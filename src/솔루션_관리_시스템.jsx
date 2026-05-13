@@ -405,7 +405,7 @@ export default function ApplicantManager() {
       {/* GNB */}
       <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100}}>
         <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"stretch",height:"52px",gap:"2px"}}>
-          <span style={{fontWeight:900,fontSize:"13px",color:C.blue,marginRight:"20px",letterSpacing:"-0.5px",display:"flex",alignItems:"center",whiteSpace:"nowrap"}}>솔루션테스트관리시스템</span>
+          <span style={{fontWeight:900,fontSize:"13px",color:C.blue,marginRight:"20px",letterSpacing:"-0.5px",display:"flex",alignItems:"center",whiteSpace:"nowrap"}}>오케스트로아카데미의솔루션테스트관리시스템</span>
           {NAV_TABS.map(tab=>{
             const active=mainMenu===tab.id;
             return(
