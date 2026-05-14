@@ -102,7 +102,14 @@ export default function ApplicantManager() {
   const [tooltip,         setTooltip]          = useState(null);
   const [deleteConfirm,   setDeleteConfirm]    = useState(null);
   const [mainMenu, setMainMenu] = useState(()=>{
-    try{ const s=sessionStorage.getItem('aida:login'); if(s){const u=JSON.parse(s);if(u?.type==="officer")return"briefing";} }catch{}
+    try{
+      const urlRole = new URLSearchParams(window.location.search).get("role");
+      if(urlRole==="officer"){
+        const s=sessionStorage.getItem('aida:login');
+        if(s){const u=JSON.parse(s);if(u?.type==="officer")return"briefing";}
+        return"briefing";
+      }
+    }catch{}
     return "list";
   });
   const [deptData,        setDeptData]         = useState([]);
@@ -181,13 +188,20 @@ export default function ApplicantManager() {
 
   // 세션 로그인 복원
   useEffect(()=>{
-    try{
-      const s=sessionStorage.getItem('aida:login');
-      if(s) setLoginUser(JSON.parse(s));
-    }catch{}
+    const urlRole = new URLSearchParams(window.location.search).get("role");
+    if(urlRole === "officer"){
+      // 직책자 URL: 세션 복원 시도
+      try{
+        const s=sessionStorage.getItem('aida:login');
+        if(s){ const u=JSON.parse(s); if(u?.type==="officer") setLoginUser(u); }
+      }catch{}
+    } else {
+      // 관리자 URL: 자동 로그인
+      setLoginUser({type:"admin"});
+    }
   },[]);
   const doLogin=(user)=>{ setLoginUser(user); try{ sessionStorage.setItem('aida:login',JSON.stringify(user)); }catch{}; if(user.type==="officer") setMainMenu("briefing"); };
-  const doLogout=()=>{ setLoginUser(null); setMainMenu("list"); try{ sessionStorage.removeItem('aida:login'); }catch{} };
+  const doLogout=()=>{ setLoginUser(null); try{ sessionStorage.removeItem('aida:login'); }catch{} };
 
   // 직책자가 허용되지 않은 메뉴 접근 시 강제 브리핑으로
   useEffect(()=>{
@@ -291,6 +305,33 @@ export default function ApplicantManager() {
     guideWs['!cols']=[{wch:60}];
     XLSX.utils.book_append_sheet(wb,guideWs,"작성안내");
     XLSX.writeFile(wb,"온보딩_대상자_일괄등록_양식.xlsx");
+  };
+
+  const backupApplicantData = () => {
+    if(applicants.length===0){ alert("백업할 응시자 데이터가 없습니다."); return; }
+    const headers=[
+      "입사년월","이름","구분(회사)","소속본부","소속팀",
+      "본부장 이름","본부장 이메일","팀장 이름","팀장 이메일","이메일",
+      "1차 응시일","1차 점수","1차 합격여부",
+      "2차 응시일","2차 점수","2차 합격여부",
+      "3차 응시일","3차 점수","3차 합격여부",
+      "최종 상태","사유/비고","아카데미 공유사항","인사팀 공유사항",
+    ];
+    const rows=applicants.map(a=>[
+      a.joinYearMonth||"", a.name||"", a.company||"", a.division||"", a.team||"",
+      a.divisionHeadName||"", a.divisionHeadEmail||"", a.teamLeaderName||"", a.teamLeaderEmail||"", a.email||"",
+      a.date1||"", a.score1||"", a.pass1||"",
+      a.date2||"", a.score2||"", a.pass2||"",
+      a.date3||"", a.score3||"", a.pass3||"",
+      a.finalStatus||"", a.reason||"", a.academyNote||"", a.hrNote||"",
+    ]);
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+    ws['!cols']=[{wch:14},{wch:10},{wch:16},{wch:18},{wch:20},{wch:12},{wch:24},{wch:12},{wch:24},{wch:28},{wch:14},{wch:10},{wch:12},{wch:14},{wch:10},{wch:12},{wch:14},{wch:10},{wch:12},{wch:12},{wch:24},{wch:20},{wch:20}];
+    XLSX.utils.book_append_sheet(wb,ws,"응시자현황");
+    const now=new Date();
+    const stamp=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+    XLSX.writeFile(wb,`응시자_백업_${stamp}.xlsx`);
   };
 
   // ── 부서/팀 CRUD ──────────────────────────────────────────
@@ -548,76 +589,48 @@ export default function ApplicantManager() {
 
   const fmtYML=ym=>{if(!ym)return"";const[y,m]=ym.split("-");return`${y}년 ${parseInt(m)}월`;};
 
-  // ── 로그인 화면 ──────────────────────────────────────────────
+  // ── 로그인 화면 (직책자 URL 전용) ────────────────────────────
   if(!loginUser){
-    const ADMIN_PW="0000";
-    const LoginPage=()=>{
-      const [adminPw,setAdminPw]=useState("");
-      const [adminErr,setAdminErr]=useState("");
+    const OfficerLoginOnly=()=>{
       const [officerCode,setOfficerCode]=useState("");
       const [officerErr,setOfficerErr]=useState("");
       return(
-        <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.blue}11,${C.purple}08,${C.bg})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+        <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.purple}11,${C.blue}06,${C.bg})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
           <style>{`@keyframes modalIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          {/* 로고 */}
           <div style={{textAlign:"center",marginBottom:"36px",animation:"modalIn 0.4s ease"}}>
-            <div style={{fontSize:"32px",marginBottom:"8px"}}>🏢</div>
-            <div style={{fontSize:"22px",fontWeight:900,color:C.blue,letterSpacing:"-0.5px"}}>테스트관리시스템</div>
-            <div style={{fontSize:"12px",color:C.muted,marginTop:"4px"}}>오케스트로 아카데미 솔루션 테스트 관리</div>
+            <div style={{fontSize:"32px",marginBottom:"8px"}}>👤</div>
+            <div style={{fontSize:"22px",fontWeight:900,color:C.purple,letterSpacing:"-0.5px"}}>테스트관리시스템</div>
+            <div style={{fontSize:"12px",color:C.muted,marginTop:"4px"}}>직책자 전용 로그인</div>
           </div>
-
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"20px",width:"100%",maxWidth:"680px",animation:"modalIn 0.5s ease"}}>
-            {/* 관리자 로그인 */}
-            <div style={{background:C.surface,borderRadius:"20px",padding:"28px 28px 24px",boxShadow:shadowLg,border:`1.5px solid ${C.blue}22`,display:"flex",flexDirection:"column",gap:"16px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"4px"}}>
-                <div style={{width:"36px",height:"36px",borderRadius:"10px",background:`linear-gradient(135deg,${C.blue},${C.blueLight})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>👑</div>
+          <div style={{width:"100%",maxWidth:"360px",animation:"modalIn 0.5s ease"}}>
+            <div style={{background:C.surface,borderRadius:"20px",padding:"32px 32px 28px",boxShadow:shadowLg,border:`1.5px solid ${C.purple}22`,display:"flex",flexDirection:"column",gap:"18px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"4px"}}>
+                <div style={{width:"42px",height:"42px",borderRadius:"12px",background:`linear-gradient(135deg,${C.purple},${C.purple}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>👤</div>
                 <div>
-                  <div style={{fontWeight:900,fontSize:"15px",color:C.text}}>관리자 로그인</div>
-                  <div style={{fontSize:"11px",color:C.muted,marginTop:"1px"}}>전체 기능 접근 가능</div>
-                </div>
-              </div>
-              <div>
-                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>비밀번호</label>
-                <input type="password" value={adminPw} onChange={e=>{setAdminPw(e.target.value);setAdminErr("");}}
-                  onKeyDown={e=>{if(e.key==="Enter"){if(adminPw===ADMIN_PW)doLogin({type:"admin"});else setAdminErr("비밀번호가 올바르지 않습니다.");}}}
-                  placeholder="비밀번호 입력" style={{width:"100%",background:C.bg,border:`1.5px solid ${adminErr?C.red:C.border}`,borderRadius:"10px",padding:"10px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}
-                  onFocus={e=>e.target.style.borderColor=adminErr?C.red:C.blueLight} onBlur={e=>e.target.style.borderColor=adminErr?C.red:C.border}/>
-                {adminErr&&<div style={{fontSize:"11px",color:C.red,marginTop:"5px"}}>⚠️ {adminErr}</div>}
-              </div>
-              <button onClick={()=>{if(adminPw===ADMIN_PW)doLogin({type:"admin"});else setAdminErr("비밀번호가 올바르지 않습니다.");}}
-                style={{padding:"11px",borderRadius:"10px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.blue}dd,${C.blue})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>
-                관리자로 로그인
-              </button>
-            </div>
-
-            {/* 직책자 로그인 */}
-            <div style={{background:C.surface,borderRadius:"20px",padding:"28px 28px 24px",boxShadow:shadowLg,border:`1.5px solid ${C.purple}22`,display:"flex",flexDirection:"column",gap:"16px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"4px"}}>
-                <div style={{width:"36px",height:"36px",borderRadius:"10px",background:`linear-gradient(135deg,${C.purple},${C.purple}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",flexShrink:0}}>👤</div>
-                <div>
-                  <div style={{fontWeight:900,fontSize:"15px",color:C.text}}>직책자 로그인</div>
-                  <div style={{fontSize:"11px",color:C.muted,marginTop:"1px"}}>소속 팀/본부 결과 열람</div>
+                  <div style={{fontWeight:900,fontSize:"16px",color:C.text}}>직책자 로그인</div>
+                  <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>소속 팀/본부 결과 열람</div>
                 </div>
               </div>
               <div>
                 <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>직책자 코드</label>
                 <input type="text" value={officerCode} onChange={e=>{setOfficerCode(e.target.value.toUpperCase());setOfficerErr("");}}
-                  onKeyDown={e=>{if(e.key==="Enter"){const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({...found, type:"officer", type_code:found.type});else setOfficerErr("등록되지 않은 코드입니다.");}}}
-                  placeholder="코드 입력 (예: ABC123)" style={{width:"100%",background:C.bg,border:`1.5px solid ${officerErr?C.red:C.border}`,borderRadius:"10px",padding:"10px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box",letterSpacing:"0.1em",textTransform:"uppercase"}}
+                  onKeyDown={e=>{if(e.key==="Enter"){const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({...found,type:"officer",type_code:found.type});else setOfficerErr("등록되지 않은 코드입니다.");}}}
+                  placeholder="코드 입력 (예: ABC123)" autoFocus
+                  style={{width:"100%",background:C.bg,border:`1.5px solid ${officerErr?C.red:C.border}`,borderRadius:"10px",padding:"12px 14px",fontSize:"15px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box",letterSpacing:"0.12em",textTransform:"uppercase"}}
                   onFocus={e=>e.target.style.borderColor=officerErr?C.red:C.purple} onBlur={e=>e.target.style.borderColor=officerErr?C.red:C.border}/>
                 {officerErr&&<div style={{fontSize:"11px",color:C.red,marginTop:"5px"}}>⚠️ {officerErr}</div>}
               </div>
-              <button onClick={()=>{const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({...found, type:"officer", type_code:found.type});else setOfficerErr("등록되지 않은 코드입니다.");}}
-                style={{padding:"11px",borderRadius:"10px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>
-                직책자로 로그인
+              <button onClick={()=>{const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({...found,type:"officer",type_code:found.type});else setOfficerErr("등록되지 않은 코드입니다.");}}
+                style={{padding:"13px",borderRadius:"10px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"14px",fontWeight:800,fontFamily:"inherit"}}>
+                로그인
               </button>
-              <div style={{fontSize:"11px",color:C.muted,textAlign:"center",marginTop:"-4px"}}>코드는 관리자에게 문의하세요</div>
+              <div style={{fontSize:"11px",color:C.muted,textAlign:"center"}}>코드는 관리자에게 문의하세요</div>
             </div>
           </div>
         </div>
       );
     };
-    return <LoginPage key="login"/>;
+    return <OfficerLoginOnly key="officer-login"/>;
   }
 
   return(
@@ -669,20 +682,16 @@ export default function ApplicantManager() {
             );
           })}
           <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:"8px",fontSize:"11px",flexShrink:0}}>
-            {/* 로그인 정보 */}
-            <div style={{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",background:loginUser?.type==="admin"?`${C.blue}10`:`${C.purple}10`,border:`1px solid ${loginUser?.type==="admin"?C.blue:C.purple}33`}}>
-              <span style={{fontSize:"13px"}}>{loginUser?.type==="admin"?"👑":"👤"}</span>
-              <span style={{fontWeight:700,color:loginUser?.type==="admin"?C.blue:C.purple,whiteSpace:"nowrap"}}>
-                {loginUser?.type==="admin"?"관리자":(loginUser?.name||"직책자")}
+            {/* 로그인 정보 - 직책자만 표시 */}
+            {isOfficer&&<div style={{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",background:`${C.purple}10`,border:`1px solid ${C.purple}33`}}>
+              <span style={{fontSize:"13px"}}>👤</span>
+              <span style={{fontWeight:700,color:C.purple,whiteSpace:"nowrap"}}>{loginUser?.name||"직책자"}</span>
+              <span style={{fontSize:"10px",color:C.muted,whiteSpace:"nowrap"}}>
+                {loginUser.type_code==="division"?"🏢 본부장":"👥 팀장"}
+                {loginUser.division&&` · ${loginUser.division}`}
+                {loginUser.type_code==="team"&&loginUser.team&&` · ${loginUser.team}`}
               </span>
-              {loginUser?.type==="officer"&&(
-                <span style={{fontSize:"10px",color:C.muted,whiteSpace:"nowrap"}}>
-                  {loginUser.type_code==="division"?"🏢 본부장":"👥 팀장"}
-                  {loginUser.division&&` · ${loginUser.division}`}
-                  {loginUser.type_code==="team"&&loginUser.team&&` · ${loginUser.team}`}
-                </span>
-              )}
-            </div>
+            </div>}
             {dbStatus==="connecting"&&<span style={{color:C.muted,whiteSpace:"nowrap"}}>⏳ 연결 중...</span>}
             {dbStatus==="firebase"&&(
               <span style={{color:C.green,fontWeight:700,display:"flex",alignItems:"center",gap:"5px",background:"#f0fdf4",padding:"4px 10px",borderRadius:"20px",border:"1px solid #bbf7d0",whiteSpace:"nowrap"}}>
@@ -699,7 +708,7 @@ export default function ApplicantManager() {
                 <span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.red,display:"inline-block",flexShrink:0}}/>DB 오류 ⚠️
               </span>
             )}
-            <button onClick={doLogout} style={{padding:"4px 12px",borderRadius:"20px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap"}}>로그아웃</button>
+            {isOfficer&&<button onClick={doLogout} style={{padding:"4px 12px",borderRadius:"20px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap"}}>로그아웃</button>}
           </div>
         </div>
       </div>
@@ -1003,6 +1012,7 @@ export default function ApplicantManager() {
               {!isOfficer&&<><input ref={appFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importApplicantExcel(e.target.files[0]);e.target.value='';}}/>
               <button onClick={downloadApplicantTemplate} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}06`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>⬇️ 양식 다운로드</button>
               <button onClick={()=>appFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📊 일괄등록</button>
+              <button onClick={backupApplicantData} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>💾 데이터 백업</button>
               <button onClick={()=>setApplicantModal({mode:'add',data:{...EMPTY_APPLICANT}})} style={{padding:"7px 16px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>＋ 추가</button></>}
             </div>
             <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadowLg}}>
