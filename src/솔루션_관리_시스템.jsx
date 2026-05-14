@@ -1,7 +1,36 @@
 // ApplicantManager.jsx
-// 오케스트로 AIDA-Tutor — 응시자 관리 독립 모듈
 import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
+
+// ── Firebase 설정 (직접 입력) ──────────────────────────────────
+const FB_API_KEY = "AIzaSyCarxTqSx__7AfzVNHzN-ilnk0gNN6PkTU";
+const FB_PROJECT = "solutiontestsystem";
+const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/app_data`;
+
+const fbGet = async (key) => {
+  const res = await fetch(`${FB_BASE}/${key}?key=${FB_API_KEY}`);
+  if(res.status===404) return null;
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const doc = await res.json();
+  const raw = doc?.fields?.value?.stringValue;
+  return raw ? JSON.parse(raw) : null;
+};
+const fbSet = async (key, value) => {
+  const body = { fields:{ value:{ stringValue: JSON.stringify(value) } } };
+  const res = await fetch(`${FB_BASE}/${key}?key=${FB_API_KEY}`,{
+    method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return true;
+};
+const stGet = async (key) => {
+  try{ return await fbGet(key); }
+  catch{ try{const r=localStorage.getItem(key);return r?JSON.parse(r):null;}catch{return null;} }
+};
+const stSet = async (key, value) => {
+  try{ await fbSet(key,value); localStorage.setItem(key,JSON.stringify(value)); return "firebase"; }
+  catch(e){ try{localStorage.setItem(key,JSON.stringify(value));}catch{} return "local:"+e.message; }
+};
 
 // ── 공통 디자인 토큰 ──────────────────────────────────────────
 const C = {
@@ -72,6 +101,7 @@ export default function ApplicantManager() {
   const [mainMenu,        setMainMenu]         = useState("list");
   const [deptData,        setDeptData]         = useState([]);
   const [deptModal,       setDeptModal]        = useState(null);
+  const [dbStatus,        setDbStatus]         = useState("connecting"); // "connecting" | "supabase" | "local" | "error:..."
 
   const appFileRef  = useRef(null);
   const deptFileRef = useRef(null);
@@ -82,29 +112,38 @@ export default function ApplicantManager() {
     onClick: e => { if(e.target===e.currentTarget && mouseDownTargetRef.current===e.currentTarget) closeFn(); },
   });
 
-  // ── 스토리지 ────────────────────────────────────────────────
+  // ── 스토리지 (Supabase 우선, localStorage 폴백) ──────────────
   useEffect(()=>{
     (async()=>{
       try{
-        const r=await window.storage?.get('aida:applicants_v2');
-        if(r) setApplicants(JSON.parse(r.value));
-      }catch{}
+        const data=await stGet('aida:applicants_v2');
+        if(data) setApplicants(Array.isArray(data)?data:[]);
+        setDbStatus("firebase");
+      }catch(e){
+        setDbStatus("error:"+e.message);
+      }
       finally{ setLoaded(true); }
     })();
   },[]);
 
   useEffect(()=>{
     if(!loaded) return;
-    window.storage?.set('aida:applicants_v2', JSON.stringify(applicants), true).catch(()=>{});
+    stSet('aida:applicants_v2', applicants).then(r=>{
+      if(r==="firebase") setDbStatus("firebase");
+      else if(r?.startsWith("local:")) setDbStatus("local");
+    });
   },[applicants, loaded]);
 
   useEffect(()=>{
     (async()=>{
-      try{ const r=await window.storage?.get('aida:deptData_v1'); if(r) setDeptData(JSON.parse(r.value)); }catch{}
+      try{
+        const data=await stGet('aida:deptData_v1');
+        if(data) setDeptData(Array.isArray(data)?data:[]);
+      }catch{}
     })();
   },[]);
   useEffect(()=>{
-    window.storage?.set('aida:deptData_v1', JSON.stringify(deptData), true).catch(()=>{});
+    stSet('aida:deptData_v1', deptData);
   },[deptData]);
 
   // ── 비밀번호 확인 ─────────────────────────────────────────
@@ -404,8 +443,8 @@ export default function ApplicantManager() {
 
       {/* GNB */}
       <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100}}>
-        <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"stretch",height:"52px",gap:"2px"}}>
-          <span style={{fontWeight:900,fontSize:"13px",color:C.blue,marginRight:"20px",letterSpacing:"-0.5px",display:"flex",alignItems:"center",whiteSpace:"nowrap"}}>오케스트로아카데미의솔루션테스트관리시스템</span>
+        <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px",flexWrap:"nowrap"}}>
+          <span style={{fontWeight:900,fontSize:"13px",color:C.blue,marginRight:"20px",letterSpacing:"-0.5px",display:"flex",alignItems:"center",whiteSpace:"nowrap"}}>테스트관리시스템</span>
           {NAV_TABS.map(tab=>{
             const active=mainMenu===tab.id;
             return(
@@ -418,11 +457,29 @@ export default function ApplicantManager() {
                   setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
                 }
               }}
-              style={{padding:"0 18px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+              style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
                 {tab.icon} {tab.label}
               </button>
             );
           })}
+          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",flexShrink:0}}>
+            {dbStatus==="connecting"&&<span style={{color:C.muted,whiteSpace:"nowrap"}}>⏳ 연결 중...</span>}
+            {dbStatus==="firebase"&&(
+              <span style={{color:C.green,fontWeight:700,display:"flex",alignItems:"center",gap:"5px",background:"#f0fdf4",padding:"4px 10px",borderRadius:"20px",border:"1px solid #bbf7d0",whiteSpace:"nowrap"}}>
+                <span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.green,display:"inline-block",flexShrink:0}}/>Firebase 연결됨
+              </span>
+            )}
+            {dbStatus==="local"&&(
+              <span style={{color:C.amber,fontWeight:700,display:"flex",alignItems:"center",gap:"5px",padding:"4px 10px",borderRadius:"20px",border:`1px solid ${C.amber}55`,background:"#fffbeb",whiteSpace:"nowrap",cursor:"pointer"}} title="Vercel 환경변수(VITE_FB_API_KEY, VITE_FB_PROJECT_ID)를 확인해주세요">
+                <span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.amber,display:"inline-block",flexShrink:0}}/>로컬 저장 ⚠️
+              </span>
+            )}
+            {dbStatus?.startsWith("error:")&&(
+              <span style={{color:C.red,fontWeight:700,display:"flex",alignItems:"center",gap:"5px",padding:"4px 10px",borderRadius:"20px",border:`1px solid #fecaca`,background:"#fef2f2",whiteSpace:"nowrap",cursor:"pointer"}} title={dbStatus}>
+                <span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.red,display:"inline-block",flexShrink:0}}/>DB 오류 ⚠️
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
