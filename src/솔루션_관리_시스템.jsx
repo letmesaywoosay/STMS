@@ -88,6 +88,9 @@ const backdropStyle = {
 // ── 메인 컴포넌트 ─────────────────────────────────────────────
 export default function ApplicantManager() {
   const [loaded,      setLoaded]      = useState(false);
+  const [deptLoaded,  setDeptLoaded]  = useState(false);
+  const [subjLoaded,  setSubjLoaded]  = useState(false);
+  const [codeLoaded,  setCodeLoaded]  = useState(false);
   const [applicants,  setApplicants]  = useState([]);
   const [applicantModal,  setApplicantModal]  = useState(null);
   const [applicantFilter, setApplicantFilter] = useState("전체");
@@ -98,7 +101,10 @@ export default function ApplicantManager() {
   const [aiMailModal,     setAiMailModal]      = useState(null);
   const [tooltip,         setTooltip]          = useState(null);
   const [deleteConfirm,   setDeleteConfirm]    = useState(null);
-  const [mainMenu,        setMainMenu]         = useState("list");
+  const [mainMenu, setMainMenu] = useState(()=>{
+    try{ const s=sessionStorage.getItem('aida:login'); if(s){const u=JSON.parse(s);if(u?.type==="officer")return"briefing";} }catch{}
+    return "list";
+  });
   const [deptData,        setDeptData]         = useState([]);
   const [deptModal,       setDeptModal]        = useState(null);
   const [dbStatus,        setDbStatus]         = useState("connecting");
@@ -146,11 +152,10 @@ export default function ApplicantManager() {
         const data=await stGet('aida:deptData_v1');
         if(data) setDeptData(Array.isArray(data)?data:[]);
       }catch{}
+      finally{ setDeptLoaded(true); }
     })();
   },[]);
-  useEffect(()=>{
-    stSet('aida:deptData_v1', deptData);
-  },[deptData]);
+  useEffect(()=>{ if(!deptLoaded) return; stSet('aida:deptData_v1', deptData); },[deptData, deptLoaded]);
 
   useEffect(()=>{
     (async()=>{
@@ -158,11 +163,10 @@ export default function ApplicantManager() {
         const data=await stGet('aida:subjects_v1');
         if(data) setSubjects(Array.isArray(data)?data:[]);
       }catch{}
+      finally{ setSubjLoaded(true); }
     })();
   },[]);
-  useEffect(()=>{
-    stSet('aida:subjects_v1', subjects);
-  },[subjects]);
+  useEffect(()=>{ if(!subjLoaded) return; stSet('aida:subjects_v1', subjects); },[subjects, subjLoaded]);
 
   useEffect(()=>{
     (async()=>{
@@ -170,11 +174,10 @@ export default function ApplicantManager() {
         const data=await stGet('aida:officerCodes_v1');
         if(data) setOfficerCodes(Array.isArray(data)?data:[]);
       }catch{}
+      finally{ setCodeLoaded(true); }
     })();
   },[]);
-  useEffect(()=>{
-    stSet('aida:officerCodes_v1', officerCodes);
-  },[officerCodes]);
+  useEffect(()=>{ if(!codeLoaded) return; stSet('aida:officerCodes_v1', officerCodes); },[officerCodes, codeLoaded]);
 
   // 세션 로그인 복원
   useEffect(()=>{
@@ -422,13 +425,22 @@ export default function ApplicantManager() {
     setAiMailModal(p=>({...p,emails,step:3,isGenerating:false}));
   };
 
+  // ── 직책자 권한 필터 ──────────────────────────────────────
+  const visibleApplicants = loginUser?.type==="officer"
+    ? applicants.filter(a=>{
+        if(loginUser.type_code==="division") return a.division===loginUser.division;
+        if(loginUser.type_code==="team") return a.division===loginUser.division&&a.team===loginUser.team;
+        return false;
+      })
+    : applicants;
+
   // ── 렌더 ──────────────────────────────────────────────────
-  const cntPass=v=>applicants.filter(a=>getLatest(a).pass===v).length;
-  const cntPending=applicants.filter(a=>!getLatest(a).pass).length;
+  const cntPass=v=>visibleApplicants.filter(a=>getLatest(a).pass===v).length;
+  const cntPending=visibleApplicants.filter(a=>!getLatest(a).pass).length;
   const tested=cntPass("합격")+cntPass("불합격");
   const passRate=tested>0?Math.round(cntPass("합격")/tested*100):null;
 
-  const filtered=applicants.filter(a=>{
+  const filtered=visibleApplicants.filter(a=>{
     const lp=getLatest(a).pass;
     const matchStatus=applicantFilter==="전체"?true:applicantFilter==="진행중"?!lp:lp===applicantFilter;
     const q=applicantSearch.toLowerCase();
@@ -470,13 +482,16 @@ export default function ApplicantManager() {
   ];
 
 
-  const NAV_TABS=[
-    {id:"list", icon:"≡",  label:"관리 리스트"},
-    {id:"ai",   icon:"🤖", label:"AI 자동분류"},
-    {id:"report",icon:"📊",label:"월별 보고서"},
-    {id:"dept", icon:"🏢", label:"부서/팀 관리"},
-    ...(loginUser?.type==="admin"?[{id:"admin",icon:"🔧",label:"관리"}]:[]),
-  ];
+  const isOfficer = loginUser?.type==="officer";
+  const NAV_TABS = isOfficer
+    ? [{id:"briefing",icon:"📋",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}]
+    : [
+        {id:"list", icon:"≡",  label:"관리 리스트"},
+        {id:"ai",   icon:"🤖", label:"AI 자동분류"},
+        {id:"report",icon:"📊",label:"월별 보고서"},
+        {id:"dept", icon:"🏢", label:"부서/팀 관리"},
+        {id:"admin",icon:"🔧", label:"관리"},
+      ];
   const fmtYML=ym=>{if(!ym)return"";const[y,m]=ym.split("-");return`${y}년 ${parseInt(m)}월`;};
 
   // ── 로그인 화면 ──────────────────────────────────────────────
@@ -533,12 +548,12 @@ export default function ApplicantManager() {
               <div>
                 <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>직책자 코드</label>
                 <input type="text" value={officerCode} onChange={e=>{setOfficerCode(e.target.value.toUpperCase());setOfficerErr("");}}
-                  onKeyDown={e=>{if(e.key==="Enter"){const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({type:"officer",...found});else setOfficerErr("등록되지 않은 코드입니다.");}}}
+                  onKeyDown={e=>{if(e.key==="Enter"){const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({type:"officer",type_code:found.type,...found});else setOfficerErr("등록되지 않은 코드입니다.");}}}
                   placeholder="코드 입력 (예: ABC123)" style={{width:"100%",background:C.bg,border:`1.5px solid ${officerErr?C.red:C.border}`,borderRadius:"10px",padding:"10px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box",letterSpacing:"0.1em",textTransform:"uppercase"}}
                   onFocus={e=>e.target.style.borderColor=officerErr?C.red:C.purple} onBlur={e=>e.target.style.borderColor=officerErr?C.red:C.border}/>
                 {officerErr&&<div style={{fontSize:"11px",color:C.red,marginTop:"5px"}}>⚠️ {officerErr}</div>}
               </div>
-              <button onClick={()=>{const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({type:"officer",...found});else setOfficerErr("등록되지 않은 코드입니다.");}}
+              <button onClick={()=>{const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({type:"officer",type_code:found.type,...found});else setOfficerErr("등록되지 않은 코드입니다.");}}
                 style={{padding:"11px",borderRadius:"10px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>
                 직책자로 로그인
               </button>
@@ -583,8 +598,12 @@ export default function ApplicantManager() {
               <span style={{fontWeight:700,color:loginUser?.type==="admin"?C.blue:C.purple,whiteSpace:"nowrap"}}>
                 {loginUser?.type==="admin"?"관리자":(loginUser?.name||"직책자")}
               </span>
-              {loginUser?.type==="officer"&&loginUser?.division&&(
-                <span style={{fontSize:"10px",color:C.muted,whiteSpace:"nowrap"}}>{loginUser.division}{loginUser.team?` · ${loginUser.team}`:""}</span>
+              {loginUser?.type==="officer"&&(
+                <span style={{fontSize:"10px",color:C.muted,whiteSpace:"nowrap"}}>
+                  {loginUser.type_code==="division"?"🏢 본부장":"👥 팀장"}
+                  {loginUser.division&&` · ${loginUser.division}`}
+                  {loginUser.type_code==="team"&&loginUser.team&&` · ${loginUser.team}`}
+                </span>
               )}
             </div>
             {dbStatus==="connecting"&&<span style={{color:C.muted,whiteSpace:"nowrap"}}>⏳ 연결 중...</span>}
@@ -614,8 +633,186 @@ export default function ApplicantManager() {
           <h1 style={{fontSize:"20px",fontWeight:900,color:C.text,margin:0,letterSpacing:"-0.3px"}}>신규입사자 솔루션 테스트 관리</h1>
         </div>
 
-        {/* 관리 리스트 */}
-        {mainMenu==="list"&&(
+        {/* ═══ 브리핑 (직책자 전용) ═══ */}
+        {mainMenu==="briefing"&&isOfficer&&(()=>{
+          const orgLabel = loginUser.type_code==="division"
+            ? `🏢 ${loginUser.division}`
+            : `👥 ${loginUser.division} · ${loginUser.team}`;
+
+          // 연도 목록
+          const allYears=[...new Set(visibleApplicants.flatMap(a=>[a.date1,a.date2,a.date3].filter(Boolean).map(d=>d.slice(0,4))))].sort().reverse();
+          const [selYear, setSelYear] = [useState(allYears[0]||"")[0], useState(allYears[0]||"")[1]];
+
+          const BriefingPage=()=>{
+            const [year,setYear]=useState(allYears[0]||"");
+            const months=Array.from({length:12},(_,i)=>String(i+1).padStart(2,"0"));
+
+            // 월별 응시 데이터
+            const monthStats=months.map(m=>{
+              const ym=`${year}-${m}`;
+              const atts=visibleApplicants.flatMap(a=>[
+                a.date1?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"1차",score:a.score1,pass:a.pass1,date:a.date1}:null,
+                a.date2?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"2차",score:a.score2,pass:a.pass2,date:a.date2}:null,
+                a.date3?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"3차",score:a.score3,pass:a.pass3,date:a.date3}:null,
+              ].filter(Boolean));
+              const pass=atts.filter(a=>a.pass==="합격").length;
+              const fail=atts.filter(a=>a.pass==="불합격").length;
+              const total=atts.length;
+              const rate=pass+fail>0?Math.round(pass/(pass+fail)*100):null;
+              const scores=atts.map(a=>parseFloat(a.score)).filter(v=>!isNaN(v));
+              const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10:null;
+              return{ym,m:parseInt(m),total,pass,fail,rate,avg,atts};
+            }).filter(s=>s.total>0);
+
+            const maxPass=Math.max(...monthStats.map(s=>s.pass),1);
+            const maxFail=Math.max(...monthStats.map(s=>s.fail),1);
+            const maxBar=Math.max(maxPass,maxFail);
+
+            // 선택 월 상세
+            const [detailYM,setDetailYM]=useState(monthStats[0]?.ym||"");
+            const detailData=monthStats.find(s=>s.ym===detailYM);
+
+            return(
+              <div style={{display:"flex",flexDirection:"column",gap:"20px"}}>
+                {/* 헤더 */}
+                <div style={{background:`linear-gradient(135deg,${C.blue}0d,${C.purple}08)`,borderRadius:"16px",border:`1px solid ${C.blue}22`,padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"12px"}}>
+                  <div>
+                    <div style={{fontSize:"18px",fontWeight:900,color:C.text,marginBottom:"4px"}}>{orgLabel}</div>
+                    <div style={{fontSize:"12px",color:C.muted}}>안녕하세요, <b style={{color:C.blue}}>{loginUser.name}</b>님. 조직의 솔루션 테스트 현황을 확인하세요.</div>
+                  </div>
+                  <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+                    <label style={{fontSize:"12px",color:C.muted,fontWeight:600}}>연도 선택</label>
+                    <div style={{display:"flex",gap:"4px"}}>
+                      {allYears.length>0?allYears.map(y=>(
+                        <button key={y} onClick={()=>setYear(y)} style={{padding:"6px 14px",borderRadius:"20px",border:`1.5px solid ${year===y?C.blue:C.border}`,background:year===y?`${C.blue}10`:"transparent",color:year===y?C.blue:C.muted,fontSize:"13px",fontWeight:year===y?800:400,cursor:"pointer",fontFamily:"inherit"}}>{y}년</button>
+                      )):<span style={{fontSize:"12px",color:C.muted}}>데이터 없음</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 전체 요약 카드 */}
+                {(()=>{
+                  const allAtts=visibleApplicants.flatMap(a=>[
+                    {pass:a.pass1,score:a.score1},{pass:a.pass2,score:a.score2},{pass:a.pass3,score:a.score3}
+                  ].filter(t=>t.pass));
+                  const totalPass=allAtts.filter(t=>t.pass==="합격").length;
+                  const totalFail=allAtts.filter(t=>t.pass==="불합격").length;
+                  const tested=totalPass+totalFail;
+                  const overallRate=tested>0?Math.round(totalPass/tested*100):null;
+                  const allScores=allAtts.map(t=>parseFloat(t.score)).filter(v=>!isNaN(v));
+                  const overallAvg=allScores.length?Math.round(allScores.reduce((a,b)=>a+b,0)/allScores.length*10)/10:null;
+                  return(
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"10px"}}>
+                      {[
+                        {label:"총 응시자",value:visibleApplicants.length+"명",color:C.blue,bg:`${C.blue}0d`},
+                        {label:"전체 합격",value:totalPass+"명",color:C.green,bg:"#f0fdf4"},
+                        {label:"전체 불합격",value:totalFail+"명",color:C.red,bg:"#fef2f2"},
+                        {label:"전체 합격률",value:overallRate!==null?overallRate+"%":"—",color:overallRate>=60?C.green:C.red,bg:overallRate>=60?"#f0fdf4":"#fef2f2"},
+                        {label:"전체 평균점수",value:overallAvg!==null?overallAvg+"점":"—",color:C.purple,bg:`${C.purple}08`},
+                      ].map(s=>(
+                        <div key={s.label} style={{background:s.bg,borderRadius:"12px",padding:"14px 16px",border:`1px solid ${s.color}22`,boxShadow:shadow}}>
+                          <div style={{fontSize:"10px",color:s.color,fontWeight:700,marginBottom:"4px"}}>{s.label}</div>
+                          <div style={{fontSize:"22px",fontWeight:900,color:s.color}}>{s.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                {/* 월별 합격/불합격 바 차트 */}
+                {monthStats.length>0&&(
+                  <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
+                    <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.blue}04)`,borderBottom:`1px solid ${C.border}`}}>
+                      <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>📊 {year}년 월별 합격/불합격 현황</div>
+                      <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>월을 클릭하면 응시자 상세 정보를 확인할 수 있습니다</div>
+                    </div>
+                    <div style={{padding:"20px",display:"flex",flexDirection:"column",gap:"10px"}}>
+                      {monthStats.map(s=>(
+                        <div key={s.ym} onClick={()=>setDetailYM(s.ym===detailYM?"":s.ym)} style={{cursor:"pointer",borderRadius:"10px",padding:"10px 14px",background:detailYM===s.ym?`${C.blue}06`:"transparent",border:`1px solid ${detailYM===s.ym?C.blue+"44":C.border+"44"}`,transition:"all 0.15s"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"8px"}}>
+                            <span style={{fontSize:"12px",fontWeight:800,color:C.text,minWidth:"40px"}}>{s.m}월</span>
+                            <span style={{fontSize:"11px",color:C.muted}}>총 {s.total}명</span>
+                            <span style={{color:C.green,fontSize:"11px",fontWeight:700}}>✅ {s.pass}</span>
+                            <span style={{color:C.red,fontSize:"11px",fontWeight:700}}>❌ {s.fail}</span>
+                            {s.rate!==null&&<span style={{fontSize:"11px",fontWeight:800,color:s.rate>=60?C.green:C.red,background:s.rate>=60?"#f0fdf4":"#fef2f2",padding:"2px 8px",borderRadius:"20px",border:`1px solid ${s.rate>=60?"#bbf7d0":"#fecaca"}`}}>합격률 {s.rate}%</span>}
+                            {s.avg!==null&&<span style={{fontSize:"11px",color:C.purple,fontWeight:600,marginLeft:"auto"}}>평균 {s.avg}점</span>}
+                          </div>
+                          <div style={{display:"flex",gap:"4px",flexDirection:"column"}}>
+                            <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                              <span style={{fontSize:"10px",color:C.green,minWidth:"28px",textAlign:"right",fontWeight:600}}>합격</span>
+                              <div style={{flex:1,height:"12px",borderRadius:"6px",background:"#f0fdf4",overflow:"hidden"}}>
+                                <div style={{height:"100%",width:`${Math.round(s.pass/maxBar*100)}%`,background:`linear-gradient(90deg,${C.green}88,${C.green})`,borderRadius:"6px",minWidth:s.pass>0?"4px":"0"}}/>
+                              </div>
+                              <span style={{fontSize:"10px",fontWeight:800,color:C.green,minWidth:"20px"}}>{s.pass}</span>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                              <span style={{fontSize:"10px",color:C.red,minWidth:"28px",textAlign:"right",fontWeight:600}}>불합격</span>
+                              <div style={{flex:1,height:"12px",borderRadius:"6px",background:"#fef2f2",overflow:"hidden"}}>
+                                <div style={{height:"100%",width:`${Math.round(s.fail/maxBar*100)}%`,background:`linear-gradient(90deg,${C.red}88,${C.red})`,borderRadius:"6px",minWidth:s.fail>0?"4px":"0"}}/>
+                              </div>
+                              <span style={{fontSize:"10px",fontWeight:800,color:C.red,minWidth:"20px"}}>{s.fail}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 선택 월 응시자 상세 */}
+                {detailData&&(
+                  <div style={{background:C.surface,borderRadius:"16px",border:`1.5px solid ${C.blue}33`,overflow:"hidden",boxShadow:shadowLg}}>
+                    <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.purple}05)`,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>📋 {detailData.m}월 응시자 상세</div>
+                      <div style={{display:"flex",gap:"10px",fontSize:"12px"}}>
+                        <span style={{color:C.green,fontWeight:700}}>✅ 합격 {detailData.pass}명</span>
+                        <span style={{color:C.red,fontWeight:700}}>❌ 불합격 {detailData.fail}명</span>
+                        {detailData.rate!==null&&<span style={{fontWeight:800,color:detailData.rate>=60?C.green:C.red}}>합격률 {detailData.rate}%</span>}
+                      </div>
+                    </div>
+                    <table style={{borderCollapse:"collapse",width:"100%",fontSize:"12px"}}>
+                      <thead>
+                        <tr style={{background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+                          {["이름","소속팀","회차","응시일","점수","결과"].map((h,i)=>(
+                            <th key={i} style={{padding:"9px 14px",textAlign:"left",fontSize:"11px",fontWeight:700,color:C.muted,borderRight:i<5?`1px solid ${C.border}`:"none"}}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...detailData.atts].sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map((att,idx)=>{
+                          const pc=PASS_STATUS_COLORS[att.pass]||PASS_STATUS_COLORS[""];
+                          const sNum=parseFloat(att.score);
+                          const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
+                          return(
+                            <tr key={att.id+att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                              <td style={{padding:"10px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>{att.name}</td>
+                              <td style={{padding:"10px 14px",color:C.muted,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{att.team||att.division||"—"}</td>
+                              <td style={{padding:"10px 14px",textAlign:"center",borderRight:`1px solid ${C.border}`}}><span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"20px",background:`${C.blue}10`,color:C.blue,fontWeight:700}}>{att.nth}</span></td>
+                              <td style={{padding:"10px 14px",color:C.subtle,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{att.date||"—"}</td>
+                              <td style={{padding:"10px 14px",textAlign:"center",fontWeight:900,fontSize:"14px",color:sColor,borderRight:`1px solid ${C.border}`}}>{att.score?att.score+"점":"—"}</td>
+                              <td style={{padding:"10px 14px",textAlign:"center"}}>{att.pass?<span style={{fontSize:"11px",padding:"3px 10px",borderRadius:"20px",background:pc.bg,color:pc.text,border:`1px solid ${pc.border}`,fontWeight:700}}>{att.pass}</span>:<span style={{color:C.muted}}>—</span>}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {monthStats.length===0&&(
+                  <div style={{textAlign:"center",padding:"60px",background:C.surface,borderRadius:"16px",border:`1.5px dashed ${C.border}`,color:C.muted}}>
+                    <div style={{fontSize:"36px",marginBottom:"10px"}}>📋</div>
+                    <div style={{fontWeight:600,color:C.subtle}}>{year}년 응시 데이터가 없습니다</div>
+                  </div>
+                )}
+              </div>
+            );
+          };
+          return <BriefingPage key={`briefing-${loginUser.code}`}/>;
+        })()}
+
+        {/* ═══ 관리 리스트 ═══ */}
+        {(mainMenu==="list")&&(
           <>
           {appViewMode==="monthly"?(
             <>
@@ -727,10 +924,10 @@ export default function ApplicantManager() {
               </div>
               <input value={applicantSearch} onChange={e=>setApplicantSearch(e.target.value)} placeholder="이름·소속·이메일·입사년월 검색..." style={{flex:1,minWidth:"180px",background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:"9px",padding:"7px 12px",color:C.text,fontSize:"13px",outline:"none",fontFamily:"inherit"}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
               <button onClick={()=>setAppViewMode("monthly")} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📅 월별 보기</button>
-              <input ref={appFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importApplicantExcel(e.target.files[0]);e.target.value='';}}/>
+              {!isOfficer&&<><input ref={appFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importApplicantExcel(e.target.files[0]);e.target.value='';}}/>
               <button onClick={downloadApplicantTemplate} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}06`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>⬇️ 양식 다운로드</button>
               <button onClick={()=>appFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📊 일괄등록</button>
-              <button onClick={()=>setApplicantModal({mode:'add',data:{...EMPTY_APPLICANT}})} style={{padding:"7px 16px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>＋ 추가</button>
+              <button onClick={()=>setApplicantModal({mode:'add',data:{...EMPTY_APPLICANT}})} style={{padding:"7px 16px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>＋ 추가</button></>}
             </div>
             <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadowLg}}>
               <table style={{borderCollapse:"collapse",width:"100%",fontSize:"12px",tableLayout:"fixed"}}>
@@ -816,8 +1013,8 @@ export default function ApplicantManager() {
                         </td>
                         <td style={{padding:"8px 6px",textAlign:"center"}}>
                           <div style={{display:"flex",gap:"3px",justifyContent:"center"}}>
-                            <button onClick={()=>setApplicantModal({mode:'edit',data:{...a}})} title="수정" style={{width:"26px",height:"26px",background:`${C.blue}10`,border:`1px solid ${C.blue}22`,borderRadius:"6px",cursor:"pointer",color:C.blue,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}22`} onMouseLeave={e=>e.currentTarget.style.background=`${C.blue}10`}>✏️</button>
-                            <button onClick={()=>deleteApplicant(a.id)} title="삭제" style={{width:"26px",height:"26px",background:"#fee2e2",border:"1px solid #dc262222",borderRadius:"6px",cursor:"pointer",color:C.red,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#fecaca"} onMouseLeave={e=>e.currentTarget.style.background="#fee2e2"}>🗑</button>
+                            {!isOfficer&&<><button onClick={()=>setApplicantModal({mode:'edit',data:{...a}})} title="수정" style={{width:"26px",height:"26px",background:`${C.blue}10`,border:`1px solid ${C.blue}22`,borderRadius:"6px",cursor:"pointer",color:C.blue,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}22`} onMouseLeave={e=>e.currentTarget.style.background=`${C.blue}10`}>✏️</button>
+                            <button onClick={()=>deleteApplicant(a.id)} title="삭제" style={{width:"26px",height:"26px",background:"#fee2e2",border:"1px solid #dc262222",borderRadius:"6px",cursor:"pointer",color:C.red,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#fecaca"} onMouseLeave={e=>e.currentTarget.style.background="#fee2e2"}>🗑</button></>}
                           </div>
                         </td>
                       </tr>
@@ -826,9 +1023,9 @@ export default function ApplicantManager() {
                 </tbody>
               </table>
               <div style={{padding:"8px 16px",borderTop:`1px solid ${C.border}`,background:C.bg,fontSize:"11px",color:C.muted,display:"flex",gap:"14px",flexWrap:"wrap",alignItems:"center"}}>
-                <span>전체 <b style={{color:C.blue}}>{applicants.length}</b>명 · 검색결과 <b style={{color:C.purple}}>{sorted.length}</b>명{sortConfig.key&&<span style={{color:C.blue,marginLeft:"6px"}}>· {["입사년월","이름","구분(회사)","소속본부","소속팀","이메일","테스트 결과","최종 상태"][["joinYearMonth","name","company","division","team","email","testResult","finalStatus"].indexOf(sortConfig.key)]} {sortConfig.dir==="asc"?"↑":"↓"} 정렬 중</span>}</span>
+                <span>전체 <b style={{color:C.blue}}>{visibleApplicants.length}</b>명 · 검색결과 <b style={{color:C.purple}}>{sorted.length}</b>명{sortConfig.key&&<span style={{color:C.blue,marginLeft:"6px"}}>· {["입사년월","이름","구분(회사)","소속본부","소속팀","이메일","테스트 결과","최종 상태"][["joinYearMonth","name","company","division","team","email","testResult","finalStatus"].indexOf(sortConfig.key)]} {sortConfig.dir==="asc"?"↑":"↓"} 정렬 중</span>}</span>
                 {passRate!==null&&<span>합격률 <b style={{color:passRate>=60?C.green:C.red}}>{passRate}%</b> ({cntPass("합격")}/{tested}명)</span>}
-                {applicants.length>0&&<button onClick={()=>confirmDelete("응시자 전체를 초기화하시겠습니까?",()=>setApplicants([]))} style={{marginLeft:"auto",background:"none",border:`1px solid ${C.border}`,borderRadius:"7px",padding:"3px 10px",color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>전체 초기화</button>}
+                {!isOfficer&&applicants.length>0&&<button onClick={()=>confirmDelete("응시자 전체를 초기화하시겠습니까?",()=>setApplicants([]))} style={{marginLeft:"auto",background:"none",border:`1px solid ${C.border}`,borderRadius:"7px",padding:"3px 10px",color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>전체 초기화</button>}
               </div>
             </div>
             </>
@@ -1386,83 +1583,100 @@ export default function ApplicantManager() {
 
         {/* ═══ 관리 (관리자 전용) ═══ */}
         {mainMenu==="admin"&&loginUser?.type==="admin"&&(()=>{
-          const OfficerMgr=()=>{
-            const [form,setForm]=useState({code:"",name:"",division:"",team:""});
-            const [editId,setEditId]=useState(null);
-            const [search,setSearch]=useState("");
-            const divOptions=[...new Set(deptData.flatMap(c=>c.divisions.map(d=>d.name)))];
-            const selDiv=deptData.flatMap(c=>c.divisions).find(d=>d.name===form.division);
-            const teamOptions=selDiv?selDiv.teams.map(t=>t.name):[];
-            const genCode=()=>{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");};
-            const save=()=>{
-              if(!form.code.trim()||!form.name.trim()){alert("코드와 이름은 필수입니다.");return;}
-              if(editId){setOfficerCodes(p=>p.map(o=>o.id===editId?{...o,...form}:o));setEditId(null);}
-              else{if(officerCodes.find(o=>o.code===form.code.trim())){alert("이미 사용 중인 코드입니다.");return;}setOfficerCodes(p=>[...p,{id:uid(),...form,code:form.code.trim().toUpperCase()}]);}
-              setForm({code:"",name:"",division:"",team:""});
-            };
-            const filtered=officerCodes.filter(o=>!search||(o.name||"").includes(search)||(o.code||"").toUpperCase().includes(search.toUpperCase())||(o.division||"").includes(search)||(o.team||"").includes(search));
+          const genCode=()=>{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");};
+          // 본부/팀 코드 인라인 저장
+          const upsertCode=(type,division,team,name,code)=>{
+            const trimCode=code.trim().toUpperCase();
+            if(!trimCode) return;
+            setOfficerCodes(p=>{
+              const existing=p.find(o=>o.type===type&&o.division===division&&(type==="division"||o.team===team));
+              if(existing) return p.map(o=>o.id===existing.id?{...o,code:trimCode,name}:o);
+              return [...p,{id:uid(),type,division,team:team||"",name,code:trimCode}];
+            });
+          };
+          const getCode=(type,division,team)=>{
+            const o=officerCodes.find(o=>o.type===type&&o.division===division&&(type==="division"||o.team===team));
+            return o||null;
+          };
+          const delCode=(type,division,team)=>{
+            setOfficerCodes(p=>p.filter(o=>!(o.type===type&&o.division===division&&(type==="division"||o.team===team))));
+          };
+          const AdminTree=()=>{
+            const [drafts,setDrafts]=useState({}); // key=`${type}:${div}:${team}` → {code,name}
+            const getD=(key,field,fallback="")=>((drafts[key]||{})[field]??fallback);
+            const setD=(key,patch)=>setDrafts(p=>({...p,[key]:{...(p[key]||{}),...patch}}));
+            if(deptData.length===0) return(
+              <div style={{textAlign:"center",padding:"60px",background:C.surface,borderRadius:"16px",border:`1.5px dashed ${C.border}`,color:C.muted}}>
+                <div style={{fontSize:"36px",marginBottom:"10px"}}>🏢</div>
+                <div style={{fontWeight:600,color:C.subtle}}>부서/팀 관리에서 회사·본부·팀을 먼저 등록하세요</div>
+              </div>
+            );
             return(
-              <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:"20px",alignItems:"start"}}>
-                <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
-                  <div style={{padding:"14px 18px",background:`linear-gradient(135deg,${C.purple}08,${C.purple}04)`,borderBottom:`1px solid ${C.border}`}}>
-                    <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>{editId?"✏️ 코드 수정":"➕ 직책자 코드 등록"}</div>
-                  </div>
-                  <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
-                    <div>
-                      <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>코드 * <span style={{fontWeight:400,color:C.muted}}>(자동생성 가능)</span></label>
-                      <div style={{display:"flex",gap:"6px"}}>
-                        <input value={form.code} onChange={e=>setForm(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="예: ABC123" maxLength={8} style={{...inp({letterSpacing:"0.12em",fontWeight:700}),flex:1}} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/>
-                        <button onClick={()=>setForm(p=>({...p,code:genCode()}))} style={{padding:"9px 12px",borderRadius:"9px",border:`1px solid ${C.border}`,cursor:"pointer",background:C.bg,color:C.subtle,fontSize:"12px",fontFamily:"inherit",whiteSpace:"nowrap"}}>🎲 생성</button>
-                      </div>
+              <div style={{display:"flex",flexDirection:"column",gap:"20px"}}>
+                {deptData.map(comp=>(
+                  <div key={comp.id} style={{background:C.surface,borderRadius:"16px",border:`1.5px solid ${C.blue}33`,overflow:"hidden",boxShadow:shadowLg}}>
+                    {/* 회사 헤더 */}
+                    <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.blue}10,${C.blue}06)`,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:"10px"}}>
+                      <span style={{fontSize:"16px"}}>🏛</span>
+                      <span style={{fontWeight:900,fontSize:"15px",color:C.blue}}>{comp.company}</span>
                     </div>
-                    <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>이름 *</label><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="예: 홍본부장" style={inp()} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                    <div>
-                      <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>소속 본부</label>
-                      {divOptions.length>0?(<select value={form.division} onChange={e=>setForm(p=>({...p,division:e.target.value,team:""}))} style={{...inp(),appearance:"auto"}}><option value="">— 선택 —</option>{divOptions.map(d=><option key={d} value={d}>{d}</option>)}</select>):(<input value={form.division} onChange={e=>setForm(p=>({...p,division:e.target.value}))} placeholder="본부명 직접 입력" style={inp()} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/>)}
-                    </div>
-                    <div>
-                      <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>소속 팀</label>
-                      {teamOptions.length>0?(<select value={form.team} onChange={e=>setForm(p=>({...p,team:e.target.value}))} style={{...inp(),appearance:"auto"}}><option value="">— 선택 —</option>{teamOptions.map(t=><option key={t} value={t}>{t}</option>)}</select>):(<input value={form.team} onChange={e=>setForm(p=>({...p,team:e.target.value}))} placeholder="팀명 직접 입력" style={inp()} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/>)}
-                    </div>
-                    <div style={{display:"flex",gap:"8px",marginTop:"4px"}}>
-                      <button onClick={save} style={{flex:1,padding:"10px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>{editId?"저장":"등록"}</button>
-                      {editId&&<button onClick={()=>{setEditId(null);setForm({code:"",name:"",division:"",team:""}); }} style={{padding:"10px 16px",borderRadius:"9px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"13px",fontFamily:"inherit"}}>취소</button>}
-                    </div>
-                  </div>
-                </div>
-                <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
-                  <div style={{padding:"14px 18px",background:`linear-gradient(135deg,${C.blue}08,${C.blue}04)`,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
-                    <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>📋 직책자 코드 목록 <span style={{fontSize:"12px",fontWeight:500,color:C.muted}}>({officerCodes.length}명)</span></div>
-                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="이름·코드·소속 검색" style={{...inp({padding:"6px 12px",fontSize:"12px"}),maxWidth:"200px"}}/>
-                  </div>
-                  {filtered.length===0?(
-                    <div style={{padding:"40px",textAlign:"center",color:C.muted,fontSize:"12px"}}>{officerCodes.length===0?"등록된 코드가 없습니다":"검색 결과 없음"}</div>
-                  ):(
-                    <table style={{borderCollapse:"collapse",width:"100%",fontSize:"12px"}}>
-                      <thead>
-                        <tr style={{background:C.bg,borderBottom:`1px solid ${C.border}`}}>
-                          {["코드","이름","소속 본부","소속 팀",""].map((h,i)=>(<th key={i} style={{padding:"9px 14px",textAlign:"left",fontSize:"11px",fontWeight:700,color:C.muted,borderRight:i<4?`1px solid ${C.border}`:"none"}}>{h}</th>))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filtered.map(o=>(
-                          <tr key={o.id} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                            <td style={{padding:"10px 14px",borderRight:`1px solid ${C.border}`}}><span style={{fontWeight:900,fontSize:"13px",letterSpacing:"0.12em",color:C.purple,background:`${C.purple}10`,padding:"3px 10px",borderRadius:"6px"}}>{o.code}</span></td>
-                            <td style={{padding:"10px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>{o.name}</td>
-                            <td style={{padding:"10px 14px",color:C.subtle,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{o.division||"—"}</td>
-                            <td style={{padding:"10px 14px",color:C.muted,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{o.team||"—"}</td>
-                            <td style={{padding:"8px 12px"}}>
-                              <div style={{display:"flex",gap:"4px",justifyContent:"center"}}>
-                                <button onClick={()=>{setEditId(o.id);setForm({code:o.code,name:o.name,division:o.division||"",team:o.team||""});}} style={{padding:"4px 10px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
-                                <button onClick={()=>confirmDelete(`'${o.name}(${o.code})' 코드를 삭제하시겠습니까?`,()=>setOfficerCodes(p=>p.filter(x=>x.id!==o.id)))} style={{padding:"4px 10px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
+                    {comp.divisions.length===0&&<div style={{padding:"20px",color:C.muted,fontSize:"12px",textAlign:"center"}}>등록된 본부가 없습니다</div>}
+                    {comp.divisions.map((div,di)=>{
+                      const divKey=`division:${div.name}:`;
+                      const divExisting=getCode("division",div.name,"");
+                      const divDraft={code:getD(divKey,"code",divExisting?.code||""),name:getD(divKey,"name",divExisting?.name||div.headName||"")};
+                      return(
+                        <div key={div.id} style={{borderBottom:di<comp.divisions.length-1?`1px solid ${C.border}`:"none"}}>
+                          {/* 본부 행 */}
+                          <div style={{padding:"14px 20px 14px 24px",background:`${C.purple}04`,borderBottom:`1px solid ${C.border}44`}}>
+                            <div style={{display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap"}}>
+                              <span style={{fontSize:"14px"}}>🏢</span>
+                              <div style={{flex:"0 0 auto"}}>
+                                <div style={{fontWeight:800,fontSize:"13px",color:C.text}}>{div.name}</div>
+                                {div.headName&&<div style={{fontSize:"11px",color:C.muted,marginTop:"1px"}}>본부장: {div.headName}</div>}
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
+                              <span style={{fontSize:"11px",color:C.muted,background:`${C.purple}10`,padding:"2px 8px",borderRadius:"6px"}}>본부장 접근코드</span>
+                              {/* 본부 코드 입력 */}
+                              <div style={{display:"flex",gap:"6px",alignItems:"center",flex:1,minWidth:"300px"}}>
+                                <input value={divDraft.name} onChange={e=>setD(divKey,{name:e.target.value})} placeholder="이름 (예: 홍본부장)" style={{...inp({padding:"6px 10px",fontSize:"12px"}),flex:"0 0 130px"}} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/>
+                                <input value={divDraft.code} onChange={e=>setD(divKey,{code:e.target.value.toUpperCase()})} placeholder="코드 (예: DIV001)" maxLength={8} style={{...inp({padding:"6px 10px",fontSize:"12px",letterSpacing:"0.1em",fontWeight:700}),flex:"0 0 120px"}} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/>
+                                <button onClick={()=>setD(divKey,{code:genCode()})} style={{padding:"6px 10px",borderRadius:"7px",border:`1px solid ${C.border}`,cursor:"pointer",background:C.bg,color:C.muted,fontSize:"11px",fontFamily:"inherit",whiteSpace:"nowrap"}}>🎲</button>
+                                <button onClick={()=>{if(!divDraft.code){alert("코드를 입력하세요");return;}upsertCode("division",div.name,"",divDraft.name||div.headName||div.name,divDraft.code);}} style={{padding:"6px 14px",borderRadius:"7px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}cc,${C.purple})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>저장</button>
+                                {divExisting&&<button onClick={()=>{delCode("division",div.name,"");setD(divKey,{code:"",name:""}); }} style={{padding:"6px 10px",borderRadius:"7px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>삭제</button>}
+                              </div>
+                              {divExisting&&<span style={{fontSize:"10px",fontWeight:700,color:C.green,background:"#f0fdf4",padding:"2px 8px",borderRadius:"6px",border:"1px solid #bbf7d0",whiteSpace:"nowrap"}}>✓ {divExisting.code}</span>}
+                            </div>
+                          </div>
+                          {/* 팀 목록 */}
+                          {div.teams.map((team,ti)=>{
+                            const teamKey=`team:${div.name}:${team.name}`;
+                            const teamExisting=getCode("team",div.name,team.name);
+                            const teamDraft={code:getD(teamKey,"code",teamExisting?.code||""),name:getD(teamKey,"name",teamExisting?.name||team.leaderName||"")};
+                            return(
+                              <div key={team.id} style={{padding:"12px 20px 12px 44px",display:"flex",alignItems:"center",gap:"10px",flexWrap:"wrap",background:ti%2===0?"transparent":`${C.bg}66`,borderTop:`1px solid ${C.border}22`}}>
+                                <span style={{fontSize:"13px"}}>👥</span>
+                                <div style={{flex:"0 0 auto"}}>
+                                  <div style={{fontWeight:700,fontSize:"12px",color:C.subtle}}>{team.name}</div>
+                                  {team.leaderName&&<div style={{fontSize:"10px",color:C.muted,marginTop:"1px"}}>팀장: {team.leaderName}</div>}
+                                </div>
+                                <span style={{fontSize:"11px",color:C.muted,background:`${C.blue}08`,padding:"2px 8px",borderRadius:"6px"}}>팀장 접근코드</span>
+                                <div style={{display:"flex",gap:"6px",alignItems:"center",flex:1,minWidth:"300px"}}>
+                                  <input value={teamDraft.name} onChange={e=>setD(teamKey,{name:e.target.value})} placeholder="이름 (예: 김팀장)" style={{...inp({padding:"6px 10px",fontSize:"12px"}),flex:"0 0 130px"}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/>
+                                  <input value={teamDraft.code} onChange={e=>setD(teamKey,{code:e.target.value.toUpperCase()})} placeholder="코드 (예: TM001)" maxLength={8} style={{...inp({padding:"6px 10px",fontSize:"12px",letterSpacing:"0.1em",fontWeight:700}),flex:"0 0 120px"}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/>
+                                  <button onClick={()=>setD(teamKey,{code:genCode()})} style={{padding:"6px 10px",borderRadius:"7px",border:`1px solid ${C.border}`,cursor:"pointer",background:C.bg,color:C.muted,fontSize:"11px",fontFamily:"inherit",whiteSpace:"nowrap"}}>🎲</button>
+                                  <button onClick={()=>{if(!teamDraft.code){alert("코드를 입력하세요");return;}upsertCode("team",div.name,team.name,teamDraft.name||team.leaderName||team.name,teamDraft.code);}} style={{padding:"6px 14px",borderRadius:"7px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.blue}cc,${C.blue})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>저장</button>
+                                  {teamExisting&&<button onClick={()=>{delCode("team",div.name,team.name);setD(teamKey,{code:"",name:""}); }} style={{padding:"6px 10px",borderRadius:"7px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>삭제</button>}
+                                </div>
+                                {teamExisting&&<span style={{fontSize:"10px",fontWeight:700,color:C.green,background:"#f0fdf4",padding:"2px 8px",borderRadius:"6px",border:"1px solid #bbf7d0",whiteSpace:"nowrap"}}>✓ {teamExisting.code}</span>}
+                              </div>
+                            );
+                          })}
+                          {div.teams.length===0&&<div style={{padding:"10px 44px",fontSize:"11px",color:C.muted}}>등록된 팀이 없습니다</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             );
           };
@@ -1470,9 +1684,12 @@ export default function ApplicantManager() {
             <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px 60px"}}>
               <div style={{marginBottom:"20px",paddingBottom:"12px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:"12px"}}>
                 <span style={{fontSize:"18px"}}>🔧</span>
-                <div><div style={{fontWeight:800,fontSize:"15px",color:C.text}}>관리자 설정 — 직책자 코드 관리</div><div style={{fontSize:"12px",color:C.muted,marginTop:"2px"}}>직책자 코드를 등록하면 해당 코드로 로그인하여 소속 팀 결과를 열람할 수 있습니다</div></div>
+                <div>
+                  <div style={{fontWeight:800,fontSize:"15px",color:C.text}}>관리자 설정 — 직책자 접근 코드 관리</div>
+                  <div style={{fontSize:"12px",color:C.muted,marginTop:"2px"}}>본부장·팀장별 접근 코드를 등록합니다. 🏢 본부장 코드로 접속하면 본부 전체를, 👥 팀장 코드로 접속하면 해당 팀만 열람할 수 있습니다.</div>
+                </div>
               </div>
-              <OfficerMgr key="officer-mgr"/>
+              <AdminTree key="admin-tree"/>
             </div>
           );
         })()}
