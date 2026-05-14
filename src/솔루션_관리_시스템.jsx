@@ -344,6 +344,42 @@ export default function ApplicantManager() {
     XLSX.writeFile(wb,"부서팀_등록_양식.xlsx");
   };
 
+  const backupDeptData = () => {
+    if(deptData.length===0){ alert("백업할 데이터가 없습니다."); return; }
+    const rows=[];
+    deptData.forEach(comp=>{
+      if(comp.divisions.length===0){
+        rows.push([comp.company,"","","","","",""]);
+      } else {
+        comp.divisions.forEach(div=>{
+          if(div.teams.length===0){
+            rows.push([comp.company,div.name,div.headName||"",div.headEmail||"","","",""]);
+          } else {
+            div.teams.forEach(team=>{
+              rows.push([comp.company,div.name,div.headName||"",div.headEmail||"",team.name,team.leaderName||"",team.leaderEmail||""]);
+            });
+          }
+        });
+      }
+    });
+    const headers=["회사","본부명","본부장이름","본부장이메일","팀명","팀장이름","팀장이메일"];
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+    ws['!cols']=[{wch:16},{wch:20},{wch:12},{wch:26},{wch:18},{wch:12},{wch:26}];
+    // 스타일: 헤더 행 굵게 표시 (sheetjs-style 미지원 환경 대비 try/catch)
+    try{
+      const headerRange=XLSX.utils.decode_range(ws['!ref']);
+      for(let c=headerRange.s.c;c<=headerRange.e.c;c++){
+        const cell=XLSX.utils.encode_cell({r:0,c});
+        if(ws[cell]) ws[cell].s={font:{bold:true},fill:{fgColor:{rgb:"D6E4F7"}}};
+      }
+    }catch{}
+    XLSX.utils.book_append_sheet(wb,ws,"부서팀현황");
+    const now=new Date();
+    const stamp=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}_${String(now.getHours()).padStart(2,"0")}${String(now.getMinutes()).padStart(2,"0")}`;
+    XLSX.writeFile(wb,`부서팀_백업_${stamp}.xlsx`);
+  };
+
   // ── 헬퍼 ──────────────────────────────────────────────────
   const getLatest=a=>{
     if(a.pass3||a.score3) return{score:a.score3,pass:a.pass3,nth:"3차",date:a.date3||""};
@@ -514,7 +550,7 @@ export default function ApplicantManager() {
 
   // ── 로그인 화면 ──────────────────────────────────────────────
   if(!loginUser){
-    const ADMIN_PW="okestro0828";
+    const ADMIN_PW="0000";
     const LoginPage=()=>{
       const [adminPw,setAdminPw]=useState("");
       const [adminErr,setAdminErr]=useState("");
@@ -1300,6 +1336,7 @@ export default function ApplicantManager() {
               <input ref={deptFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importDeptExcel(e.target.files[0]);e.target.value='';}}/>
               <button onClick={downloadDeptTemplate} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}06`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>⬇️ 엑셀 양식</button>
               <button onClick={()=>deptFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📊 엑셀 일괄등록</button>
+              <button onClick={backupDeptData} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>💾 현재 데이터 백업</button>
               <button onClick={()=>setDeptModal({type:"company",mode:"add",data:{company:""}})} style={{padding:"7px 16px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.blue}dd,${C.blue})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>＋ 회사 추가</button>
             </div>
             {deptData.length===0&&(
