@@ -186,8 +186,13 @@ export default function ApplicantManager() {
       if(s) setLoginUser(JSON.parse(s));
     }catch{}
   },[]);
-  const doLogin=(user)=>{ setLoginUser(user); try{ sessionStorage.setItem('aida:login',JSON.stringify(user)); }catch{} };
-  const doLogout=()=>{ setLoginUser(null); try{ sessionStorage.removeItem('aida:login'); }catch{} };
+  const doLogin=(user)=>{ setLoginUser(user); try{ sessionStorage.setItem('aida:login',JSON.stringify(user)); }catch{}; if(user.type==="officer") setMainMenu("briefing"); };
+  const doLogout=()=>{ setLoginUser(null); setMainMenu("list"); try{ sessionStorage.removeItem('aida:login'); }catch{} };
+
+  // 직책자가 허용되지 않은 메뉴 접근 시 강제 브리핑으로
+  useEffect(()=>{
+    if(loginUser?.type==="officer"&&!["briefing","list"].includes(mainMenu)) setMainMenu("briefing");
+  },[loginUser, mainMenu]);
 
   // ── 비밀번호 확인 ─────────────────────────────────────────
   const confirmDelete=(msg,action)=>setDeleteConfirm({msg,action});
@@ -483,15 +488,28 @@ export default function ApplicantManager() {
 
 
   const isOfficer = loginUser?.type==="officer";
+  const isAdmin   = loginUser?.type==="admin";
+
+  // 직책자 허용 메뉴 화이트리스트
+  const OFFICER_ALLOWED = ["briefing","list"];
+
+  // 직책자가 허용되지 않은 메뉴에 있으면 강제로 브리핑으로
+  const safeMenu = isOfficer && !OFFICER_ALLOWED.includes(mainMenu) ? "briefing" : mainMenu;
+
   const NAV_TABS = isOfficer
-    ? [{id:"briefing",icon:"📋",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}]
+    ? [{id:"briefing",icon:"📋",label:"브리핑"},{id:"≡",icon:"≡",label:"응시자 목록",realId:"list"}]
     : [
-        {id:"list", icon:"≡",  label:"관리 리스트"},
-        {id:"ai",   icon:"🤖", label:"AI 자동분류"},
-        {id:"report",icon:"📊",label:"월별 보고서"},
-        {id:"dept", icon:"🏢", label:"부서/팀 관리"},
-        {id:"admin",icon:"🔧", label:"관리"},
+        {id:"list",  icon:"≡",  label:"관리 리스트"},
+        {id:"ai",    icon:"🤖", label:"AI 자동분류"},
+        {id:"report",icon:"📊", label:"월별 보고서"},
+        {id:"dept",  icon:"🏢", label:"부서/팀 관리"},
+        {id:"admin", icon:"🔧", label:"관리"},
       ];
+
+  const TAB_IDS = isOfficer
+    ? [{id:"briefing",label:"📋 브리핑"},{id:"list",label:"≡ 응시자 목록"}]
+    : null;
+
   const fmtYML=ym=>{if(!ym)return"";const[y,m]=ym.split("-");return`${y}년 ${parseInt(m)}월`;};
 
   // ── 로그인 화면 ──────────────────────────────────────────────
@@ -548,12 +566,12 @@ export default function ApplicantManager() {
               <div>
                 <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>직책자 코드</label>
                 <input type="text" value={officerCode} onChange={e=>{setOfficerCode(e.target.value.toUpperCase());setOfficerErr("");}}
-                  onKeyDown={e=>{if(e.key==="Enter"){const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({type:"officer",type_code:found.type,...found});else setOfficerErr("등록되지 않은 코드입니다.");}}}
+                  onKeyDown={e=>{if(e.key==="Enter"){const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({...found, type:"officer", type_code:found.type});else setOfficerErr("등록되지 않은 코드입니다.");}}}
                   placeholder="코드 입력 (예: ABC123)" style={{width:"100%",background:C.bg,border:`1.5px solid ${officerErr?C.red:C.border}`,borderRadius:"10px",padding:"10px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box",letterSpacing:"0.1em",textTransform:"uppercase"}}
                   onFocus={e=>e.target.style.borderColor=officerErr?C.red:C.purple} onBlur={e=>e.target.style.borderColor=officerErr?C.red:C.border}/>
                 {officerErr&&<div style={{fontSize:"11px",color:C.red,marginTop:"5px"}}>⚠️ {officerErr}</div>}
               </div>
-              <button onClick={()=>{const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({type:"officer",type_code:found.type,...found});else setOfficerErr("등록되지 않은 코드입니다.");}}
+              <button onClick={()=>{const found=officerCodes.find(o=>o.code===officerCode.trim());if(found)doLogin({...found, type:"officer", type_code:found.type});else setOfficerErr("등록되지 않은 코드입니다.");}}
                 style={{padding:"11px",borderRadius:"10px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>
                 직책자로 로그인
               </button>
@@ -574,7 +592,30 @@ export default function ApplicantManager() {
       <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100}}>
         <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px",flexWrap:"nowrap"}}>
           <span style={{fontWeight:900,fontSize:"13px",color:C.blue,marginRight:"20px",letterSpacing:"-0.5px",display:"flex",alignItems:"center",whiteSpace:"nowrap"}}>테스트관리시스템</span>
-          {NAV_TABS.map(tab=>{
+
+          {/* 직책자: 브리핑 + 응시자 목록만 */}
+          {isOfficer&&(
+            <>
+              {[{id:"briefing",icon:"📋",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}].map(tab=>{
+                const active=safeMenu===tab.id;
+                return(
+                  <button key={tab.id} onClick={()=>setMainMenu(tab.id)}
+                    style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.purple}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.purple:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+                    {tab.icon} {tab.label}
+                  </button>
+                );
+              })}
+            </>
+          )}
+
+          {/* 관리자: 전체 메뉴 */}
+          {isAdmin&&[
+            {id:"list",  icon:"≡",  label:"관리 리스트"},
+            {id:"ai",    icon:"🤖", label:"AI 자동분류"},
+            {id:"report",icon:"📊", label:"월별 보고서"},
+            {id:"dept",  icon:"🏢", label:"부서/팀 관리"},
+            {id:"admin", icon:"🔧", label:"관리"},
+          ].map(tab=>{
             const active=mainMenu===tab.id;
             return(
               <button key={tab.id} onClick={()=>{
@@ -634,14 +675,13 @@ export default function ApplicantManager() {
         </div>
 
         {/* ═══ 브리핑 (직책자 전용) ═══ */}
-        {mainMenu==="briefing"&&isOfficer&&(()=>{
+        {safeMenu==="briefing"&&isOfficer&&(()=>{
           const orgLabel = loginUser.type_code==="division"
             ? `🏢 ${loginUser.division}`
             : `👥 ${loginUser.division} · ${loginUser.team}`;
 
           // 연도 목록
           const allYears=[...new Set(visibleApplicants.flatMap(a=>[a.date1,a.date2,a.date3].filter(Boolean).map(d=>d.slice(0,4))))].sort().reverse();
-          const [selYear, setSelYear] = [useState(allYears[0]||"")[0], useState(allYears[0]||"")[1]];
 
           const BriefingPage=()=>{
             const [year,setYear]=useState(allYears[0]||"");
@@ -812,7 +852,7 @@ export default function ApplicantManager() {
         })()}
 
         {/* ═══ 관리 리스트 ═══ */}
-        {(mainMenu==="list")&&(
+        {(isOfficer?safeMenu==="list":mainMenu==="list")&&(
           <>
           {appViewMode==="monthly"?(
             <>
@@ -902,7 +942,7 @@ export default function ApplicantManager() {
                 </div>
               )}
             </div>
-            {selectedIds.length>0&&(
+            {!isOfficer&&selectedIds.length>0&&(
               <div style={{marginBottom:"12px",padding:"10px 16px",background:`linear-gradient(135deg,${C.blue}0e,${C.purple}08)`,borderRadius:"12px",border:`1.5px solid ${C.blue}33`,display:"flex",alignItems:"center",gap:"16px",flexWrap:"wrap",boxShadow:shadow}}>
                 <span style={{fontSize:"12px",fontWeight:800,color:C.blue}}>✓ {selectedIds.length}명 선택됨</span>
                 <div style={{display:"flex",gap:"10px",fontSize:"12px",flexWrap:"wrap"}}>
@@ -932,20 +972,21 @@ export default function ApplicantManager() {
             <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadowLg}}>
               <table style={{borderCollapse:"collapse",width:"100%",fontSize:"12px",tableLayout:"fixed"}}>
                 <colgroup>
-                  <col style={{width:"36px"}}/><col style={{width:"82px"}}/><col style={{width:"68px"}}/><col style={{width:"100px"}}/>
+                  {!isOfficer&&<><col style={{width:"36px"}}/></>}<col style={{width:"82px"}}/><col style={{width:"68px"}}/><col style={{width:"100px"}}/>
                   <col style={{width:"108px"}}/><col style={{width:"96px"}}/><col style={{width:"148px"}}/><col style={{width:"108px"}}/>
-                  <col style={{width:"88px"}}/><col style={{width:"72px"}}/><col style={{width:"54px"}}/>
+                  <col style={{width:"88px"}}/><col style={{width:"72px"}}/>{!isOfficer&&<col style={{width:"54px"}}/>}
                 </colgroup>
                 <thead>
                   <tr style={{background:C.bg,borderBottom:`1.5px solid ${C.border}`}}>
-                    <th style={{padding:"10px 0",textAlign:"center",borderRight:`1px solid ${C.border}`}}>
+                    {!isOfficer&&<th style={{padding:"10px 0",textAlign:"center",borderRight:`1px solid ${C.border}`}}>
                       <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{cursor:"pointer",width:"14px",height:"14px",accentColor:C.blue}}/>
-                    </th>
+                    </th>}
                     {[
                       {label:"입사년월",key:"joinYearMonth"},{label:"이름",key:"name"},{label:"구분(회사)",key:"company"},
                       {label:"소속본부",key:"division"},{label:"소속팀",key:"team"},{label:"이메일",key:"email"},
                       {label:"테스트 결과",key:"testResult",bg:`${C.green}06`},{label:"최종 상태",key:"finalStatus",bg:`${C.purple}06`},
-                      {label:"메모",key:null},{label:"",key:null},
+                      {label:"메모",key:null},
+                      ...(!isOfficer?[{label:"",key:null}]:[]),
                     ].map(({label,key,bg},i)=>{
                       const isActive=sortConfig.key===key;
                       const arrow=!key?"":(isActive?(sortConfig.dir==="asc"?"↑":"↓"):"↕");
@@ -962,7 +1003,7 @@ export default function ApplicantManager() {
                 </thead>
                 <tbody>
                   {sorted.length===0?(
-                    <tr><td colSpan={11} style={{padding:"60px",textAlign:"center",color:C.muted}}>
+                    <tr><td colSpan={isOfficer?10:11} style={{padding:"60px",textAlign:"center",color:C.muted}}>
                       <div style={{fontSize:"32px",marginBottom:"8px"}}>👥</div>
                       <div style={{fontWeight:600,color:C.subtle}}>등록된 응시자가 없습니다</div>
                     </td></tr>
@@ -976,9 +1017,9 @@ export default function ApplicantManager() {
                     const isSel=selectedIds.includes(a.id);
                     return(
                       <tr key={a.id} style={{borderBottom:idx<sorted.length-1?`1px solid ${C.border}`:"none",background:isSel?`${C.blue}06`:"transparent",transition:"background 0.15s"}} onMouseEnter={e=>{if(!isSel)e.currentTarget.style.background=`${C.blue}04`;}} onMouseLeave={e=>{if(!isSel)e.currentTarget.style.background="transparent";}}>
-                        <td style={{padding:"8px 0",textAlign:"center",borderRight:`1px solid ${C.border}`}}>
+                        {!isOfficer&&<td style={{padding:"8px 0",textAlign:"center",borderRight:`1px solid ${C.border}`}}>
                           <input type="checkbox" checked={isSel} onChange={()=>toggleSelect(a.id)} style={{cursor:"pointer",width:"14px",height:"14px",accentColor:C.blue}}/>
-                        </td>
+                        </td>}
                         <td style={{padding:"8px 10px",color:C.subtle,fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{a.joinYearMonth||"—"}</td>
                         <td style={{padding:"8px 10px",fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{a.name}</td>
                         <td style={{padding:"8px 10px",borderRight:`1px solid ${C.border}`,overflow:"hidden"}}>
@@ -1034,7 +1075,7 @@ export default function ApplicantManager() {
         )}
 
         {/* AI 자동분류 페이지 */}
-        {mainMenu==="ai"&&(()=>{
+        {isAdmin&&mainMenu==="ai"&&(()=>{
           const am=aiMailModal||{step:1,yearMonth:"",availableYMs:[],groups:{},emails:[],isGenerating:false};
           const setAM=patch=>setAiMailModal(p=>({...(p||am),...patch}));
           const monthApps=am.yearMonth?getMonthApplicants(am.yearMonth):[];
@@ -1252,7 +1293,7 @@ export default function ApplicantManager() {
         })()}
 
         {/* 부서/팀 관리 페이지 */}
-        {mainMenu==="dept"&&(
+        {isAdmin&&mainMenu==="dept"&&(
           <div>
             <div style={{display:"flex",gap:"8px",marginBottom:"20px",flexWrap:"wrap",alignItems:"center"}}>
               <div style={{flex:1,fontSize:"13px",color:C.muted}}>회사 › 본부 › 팀 구조를 등록하고 관리합니다.</div>
@@ -1322,7 +1363,7 @@ export default function ApplicantManager() {
         )}
 
         {/* ═══ 월별 보고서 ═══ */}
-        {mainMenu==="report"&&(()=>{
+        {isAdmin&&mainMenu==="report"&&(()=>{
           // 사용 가능한 년월 목록
           const allYMs=new Set();
           applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>allYMs.add(d.slice(0,7)));});
@@ -1694,7 +1735,7 @@ export default function ApplicantManager() {
           );
         })()}
 
-      {applicantModal&&(()=>{
+      {applicantModal&&!isOfficer&&(()=>{
         // ── setAM: 과목합산→총점, 점수→합불, 최종상태 자동 ──
         const setAM=patch=>setApplicantModal(p=>{
           let d={...p.data,...patch};
