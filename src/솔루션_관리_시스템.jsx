@@ -44,10 +44,40 @@ const shadow   = "0 1px 6px rgba(0,0,0,0.07),0 4px 16px rgba(0,0,0,0.05)";
 const shadowLg = "0 4px 24px rgba(0,0,0,0.09),0 1px 4px rgba(0,0,0,0.05)";
 const uid = () => Math.random().toString(36).slice(2, 8);
 
+// ── RBAC 설정 ────────────────────────────────────────────────
+const ROLES = {
+  super_admin: { label:"최고 관리자", color:"#7c3aed", bg:"#f5f3ff", icon:"👑" },
+  admin:       { label:"관리자",      color:"#1d4ed8", bg:"#eff6ff", icon:"🔑" },
+  viewer:      { label:"뷰어",        color:"#0d9488", bg:"#f0fdfa", icon:"👁" },
+};
+// 권한 매트릭스: 역할별 허용 기능
+const CAN = {
+  edit_applicant:  ["super_admin","admin"],
+  delete_applicant:["super_admin","admin"],
+  import_excel:    ["super_admin","admin"],
+  backup:          ["super_admin","admin"],
+  reset_all:       ["super_admin"],
+  ai_menu:         ["super_admin","admin","viewer"],
+  report_menu:     ["super_admin","admin","viewer"],
+  dept_menu:       ["super_admin","admin"],
+  edit_dept:       ["super_admin","admin"],
+  admin_menu:      ["super_admin"],
+  manage_accounts: ["super_admin"],
+};
+const can = (role, action) => CAN[action]?.includes(role) ?? false;
+
+// 간단한 해시 (SHA-256 대신 btoa+salt — 프로덕션엔 bcrypt 권장)
+const hashPw = async (pw) => {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("aida_salt_"+pw));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+};
+const INITIAL_SUPER = { id:"super_0", username:"admin", role:"super_admin", name:"최고 관리자" };
+const INITIAL_SUPER_PW = "0000"; // 최초 비밀번호
+
 // ── 응시자 관련 상수 ──────────────────────────────────────────
 const COMPANY_OPTIONS      = ["오케스트로","오케스트로클라우드","오케스트로AGI","기타"];
 const PASS_STATUS_OPTIONS  = ["합격","불합격","미응시","-"];
-const FINAL_STATUS_OPTIONS = ["합격","불합격","진행중","해당없음","퇴사"];
+const FINAL_STATUS_OPTIONS = ["합격","불합격","진행중","면제","퇴사"];
 
 const PASS_STATUS_COLORS = {
   "합격":   {bg:"#f0fdf4",border:"#bbf7d0",text:"#059669"},
@@ -60,7 +90,7 @@ const FINAL_STATUS_COLORS = {
   "합격":    {bg:"#f0fdf4",border:"#bbf7d0",text:"#059669"},
   "불합격":  {bg:"#fef2f2",border:"#fecaca",text:"#dc2626"},
   "진행중":  {bg:"#eff6ff",border:"#bfdbfe",text:"#3b82f6"},
-  "해당없음":{bg:"#f8fafc",border:"#e2e8f0",text:"#94a3b8"},
+  "면제":{bg:"#f8fafc",border:"#e2e8f0",text:"#94a3b8"},
   "퇴사":    {bg:"#fdf4ff",border:"#e9d5ff",text:"#7c3aed"},
   "":        {bg:"#eff6ff",border:"#bfdbfe",text:"#93c5fd"},
 };
@@ -118,9 +148,11 @@ export default function ApplicantManager() {
   const [reportMonth,     setReportMonth]      = useState("");
   const [subjects,        setSubjects]         = useState([]);
   const [showSubjSetting, setShowSubjSetting]  = useState(false);
-  const [loginUser,       setLoginUser]        = useState(null); // null | {type:"admin"} | {type:"officer", code, name, division, team}
-  const [officerCodes,    setOfficerCodes]     = useState([]); // [{id, code, name, division, team}]
+  const [loginUser,       setLoginUser]        = useState(null);
+  const [officerCodes,    setOfficerCodes]     = useState([]);
   const [showOfficerMgr,  setShowOfficerMgr]   = useState(false);
+  const [adminAccounts,   setAdminAccounts]    = useState([]); // [{id,username,pwHash,role,name}]
+  const [acctLoaded,      setAcctLoaded]       = useState(false);
 
   const appFileRef  = useRef(null);
   const deptFileRef = useRef(null);
@@ -186,18 +218,35 @@ export default function ApplicantManager() {
   },[]);
   useEffect(()=>{ if(!codeLoaded) return; stSet('aida:officerCodes_v1', officerCodes); },[officerCodes, codeLoaded]);
 
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const data=await stGet('aida:adminAccounts_v1');
+        if(data&&Array.isArray(data)&&data.length>0){ setAdminAccounts(data); }
+        else{
+          // 최초 실행: super_admin 계정 자동 생성
+          const hash=await hashPw(INITIAL_SUPER_PW);
+          const initAcct=[{...INITIAL_SUPER, pwHash:hash}];
+          setAdminAccounts(initAcct);
+          stSet('aida:adminAccounts_v1', initAcct);
+        }
+      }catch{
+        const hash=await hashPw(INITIAL_SUPER_PW);
+        setAdminAccounts([{...INITIAL_SUPER, pwHash:hash}]);
+      }
+      finally{ setAcctLoaded(true); }
+    })();
+  },[]);
+  useEffect(()=>{ if(!acctLoaded) return; stSet('aida:adminAccounts_v1', adminAccounts); },[adminAccounts, acctLoaded]);
+
   // 세션 로그인 복원
   useEffect(()=>{
     const urlRole = new URLSearchParams(window.location.search).get("role");
-    if(urlRole === "officer"){
-      // 직책자 URL: 세션 복원 시도
-      try{
-        const s=sessionStorage.getItem('aida:login');
-        if(s){ const u=JSON.parse(s); if(u?.type==="officer") setLoginUser(u); }
-      }catch{}
+    if(urlRole==="officer"){
+      try{ const s=sessionStorage.getItem('aida:login'); if(s){const u=JSON.parse(s);if(u?.type==="officer")setLoginUser(u);} }catch{}
     } else {
-      // 관리자 URL: 자동 로그인
-      setLoginUser({type:"admin"});
+      // 관리자 URL: 세션 복원 (없으면 로그인 화면)
+      try{ const s=sessionStorage.getItem('aida:login'); if(s){const u=JSON.parse(s);if(u?.type==="admin_rbac")setLoginUser(u);} }catch{}
     }
   },[]);
   const doLogin=(user)=>{ setLoginUser(user); try{ sessionStorage.setItem('aida:login',JSON.stringify(user)); }catch{}; if(user.type==="officer") setMainMenu("briefing"); };
@@ -564,32 +613,91 @@ export default function ApplicantManager() {
   ];
 
 
-  const isOfficer = loginUser?.type==="officer";
-  const isAdmin   = loginUser?.type==="admin";
+  const isOfficer    = loginUser?.type==="officer";
+  const userRole     = isOfficer ? null : (loginUser?.role || null);
+  const isAdmin      = loginUser?.type==="admin_rbac";
+  const isSuperAdmin = userRole==="super_admin";
 
   // 직책자 허용 메뉴 화이트리스트
   const OFFICER_ALLOWED = ["briefing","list"];
-
-  // 직책자가 허용되지 않은 메뉴에 있으면 강제로 브리핑으로
   const safeMenu = isOfficer && !OFFICER_ALLOWED.includes(mainMenu) ? "briefing" : mainMenu;
 
-  const NAV_TABS = isOfficer
-    ? [{id:"briefing",icon:"📋",label:"브리핑"},{id:"≡",icon:"≡",label:"응시자 목록",realId:"list"}]
-    : [
-        {id:"list",  icon:"≡",  label:"관리 리스트"},
-        {id:"ai",    icon:"🤖", label:"AI 자동분류"},
-        {id:"report",icon:"📊", label:"월별 보고서"},
-        {id:"dept",  icon:"🏢", label:"부서/팀 관리"},
-        {id:"admin", icon:"🔧", label:"관리"},
-      ];
-
-  const TAB_IDS = isOfficer
-    ? [{id:"briefing",label:"📋 브리핑"},{id:"list",label:"≡ 응시자 목록"}]
-    : null;
+  const ADMIN_TABS = isAdmin ? [
+    {id:"list",   icon:"≡",  label:"관리 리스트"},
+    ...(can(userRole,"ai_menu")     ?[{id:"ai",    icon:"🤖",label:"AI 자동분류"}]:[]),
+    ...(can(userRole,"report_menu") ?[{id:"report",icon:"📊",label:"월별 보고서"}]:[]),
+    ...(can(userRole,"dept_menu")   ?[{id:"dept",  icon:"🏢",label:"부서/팀 관리"}]:[]),
+    ...(isSuperAdmin                ?[{id:"admin", icon:"🔧",label:"관리"}]:[]),
+  ] : [];
 
   const fmtYML=ym=>{if(!ym)return"";const[y,m]=ym.split("-");return`${y}년 ${parseInt(m)}월`;};
 
-  // ── 로그인 화면 (직책자 URL 전용) ────────────────────────────
+  // ── 관리자 로그인 화면 ───────────────────────────────────────
+  const urlRole = new URLSearchParams(window.location.search).get("role");
+  if(!loginUser && urlRole !== "officer"){
+    const AdminLogin=()=>{
+      const [username,setUsername]=useState("");
+      const [password,setPassword]=useState("");
+      const [err,setErr]=useState("");
+      const [loading,setLoading]=useState(false);
+      const handleLogin=async()=>{
+        if(!username.trim()||!password.trim()){setErr("아이디와 비밀번호를 입력해주세요.");return;}
+        setLoading(true); setErr("");
+        try{
+          const hash=await hashPw(password);
+          const acct=adminAccounts.find(a=>a.username===username.trim()&&a.pwHash===hash);
+          if(acct){ doLogin({type:"admin_rbac", id:acct.id, username:acct.username, name:acct.name, role:acct.role}); }
+          else{ setErr("아이디 또는 비밀번호가 올바르지 않습니다."); }
+        }catch(e){ setErr("로그인 중 오류가 발생했습니다."); }
+        finally{ setLoading(false); }
+      };
+      return(
+        <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.blue}11,${C.purple}08,${C.bg})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+          <style>{`@keyframes modalIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
+          <div style={{textAlign:"center",marginBottom:"36px",animation:"modalIn 0.4s ease"}}>
+            <div style={{fontSize:"12px",color:C.muted,marginTop:"4px"}}>관리자 로그인</div>
+          </div>
+          <div style={{width:"100%",maxWidth:"380px",animation:"modalIn 0.5s ease"}}>
+            <div style={{background:C.surface,borderRadius:"20px",padding:"32px",boxShadow:shadowLg,border:`1.5px solid ${C.blue}22`,display:"flex",flexDirection:"column",gap:"18px"}}>
+              <div style={{textAlign:"center",marginBottom:"4px"}}>
+                <div style={{fontSize:"28px",marginBottom:"6px"}}>🔑</div>
+                <div style={{fontWeight:900,fontSize:"18px",color:C.text}}>테스트관리시스템</div>
+                <div style={{fontSize:"11px",color:C.muted,marginTop:"4px"}}>관리자 계정으로 로그인하세요</div>
+              </div>
+              <div>
+                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>아이디</label>
+                <input type="text" value={username} onChange={e=>{setUsername(e.target.value);setErr("");}}
+                  onKeyDown={e=>{if(e.key==="Enter")handleLogin();}}
+                  placeholder="아이디 입력" autoFocus
+                  style={{width:"100%",background:C.bg,border:`1.5px solid ${err?C.red:C.border}`,borderRadius:"10px",padding:"11px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}
+                  onFocus={e=>e.target.style.borderColor=err?C.red:C.blueLight} onBlur={e=>e.target.style.borderColor=err?C.red:C.border}/>
+              </div>
+              <div>
+                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>비밀번호</label>
+                <input type="password" value={password} onChange={e=>{setPassword(e.target.value);setErr("");}}
+                  onKeyDown={e=>{if(e.key==="Enter")handleLogin();}}
+                  placeholder="비밀번호 입력"
+                  style={{width:"100%",background:C.bg,border:`1.5px solid ${err?C.red:C.border}`,borderRadius:"10px",padding:"11px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}
+                  onFocus={e=>e.target.style.borderColor=err?C.red:C.blueLight} onBlur={e=>e.target.style.borderColor=err?C.red:C.border}/>
+                {err&&<div style={{fontSize:"11px",color:C.red,marginTop:"6px"}}>⚠️ {err}</div>}
+              </div>
+              <button onClick={handleLogin} disabled={loading}
+                style={{padding:"13px",borderRadius:"10px",border:"none",cursor:loading?"not-allowed":"pointer",background:loading?C.border:`linear-gradient(135deg,${C.blue}dd,${C.blue})`,color:"#fff",fontSize:"14px",fontWeight:800,fontFamily:"inherit",transition:"all 0.15s"}}>
+                {loading?"로그인 중...":"로그인"}
+              </button>
+              <div style={{fontSize:"11px",color:C.muted,textAlign:"center",padding:"8px 14px",background:C.bg,borderRadius:"8px",lineHeight:1.7}}>
+                초기 계정: <b style={{color:C.blue}}>admin</b> / <b style={{color:C.blue}}>0000</b><br/>
+                <span style={{fontSize:"10px"}}>로그인 후 즉시 비밀번호를 변경해주세요</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+    return <AdminLogin key="admin-login"/>;
+  }
+
+  // ── 직책자 로그인 화면 ────────────────────────────────────────
   if(!loginUser){
     const OfficerLoginOnly=()=>{
       const [officerCode,setOfficerCode]=useState("");
@@ -656,14 +764,8 @@ export default function ApplicantManager() {
             </>
           )}
 
-          {/* 관리자: 전체 메뉴 */}
-          {isAdmin&&[
-            {id:"list",  icon:"≡",  label:"관리 리스트"},
-            {id:"ai",    icon:"🤖", label:"AI 자동분류"},
-            {id:"report",icon:"📊", label:"월별 보고서"},
-            {id:"dept",  icon:"🏢", label:"부서/팀 관리"},
-            {id:"admin", icon:"🔧", label:"관리"},
-          ].map(tab=>{
+          {/* 관리자: 역할별 메뉴 */}
+          {isAdmin&&ADMIN_TABS.map(tab=>{
             const active=mainMenu===tab.id;
             return(
               <button key={tab.id} onClick={()=>{
@@ -681,6 +783,14 @@ export default function ApplicantManager() {
             );
           })}
           <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:"8px",fontSize:"11px",flexShrink:0}}>
+            {/* 로그인 정보 - 관리자 뱃지 */}
+            {isAdmin&&(
+              <div style={{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",background:ROLES[userRole]?.bg||`${C.blue}10`,border:`1px solid ${ROLES[userRole]?.color||C.blue}33`}}>
+                <span style={{fontSize:"12px"}}>{ROLES[userRole]?.icon||"🔑"}</span>
+                <span style={{fontWeight:700,color:ROLES[userRole]?.color||C.blue,fontSize:"12px",whiteSpace:"nowrap"}}>{loginUser?.name||loginUser?.username}</span>
+                <span style={{fontSize:"10px",color:ROLES[userRole]?.color||C.blue,opacity:0.7,whiteSpace:"nowrap"}}>{ROLES[userRole]?.label}</span>
+              </div>
+            )}
             {/* 로그인 정보 - 직책자만 표시 */}
             {isOfficer&&<div style={{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",background:`${C.purple}10`,border:`1px solid ${C.purple}33`}}>
               <span style={{fontSize:"13px"}}>👤</span>
@@ -707,7 +817,7 @@ export default function ApplicantManager() {
                 <span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.red,display:"inline-block",flexShrink:0}}/>DB 오류 ⚠️
               </span>
             )}
-            {isOfficer&&<button onClick={doLogout} style={{padding:"4px 12px",borderRadius:"20px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap"}}>로그아웃</button>}
+            {(isOfficer||isAdmin)&&<button onClick={doLogout} style={{padding:"4px 12px",borderRadius:"20px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap"}}>로그아웃</button>}
           </div>
         </div>
       </div>
@@ -1017,11 +1127,11 @@ export default function ApplicantManager() {
               </div>
               <input value={applicantSearch} onChange={e=>setApplicantSearch(e.target.value)} placeholder="이름·소속·이메일·입사년월 검색..." style={{flex:1,minWidth:"180px",background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:"9px",padding:"7px 12px",color:C.text,fontSize:"13px",outline:"none",fontFamily:"inherit"}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
               <button onClick={()=>setAppViewMode("monthly")} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📅 월별 보기</button>
-              {!isOfficer&&<><input ref={appFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importApplicantExcel(e.target.files[0]);e.target.value='';}}/>
+              {isAdmin&&can(userRole,"import_excel")&&<><input ref={appFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importApplicantExcel(e.target.files[0]);e.target.value='';}}/>
               <button onClick={downloadApplicantTemplate} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}06`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>⬇️ 양식 다운로드</button>
-              <button onClick={()=>appFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📊 일괄등록</button>
-              <button onClick={backupApplicantData} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>💾 데이터 백업</button>
-              <button onClick={()=>setApplicantModal({mode:'add',data:{...EMPTY_APPLICANT}})} style={{padding:"7px 16px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>＋ 추가</button></>}
+              <button onClick={()=>appFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📊 일괄등록</button></>}
+              {isAdmin&&can(userRole,"backup")&&<button onClick={backupApplicantData} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>💾 데이터 백업</button>}
+              {isAdmin&&can(userRole,"edit_applicant")&&<button onClick={()=>setApplicantModal({mode:'add',data:{...EMPTY_APPLICANT}})} style={{padding:"7px 16px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>＋ 추가</button>}
             </div>
             <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadowLg}}>
               <table style={{borderCollapse:"collapse",width:"100%",fontSize:"12px",tableLayout:"fixed"}}>
@@ -1075,7 +1185,10 @@ export default function ApplicantManager() {
                           <input type="checkbox" checked={isSel} onChange={()=>toggleSelect(a.id)} style={{cursor:"pointer",width:"14px",height:"14px",accentColor:C.blue}}/>
                         </td>}
                         <td style={{padding:"8px 10px",color:C.subtle,fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{a.joinYearMonth||"—"}</td>
-                        <td style={{padding:"8px 10px",fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{a.name}</td>
+                        <td style={{padding:"8px 10px",fontWeight:700,color:(isAdmin&&can(userRole,"edit_applicant"))?C.blue:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`,cursor:(isAdmin&&can(userRole,"edit_applicant"))?"pointer":"default",textDecoration:(isAdmin&&can(userRole,"edit_applicant"))?"underline":"none",textUnderlineOffset:"2px"}}
+                          onClick={(isAdmin&&can(userRole,"edit_applicant"))?()=>setApplicantModal({mode:'edit',data:{...a}}):undefined}
+                          title={(isAdmin&&can(userRole,"edit_applicant"))?"클릭하여 상세 정보 수정":""}
+                        >{a.name}</td>
                         <td style={{padding:"8px 10px",borderRight:`1px solid ${C.border}`,overflow:"hidden"}}>
                           <span style={{fontSize:"11px",padding:"2px 7px",borderRadius:"6px",background:`${C.blue}10`,color:C.blue,fontWeight:600,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.company||"—"}</span>
                         </td>
@@ -1108,8 +1221,8 @@ export default function ApplicantManager() {
                         </td>
                         <td style={{padding:"8px 6px",textAlign:"center"}}>
                           <div style={{display:"flex",gap:"3px",justifyContent:"center"}}>
-                            {!isOfficer&&<><button onClick={()=>setApplicantModal({mode:'edit',data:{...a}})} title="수정" style={{width:"26px",height:"26px",background:`${C.blue}10`,border:`1px solid ${C.blue}22`,borderRadius:"6px",cursor:"pointer",color:C.blue,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}22`} onMouseLeave={e=>e.currentTarget.style.background=`${C.blue}10`}>✏️</button>
-                            <button onClick={()=>deleteApplicant(a.id)} title="삭제" style={{width:"26px",height:"26px",background:"#fee2e2",border:"1px solid #dc262222",borderRadius:"6px",cursor:"pointer",color:C.red,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#fecaca"} onMouseLeave={e=>e.currentTarget.style.background="#fee2e2"}>🗑</button></>}
+                            {isAdmin&&can(userRole,"edit_applicant")&&<button onClick={()=>setApplicantModal({mode:'edit',data:{...a}})} title="수정" style={{width:"26px",height:"26px",background:`${C.blue}10`,border:`1px solid ${C.blue}22`,borderRadius:"6px",cursor:"pointer",color:C.blue,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}22`} onMouseLeave={e=>e.currentTarget.style.background=`${C.blue}10`}>✏️</button>}
+                            {isAdmin&&can(userRole,"delete_applicant")&&<button onClick={()=>deleteApplicant(a.id)} title="삭제" style={{width:"26px",height:"26px",background:"#fee2e2",border:"1px solid #dc262222",borderRadius:"6px",cursor:"pointer",color:C.red,fontSize:"12px",display:"flex",alignItems:"center",justifyContent:"center"}} onMouseEnter={e=>e.currentTarget.style.background="#fecaca"} onMouseLeave={e=>e.currentTarget.style.background="#fee2e2"}>🗑</button>}
                           </div>
                         </td>
                       </tr>
@@ -1678,7 +1791,7 @@ export default function ApplicantManager() {
       </div>
 
         {/* ═══ 관리 (관리자 전용) ═══ */}
-        {mainMenu==="admin"&&loginUser?.type==="admin"&&(()=>{
+        {mainMenu==="admin"&&isSuperAdmin&&(()=>{
           const genCode=()=>{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");};
           // 본부/팀 코드 인라인 저장
           const upsertCode=(type,division,team,name,code)=>{
@@ -1778,19 +1891,123 @@ export default function ApplicantManager() {
           };
           return(
             <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px 60px"}}>
-              <div style={{marginBottom:"20px",paddingBottom:"12px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:"12px"}}>
+              <div style={{marginBottom:"24px",paddingBottom:"12px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:"12px"}}>
                 <span style={{fontSize:"18px"}}>🔧</span>
-                <div>
-                  <div style={{fontWeight:800,fontSize:"15px",color:C.text}}>관리자 설정 — 직책자 접근 코드 관리</div>
-                  <div style={{fontSize:"12px",color:C.muted,marginTop:"2px"}}>본부장·팀장별 접근 코드를 등록합니다. 🏢 본부장 코드로 접속하면 본부 전체를, 👥 팀장 코드로 접속하면 해당 팀만 열람할 수 있습니다.</div>
-                </div>
+                <div><div style={{fontWeight:800,fontSize:"15px",color:C.text}}>관리자 설정</div><div style={{fontSize:"12px",color:C.muted,marginTop:"2px"}}>직책자 코드 및 관리자 계정을 관리합니다</div></div>
               </div>
-              <AdminTree key="admin-tree"/>
+
+              {/* 탭 */}
+              {(()=>{
+                const AdminMgmtPanel=()=>{
+                  const [activeTab,setActiveTab]=useState("officer");
+                  return(
+                    <div>
+                      <div style={{display:"flex",gap:"4px",marginBottom:"20px",background:C.bg,borderRadius:"12px",padding:"4px",border:`1px solid ${C.border}`,width:"fit-content"}}>
+                        {[{id:"officer",label:"👤 직책자 코드"},{id:"accounts",label:"🔑 관리자 계정"}].map(t=>(
+                          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{padding:"8px 18px",borderRadius:"9px",border:"none",cursor:"pointer",background:activeTab===t.id?C.surface:"transparent",color:activeTab===t.id?C.blue:C.muted,fontSize:"13px",fontWeight:activeTab===t.id?700:400,fontFamily:"inherit",boxShadow:activeTab===t.id?shadow:"none",transition:"all 0.15s"}}>{t.label}</button>
+                        ))}
+                      </div>
+
+                      {activeTab==="officer"&&<AdminTree key="admin-tree"/>}
+
+                      {activeTab==="accounts"&&(()=>{
+                        const AccountMgr=()=>{
+                          const [form,setForm]=useState({username:"",password:"",name:"",role:"admin"});
+                          const [editId,setEditId]=useState(null);
+                          const [editPw,setEditPw]=useState("");
+                          const [msg,setMsg]=useState("");
+                          const saveAccount=async()=>{
+                            if(!form.username.trim()||!form.name.trim()){setMsg("아이디와 이름은 필수입니다.");return;}
+                            if(!editId&&!form.password.trim()){setMsg("비밀번호를 입력해주세요.");return;}
+                            if(!editId&&adminAccounts.find(a=>a.username===form.username.trim())){setMsg("이미 사용 중인 아이디입니다.");return;}
+                            const hash=form.password.trim()?await hashPw(form.password.trim()):"";
+                            if(editId){
+                              setAdminAccounts(p=>p.map(a=>a.id===editId?{...a,username:form.username.trim(),name:form.name.trim(),role:form.role,...(hash?{pwHash:hash}:{})}:a));
+                            } else {
+                              setAdminAccounts(p=>[...p,{id:uid(),username:form.username.trim(),pwHash:hash,name:form.name.trim(),role:form.role}]);
+                            }
+                            setForm({username:"",password:"",name:"",role:"admin"});setEditId(null);setMsg("저장됐습니다.");setTimeout(()=>setMsg(""),2000);
+                          };
+                          return(
+                            <div style={{display:"grid",gridTemplateColumns:"340px 1fr",gap:"20px",alignItems:"start"}}>
+                              {/* 계정 등록 폼 */}
+                              <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
+                                <div style={{padding:"14px 18px",background:`linear-gradient(135deg,${C.purple}08,${C.purple}04)`,borderBottom:`1px solid ${C.border}`}}>
+                                  <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>{editId?"✏️ 계정 수정":"➕ 계정 등록"}</div>
+                                </div>
+                                <div style={{padding:"18px",display:"flex",flexDirection:"column",gap:"12px"}}>
+                                  <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>아이디 *</label><input value={form.username} onChange={e=>setForm(p=>({...p,username:e.target.value}))} placeholder="예: hong" style={inp()} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                                  <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>이름 *</label><input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} placeholder="예: 홍길동" style={inp()} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                                  <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>비밀번호 {editId&&<span style={{fontWeight:400,color:C.muted}}>(빈칸이면 유지)</span>}</label><input type="password" value={form.password} onChange={e=>setForm(p=>({...p,password:e.target.value}))} placeholder={editId?"변경할 경우만 입력":"비밀번호"} style={inp()} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                                  <div>
+                                    <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>역할 *</label>
+                                    <div style={{display:"flex",gap:"6px"}}>
+                                      {Object.entries(ROLES).map(([role,info])=>(
+                                        <button key={role} onClick={()=>setForm(p=>({...p,role}))} style={{flex:1,padding:"8px 6px",borderRadius:"8px",border:`1.5px solid ${form.role===role?info.color:C.border}`,background:form.role===role?info.bg:"transparent",color:form.role===role?info.color:C.muted,fontSize:"11px",fontWeight:form.role===role?700:400,cursor:"pointer",fontFamily:"inherit",textAlign:"center"}}>
+                                          {info.icon}<br/><span style={{fontSize:"10px"}}>{info.label}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {msg&&<div style={{fontSize:"12px",color:msg.includes("저장")?C.green:C.red,background:msg.includes("저장")?"#f0fdf4":"#fef2f2",padding:"8px 12px",borderRadius:"8px"}}>{msg}</div>}
+                                  <div style={{display:"flex",gap:"8px"}}>
+                                    <button onClick={saveAccount} style={{flex:1,padding:"10px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>{editId?"저장":"등록"}</button>
+                                    {editId&&<button onClick={()=>{setEditId(null);setForm({username:"",password:"",name:"",role:"admin"});}} style={{padding:"10px 16px",borderRadius:"9px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"13px",fontFamily:"inherit"}}>취소</button>}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 계정 목록 */}
+                              <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
+                                <div style={{padding:"14px 18px",background:`linear-gradient(135deg,${C.blue}08,${C.blue}04)`,borderBottom:`1px solid ${C.border}`}}>
+                                  <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>🔑 관리자 계정 목록 <span style={{fontSize:"12px",fontWeight:500,color:C.muted}}>({adminAccounts.length}명)</span></div>
+                                </div>
+                                <table style={{borderCollapse:"collapse",width:"100%",fontSize:"12px"}}>
+                                  <thead>
+                                    <tr style={{background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+                                      {["아이디","이름","역할",""].map((h,i)=>(<th key={i} style={{padding:"9px 14px",textAlign:"left",fontSize:"11px",fontWeight:700,color:C.muted,borderRight:i<3?`1px solid ${C.border}`:"none"}}>{h}</th>))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {adminAccounts.map(acct=>{
+                                      const ri=ROLES[acct.role]||{label:acct.role,color:C.muted,bg:C.bg,icon:"?"};
+                                      const isSelf=acct.id===loginUser?.id;
+                                      return(
+                                        <tr key={acct.id} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                                          <td style={{padding:"10px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>
+                                            {acct.username}{isSelf&&<span style={{marginLeft:"6px",fontSize:"10px",color:C.blue,background:`${C.blue}10`,padding:"1px 6px",borderRadius:"10px"}}>나</span>}
+                                          </td>
+                                          <td style={{padding:"10px 14px",color:C.subtle,borderRight:`1px solid ${C.border}`}}>{acct.name}</td>
+                                          <td style={{padding:"10px 14px",borderRight:`1px solid ${C.border}`}}>
+                                            <span style={{fontSize:"11px",padding:"3px 10px",borderRadius:"20px",background:ri.bg,color:ri.color,border:`1px solid ${ri.color}33`,fontWeight:700}}>{ri.icon} {ri.label}</span>
+                                          </td>
+                                          <td style={{padding:"8px 12px"}}>
+                                            <div style={{display:"flex",gap:"4px",justifyContent:"center"}}>
+                                              <button onClick={()=>{setEditId(acct.id);setForm({username:acct.username,password:"",name:acct.name,role:acct.role});}} style={{padding:"4px 10px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
+                                              {!isSelf&&<button onClick={()=>confirmDelete(`'${acct.name}(${acct.username})' 계정을 삭제하시겠습니까?`,()=>setAdminAccounts(p=>p.filter(a=>a.id!==acct.id)))} style={{padding:"4px 10px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>}
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          );
+                        };
+                        return <AccountMgr key="acct-mgr"/>;
+                      })()}
+                    </div>
+                  );
+                };
+                return <AdminMgmtPanel key="admin-mgmt"/>;
+              })()}
             </div>
           );
         })()}
 
-      {applicantModal&&!isOfficer&&(()=>{
+      {applicantModal&&isAdmin&&can(userRole,"edit_applicant")&&(()=>{
         // ── setAM: 과목합산→총점, 점수→합불, 최종상태 자동 ──
         const setAM=patch=>setApplicantModal(p=>{
           let d={...p.data,...patch};
@@ -1814,7 +2031,7 @@ export default function ApplicantManager() {
           });
           // 5: 최종 상태 자동 반영 (퇴사/해당없음은 수동 유지)
           if(!("finalStatus"in patch)){
-            const wasManual=["퇴사","해당없음"].includes(p.data.finalStatus);
+            const wasManual=["퇴사","면제"].includes(p.data.finalStatus);
             if(!wasManual){
               if([d.pass1,d.pass2,d.pass3].some(v=>v==="합격")) d.finalStatus="합격";
               else if(d.pass3==="불합격") d.finalStatus="불합격";
@@ -1911,63 +2128,24 @@ export default function ApplicantManager() {
                 </div>
                 <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>이메일</label><input value={applicantModal.data.email} onChange={e=>setAM({email:e.target.value})} placeholder="hong@okestro.com" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
 
-                {/* 테스트 결과 헤더 + 과목 설정 버튼 */}
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingBottom:"4px",borderBottom:`1px solid ${C.border}`,marginTop:"4px"}}>
+                {/* 테스트 결과 헤더 */}
+                <div style={{display:"flex",alignItems:"center",paddingBottom:"4px",borderBottom:`1px solid ${C.border}`,marginTop:"4px"}}>
                   <span style={{fontSize:"11px",fontWeight:800,color:C.green,letterSpacing:"0.05em"}}>
                     테스트 결과 <span style={{fontSize:"10px",fontWeight:500,color:C.muted}}>(최대 3회 · 60점 이상 합격)</span>
                   </span>
-                  <button onClick={()=>setShowSubjSetting(v=>!v)} style={{padding:"3px 10px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:showSubjSetting?`${C.blue}10`:"transparent",color:showSubjSetting?C.blue:C.muted,fontSize:"11px",fontWeight:600,fontFamily:"inherit",display:"flex",alignItems:"center",gap:"4px"}}>
-                    ⚙️ 과목 설정 {subjects.length>0&&<span style={{background:C.blue,color:"#fff",borderRadius:"10px",padding:"1px 6px",fontSize:"10px"}}>{subjects.length}</span>}
-                  </button>
                 </div>
-
-                {/* 과목 설정 패널 */}
-                {showSubjSetting&&(()=>{
-                  const SubjPanel=()=>{
-                    const [nm,setNm]=useState("");
-                    const [mx,setMx]=useState("100");
-                    return(
-                      <div style={{background:`${C.blue}06`,borderRadius:"12px",border:`1.5px solid ${C.blue}22`,padding:"14px 16px",display:"flex",flexDirection:"column",gap:"10px"}}>
-                        <div style={{fontSize:"11px",fontWeight:800,color:C.blue,marginBottom:"2px"}}>⚙️ 과목 관리 — 설정은 모든 응시자에게 공통 적용됩니다</div>
-                        {subjects.length===0?(
-                          <div style={{fontSize:"11px",color:C.muted,padding:"8px",textAlign:"center",background:C.bg,borderRadius:"8px"}}>등록된 과목이 없습니다. 아래에서 추가하세요.</div>
-                        ):(
-                          <div style={{display:"flex",flexDirection:"column",gap:"5px"}}>
-                            {subjects.map((s,i)=>(
-                              <div key={s.id} style={{display:"flex",alignItems:"center",gap:"8px",background:C.surface,borderRadius:"8px",padding:"7px 10px",border:`1px solid ${C.border}`}}>
-                                <span style={{flex:1,fontSize:"12px",fontWeight:700,color:C.text}}>{s.name}</span>
-                                <span style={{fontSize:"11px",color:C.muted,background:C.bg,padding:"2px 8px",borderRadius:"6px",border:`1px solid ${C.border}`}}>만점 {s.maxScore}점</span>
-                                <button onClick={()=>setSubjects(p=>p.filter((_,j)=>j!==i))} style={{padding:"3px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
-                              </div>
-                            ))}
-                            <div style={{fontSize:"10px",color:C.muted,textAlign:"right"}}>
-                              총 만점: <b style={{color:C.text}}>{subjects.reduce((a,s)=>a+Number(s.maxScore||0),0)}점</b>
-                            </div>
-                          </div>
-                        )}
-                        <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
-                          <input value={nm} onChange={e=>setNm(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&nm.trim()){setSubjects(p=>[...p,{id:Math.random().toString(36).slice(2,8),name:nm.trim(),maxScore:mx||"100"}]);setNm("");setMx("100");}}} placeholder="과목명 (예: IaaS)" style={{...inp({padding:"7px 10px",fontSize:"12px"}),flex:2}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/>
-                          <input value={mx} onChange={e=>setMx(e.target.value)} placeholder="만점" type="number" min="1" style={{...inp({padding:"7px 10px",fontSize:"12px"}),flex:"0 0 70px"}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/>
-                          <button onClick={()=>{if(!nm.trim())return;setSubjects(p=>[...p,{id:Math.random().toString(36).slice(2,8),name:nm.trim(),maxScore:mx||"100"}]);setNm("");setMx("100");}} style={{padding:"7px 14px",borderRadius:"8px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.blue}dd,${C.blue})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>+ 추가</button>
-                        </div>
-                      </div>
-                    );
-                  };
-                  return <SubjPanel key="subj-panel"/>;
-                })()}
 
                 {/* 차시별 점수 입력 */}
                 {[
-                  {nth:"1차",scoreKey:"score1",passKey:"pass1",dateKey:"date1",subKey:"subScores1",prev:null},
-                  {nth:"2차",scoreKey:"score2",passKey:"pass2",dateKey:"date2",subKey:"subScores2",prev:"pass1"},
-                  {nth:"3차",scoreKey:"score3",passKey:"pass3",dateKey:"date3",subKey:"subScores3",prev:"pass2"},
-                ].map(({nth,scoreKey,passKey,dateKey,subKey,prev})=>{
+                  {nth:"1차",scoreKey:"score1",passKey:"pass1",dateKey:"date1",prev:null},
+                  {nth:"2차",scoreKey:"score2",passKey:"pass2",dateKey:"date2",prev:"pass1"},
+                  {nth:"3차",scoreKey:"score3",passKey:"pass3",dateKey:"date3",prev:"pass2"},
+                ].map(({nth,scoreKey,passKey,dateKey,prev})=>{
                   const isLocked=prev&&(!applicantModal.data[prev]||applicantModal.data[prev]==="합격");
                   const lockReason=prev&&applicantModal.data[prev]==="합격"?"이전 차시 합격 — 추가 응시 불필요":"이전 회차 결과 입력 후 활성화";
                   const sc=PASS_STATUS_COLORS[applicantModal.data[passKey]]||PASS_STATUS_COLORS[""];
                   const sNum=parseFloat(applicantModal.data[scoreKey]);
                   const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
-                  const subScores=applicantModal.data[subKey]||{};
                   return(
                     <div key={nth} style={{borderRadius:"10px",border:`1.5px solid ${isLocked?C.border:applicantModal.data[passKey]?sc.border:C.border}`,padding:"12px 14px",background:isLocked?C.bg:applicantModal.data[passKey]?sc.bg+"44":"#fafbfd",opacity:isLocked?0.4:1,transition:"all 0.2s"}}>
                       <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
@@ -1976,17 +2154,14 @@ export default function ApplicantManager() {
                         {!isLocked&&applicantModal.data[passKey]==="합격"&&<span style={{fontSize:"10px",color:C.green,fontWeight:700}}>✅ 합격</span>}
                         {!isLocked&&applicantModal.data[passKey]==="불합격"&&<span style={{fontSize:"10px",color:C.red,fontWeight:700}}>❌ 불합격</span>}
                       </div>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px",marginBottom:subjects.length>0?"12px":"0"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px"}}>
                         <div>
                           <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>응시일</label>
                           <input type="date" disabled={!!isLocked} value={applicantModal.data[dateKey]||""} onChange={e=>setAM({[dateKey]:e.target.value})} style={{...inp({padding:"7px 10px",fontSize:"12px"})}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
                         </div>
                         <div>
-                          <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>
-                            총점 <span style={{color:C.muted,fontWeight:400}}>(60↑합격)</span>
-                            {subjects.length>0&&<span style={{color:C.teal,fontWeight:600,marginLeft:"4px",fontSize:"9px"}}>자동합산</span>}
-                          </label>
-                          <input type="number" min="0" max="9999" disabled={!!isLocked||(subjects.length>0)} value={applicantModal.data[scoreKey]} onChange={e=>setAM({[scoreKey]:e.target.value})} placeholder="총점" style={{...inp({padding:"7px 10px",fontSize:"15px",fontWeight:sColor?"900":"400",color:sColor||C.text,background:subjects.length>0?`${C.teal}06`:undefined})}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                          <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>점수 <span style={{color:C.muted,fontWeight:400}}>(60↑합격)</span></label>
+                          <input type="number" min="0" max="9999" disabled={!!isLocked} value={applicantModal.data[scoreKey]} onChange={e=>setAM({[scoreKey]:e.target.value})} placeholder="점수" style={{...inp({padding:"7px 10px",fontSize:"15px",fontWeight:sColor?"900":"400",color:sColor||C.text})}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
                         </div>
                         <div>
                           <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>결과 <span style={{color:C.teal,fontWeight:400,fontSize:"9px"}}>자동</span></label>
@@ -1997,23 +2172,6 @@ export default function ApplicantManager() {
                           </div>
                         </div>
                       </div>
-                      {subjects.length>0&&(
-                        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(110px,1fr))",gap:"8px",paddingTop:"10px",borderTop:`1px dashed ${C.border}`}}>
-                          {subjects.map(s=>{
-                            const v=subScores[s.id]||"";
-                            const vNum=parseFloat(v);
-                            const subColor=isNaN(vNum)||v===""?"":vNum>=parseFloat(s.maxScore)*0.6?C.green:C.red;
-                            return(
-                              <div key={s.id}>
-                                <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>
-                                  {s.name} <span style={{color:C.muted,fontWeight:400}}>/{s.maxScore}점</span>
-                                </label>
-                                <input type="number" min="0" max={s.maxScore} disabled={!!isLocked} value={v} onChange={e=>{const updated={...subScores,[s.id]:e.target.value};setAM({[subKey]:updated});}} placeholder="0" style={{...inp({padding:"7px 10px",fontSize:"13px",fontWeight:subColor?"800":"400",color:subColor||C.text})}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -2028,7 +2186,7 @@ export default function ApplicantManager() {
                       <button key={s} onClick={()=>setAM({finalStatus:s})} style={{padding:"7px 16px",borderRadius:"20px",border:`1.5px solid ${sel?fc.text:C.border}`,background:sel?fc.bg:"transparent",color:sel?fc.text:C.muted,fontSize:"12px",fontWeight:sel?700:400,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",boxShadow:sel?`0 0 0 2px ${fc.text}22`:"none"}}>{s}</button>
                     );})}
                   </div>
-                  {["퇴사","해당없음"].includes(applicantModal.data.finalStatus)&&(
+                  {["퇴사","면제"].includes(applicantModal.data.finalStatus)&&(
                     <div style={{fontSize:"10px",color:C.amber,marginTop:"6px"}}>⚠️ 수동으로 설정된 상태입니다.</div>
                   )}
                 </div>
