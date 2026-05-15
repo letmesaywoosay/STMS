@@ -716,7 +716,7 @@ export default function ApplicantManager() {
       const [countdown,    setCountdown]    = useState(0);
 
       // 카운트다운 타이머
-      React.useEffect(()=>{
+      useEffect(()=>{
         if(!otpExpiry) return;
         const tick=setInterval(()=>{
           const left=Math.max(0,Math.floor((otpExpiry-Date.now())/1000));
