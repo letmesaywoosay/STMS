@@ -700,7 +700,7 @@ export default function ApplicantManager() {
   // ── 직책자 로그인 화면 ────────────────────────────────────────
   if(!loginUser){
     // ★ EmailJS 설정값을 여기에 입력하세요
-    const EMAILJS_SERVICE_ID  = "service_w9dhfpy";
+    const EMAILJS_SERVICE_ID  = "service_dqh2rka";
     const EMAILJS_TEMPLATE_ID = "template_crmker8";
     const EMAILJS_PUBLIC_KEY  = "kzHB8e8yCF3r0OnaA";
 
