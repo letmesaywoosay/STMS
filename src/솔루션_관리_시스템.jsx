@@ -806,31 +806,6 @@ export default function ApplicantManager() {
               }
             </div>
 
-            {/* 차시별 */}
-            <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow,marginBottom:"20px"}}>
-              <div style={{padding:"13px 20px",background:`linear-gradient(135deg,${C.teal}08,${C.teal}04)`,borderBottom:`1px solid ${C.border}`}}>
-                <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>🎯 차시별 점수 현황</div>
-              </div>
-              <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:"12px"}}>
-                {["1차","2차","3차"].map(nth=>{
-                  const arr=nthGroups[nth];
-                  const a2=nthAvg(nth);
-                  const maxS=Math.max(...arr,100);
-                  return(
-                    <div key={nth} style={{display:"flex",alignItems:"center",gap:"12px"}}>
-                      <span style={{fontSize:"12px",fontWeight:700,color:C.text,minWidth:"28px"}}>{nth}</span>
-                      <div style={{flex:1,height:"24px",borderRadius:"8px",background:C.bg,overflow:"hidden",position:"relative"}}>
-                        <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${arr.length?Math.max((a2||0)/100*100,4):0}%`,background:`linear-gradient(90deg,${C.teal}55,${C.teal}88)`,borderRadius:"8px",transition:"width 0.5s"}}/>
-                        <div style={{position:"absolute",left:"10px",top:0,bottom:0,display:"flex",alignItems:"center"}}>
-                          <span style={{fontSize:"11px",fontWeight:700,color:arr.length?C.teal:C.muted}}>{arr.length?`${a2}점 (${arr.length}명)`:"응시없음 (0명)"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* 점수 분포도 */}
             <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow,marginBottom:"20px"}}>
               <div style={{padding:"13px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.blue}04)`,borderBottom:`1px solid ${C.border}`}}>
@@ -839,6 +814,81 @@ export default function ApplicantManager() {
               </div>
               <div style={{padding:"20px"}}><ScatterPub apps={mApps}/></div>
             </div>
+
+            {/* 최근 1년 월별 평균 점수 추이 */}
+            {(()=>{
+              const buildLast12=(baseYM)=>{
+                const [y,m]=baseYM.split("-").map(Number);
+                const months=[];
+                for(let i=11;i>=0;i--){
+                  let tm=m-i; let ty=y;
+                  while(tm<=0){tm+=12;ty--;}
+                  months.push(`${ty}-${String(tm).padStart(2,"0")}`);
+                }
+                return months;
+              };
+              const last12=buildLast12(selYM);
+              const monthAvgsPub=last12.map(ym=>{
+                const apps=applicants.flatMap(a=>{
+                  const atts=[
+                    a.date1?.startsWith(ym)?{score:a.score1}:null,
+                    a.date2?.startsWith(ym)?{score:a.score2}:null,
+                    a.date3?.startsWith(ym)?{score:a.score3}:null,
+                  ].filter(Boolean);
+                  return atts;
+                });
+                const sc=apps.map(a=>parseFloat(a.score)).filter(v=>!isNaN(v));
+                const avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length*10)/10:null;
+                const [yy,mm]=ym.split("-");
+                return{ym,label:`${parseInt(mm)}월`,avg,count:sc.length};
+              });
+              const hasAny=monthAvgsPub.some(m=>m.avg!==null);
+              if(!hasAny) return null;
+              const barH=160;
+              return(
+                <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow,marginBottom:"20px"}}>
+                  <div style={{padding:"13px 20px",background:`linear-gradient(135deg,${C.purple}08,${C.purple}04)`,borderBottom:`1px solid ${C.border}`}}>
+                    <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>📈 최근 1년 월별 평균 점수 추이</div>
+                  </div>
+                  <div style={{padding:"24px 20px 16px"}}>
+                    <div style={{display:"flex",alignItems:"flex-end",gap:"6px",height:`${barH+40}px`,position:"relative"}}>
+                      <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",height:`${barH}px`,marginRight:"8px",textAlign:"right",minWidth:"28px",marginBottom:"28px"}}>
+                        {[100,80,60,40,20,0].map(v=>(
+                          <span key={v} style={{fontSize:"9px",color:v===60?C.green:C.muted,fontWeight:v===60?800:400,lineHeight:"1"}}>{v}</span>
+                        ))}
+                      </div>
+                      <div style={{flex:1,display:"flex",alignItems:"flex-end",gap:"4px",borderLeft:`1.5px solid ${C.border}`,borderBottom:`1.5px solid ${C.border}`,paddingLeft:"4px",position:"relative",height:`${barH+28}px`}}>
+                        <div style={{position:"absolute",left:0,right:0,bottom:`${(60/100)*barH+28}px`,borderTop:`1.5px dashed ${C.green}66`,pointerEvents:"none",zIndex:1}}>
+                          <span style={{position:"absolute",right:"4px",top:"-14px",fontSize:"9px",color:C.green,fontWeight:700}}>60점</span>
+                        </div>
+                        {[20,40,80].map(v=>(
+                          <div key={v} style={{position:"absolute",left:0,right:0,bottom:`${(v/100)*barH+28}px`,borderTop:`1px solid ${C.border}33`,pointerEvents:"none"}}/>
+                        ))}
+                        {monthAvgsPub.map((m,i)=>{
+                          const isSelected=m.ym===selYM;
+                          const barPct=m.avg!==null?(m.avg/100):0;
+                          const barPx=Math.max(barPct*barH,m.avg!==null?2:0);
+                          const isPass=m.avg!==null&&m.avg>=60;
+                          const col=isSelected?C.purple:isPass?C.blue:C.red;
+                          return(
+                            <div key={m.ym} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:`${barH}px`,gap:"2px"}}>
+                              {m.avg!==null&&<span style={{fontSize:"8px",fontWeight:800,color:col,whiteSpace:"nowrap"}}>{m.avg}점</span>}
+                              <div style={{width:"100%",height:`${barPx}px`,background:m.avg!==null?`linear-gradient(180deg,${col}cc,${col}88)`:"transparent",borderRadius:"4px 4px 0 0",border:isSelected?`2px solid ${C.purple}`:"none",transition:"height 0.4s",boxSizing:"border-box"}}/>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",paddingLeft:"46px",gap:"4px"}}>
+                      {monthAvgsPub.map((m,i)=>(
+                        <div key={i} style={{flex:1,textAlign:"center",fontSize:"9px",color:m.ym===selYM?C.purple:C.muted,fontWeight:m.ym===selYM?800:400}}>{m.label}</div>
+                      ))}
+                    </div>
+                    <div style={{textAlign:"center",marginTop:"6px",fontSize:"11px",color:C.muted}}><span style={{color:C.purple,fontWeight:700}}>■ 선택된 달</span></div>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         </div>
@@ -2017,9 +2067,8 @@ export default function ApplicantManager() {
                 </table>
               </div>
 
-              {/* 2. 점수 평균 + 구간 분포 */}
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"16px",marginBottom:"20px"}}>
-                {/* 평균 */}
+              {/* 2. 점수 평균 */}
+              <div style={{marginBottom:"20px"}}>
                 <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
                   <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.purple}08,${C.purple}04)`,borderBottom:`1px solid ${C.border}`}}>
                     <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>📐 점수 평균</div>
@@ -2033,31 +2082,6 @@ export default function ApplicantManager() {
                         <span style={{fontSize:"16px",fontWeight:800,color:avgDiff>=0?C.green:C.red}}>{avgDiff>=0?"+":""}{avgDiff}점</span>
                       </div>
                     )}
-                  </div>
-                </div>
-
-                {/* 차시별 평균 */}
-                <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
-                  <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.teal}08,${C.teal}04)`,borderBottom:`1px solid ${C.border}`}}>
-                    <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>🎯 차시별 점수 현황</div>
-                  </div>
-                  <div style={{padding:"20px",display:"flex",flexDirection:"column",gap:"14px"}}>
-                    {Object.entries(nthGroups).map(([nth,sc])=>{
-                      const nAvg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length*10)/10:null;
-                      const pct=nAvg!==null?Math.round(nAvg):0;
-                      const col=nAvg>=60?C.green:C.red;
-                      return(
-                        <div key={nth}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"5px"}}>
-                            <span style={{fontSize:"12px",fontWeight:700,color:C.subtle}}>{nth}</span>
-                            <span style={{fontSize:"13px",fontWeight:800,color:nAvg!==null?col:C.muted}}>{nAvg!==null?nAvg+"점":"응시없음"}<span style={{fontSize:"10px",fontWeight:400,color:C.muted,marginLeft:"4px"}}>({sc.length}명)</span></span>
-                          </div>
-                          <div style={{height:"10px",borderRadius:"10px",background:C.bg,overflow:"hidden"}}>
-                            <div style={{height:"100%",width:`${Math.min(pct,100)}%`,background:`linear-gradient(90deg,${col}aa,${col})`,borderRadius:"10px",transition:"width 0.5s"}}/>
-                          </div>
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
               </div>
