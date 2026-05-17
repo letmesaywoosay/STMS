@@ -806,6 +806,17 @@ export default function ApplicantManager() {
               }
             </div>
 
+            {/* 점수 평균 */}
+            <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow,marginBottom:"20px"}}>
+              <div style={{padding:"13px 20px",background:`linear-gradient(135deg,${C.purple}08,${C.purple}04)`,borderBottom:`1px solid ${C.border}`}}>
+                <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>📐 점수 평균</div>
+              </div>
+              <div style={{padding:"24px",textAlign:"center"}}>
+                <div style={{fontSize:"56px",fontWeight:900,color:avg!==null&&avg>=60?C.green:C.red,lineHeight:1}}>{avg!==null?avg:"—"}<span style={{fontSize:"20px",fontWeight:500,color:C.muted}}>점</span></div>
+                <div style={{fontSize:"12px",color:C.muted,marginTop:"10px"}}>총 {scores.length}명 점수 기준</div>
+              </div>
+            </div>
+
             {/* 점수 분포도 */}
             <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow,marginBottom:"20px"}}>
               <div style={{padding:"13px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.blue}04)`,borderBottom:`1px solid ${C.border}`}}>
