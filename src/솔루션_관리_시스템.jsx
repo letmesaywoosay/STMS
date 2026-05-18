@@ -133,6 +133,15 @@ export default function ApplicantManager() {
   const [sortConfig,      setSortConfig]       = useState({key:null,dir:"asc"});
   const [aiMailModal,     setAiMailModal]      = useState(null);
   const [tooltip,         setTooltip]          = useState(null);
+  const [colFilters,      setColFilters]       = useState({company:"",division:"",team:""});
+  const [colDropdown,     setColDropdown]      = useState(null); // "company"|"division"|"team"|null
+
+  useEffect(()=>{
+    if(!colDropdown) return;
+    const close=()=>setColDropdown(null);
+    document.addEventListener("click",close);
+    return()=>document.removeEventListener("click",close);
+  },[colDropdown]);
   const [deleteConfirm,   setDeleteConfirm]    = useState(null);
   const [mainMenu, setMainMenu] = useState(()=>{
     try{
@@ -606,10 +615,11 @@ export default function ApplicantManager() {
     const matchStatus=applicantFilter==="전체"?true:applicantFilter==="진행중"?!lp:lp===applicantFilter;
     const q=applicantSearch.toLowerCase();
     const matchSearch=!q||(a.name||"").toLowerCase().includes(q)||(a.company||"").toLowerCase().includes(q)||(a.division||"").toLowerCase().includes(q)||(a.team||"").toLowerCase().includes(q)||(a.email||"").toLowerCase().includes(q)||(a.joinYearMonth||"").includes(q);
-    // 자연어 검색 결과 필터
-    const nlIds=window.__nlSearchIds;
-    const matchNL=!nlIds||nlIds.includes(a.id);
-    return matchStatus&&matchSearch&&matchNL;
+    const matchCol=
+      (!colFilters.company||(a.company||"")=== colFilters.company)&&
+      (!colFilters.division||(a.division||"")=== colFilters.division)&&
+      (!colFilters.team||(a.team||"")=== colFilters.team);
+    return matchStatus&&matchSearch&&matchCol;
   });
 
   const handleSort=key=>{
@@ -1572,52 +1582,14 @@ export default function ApplicantManager() {
         {/* ═══ 홈 랜딩 ═══ */}
         {isAdmin&&mainMenu==="home"&&(()=>{
           const LandingPage=()=>{
-            const [query,setQuery]=useState("");
-            const [searching,setSearching]=useState(false);
-            const [searchResult,setSearchResult]=useState(null); // {summary, ids}
-            const [searchError,setSearchError]=useState("");
-
             const userName=loginUser?.name||loginUser?.username||"";
-
-            const runSearch=async()=>{
-              if(!query.trim()||searching) return;
-              setSearching(true);setSearchResult(null);setSearchError("");
-              try{
-                const appSummary=applicants.map(a=>`ID:${a.id}|이름:${a.name}|소속:${a.division||""}|팀:${a.team||""}|회사:${a.company||""}|1차점수:${a.score1||""}|1차합불:${a.pass1||""}|2차점수:${a.score2||""}|2차합불:${a.pass2||""}|3차점수:${a.score3||""}|3차합불:${a.pass3||""}|최종상태:${a.finalStatus||""}`).join("\n");
-                const prompt=`당신은 응시자 데이터 검색 도우미입니다.\n\n아래는 전체 응시자 데이터입니다:\n${appSummary}\n\n사용자 검색어: "${query}"\n\n위 검색어에 해당하는 응시자의 ID 목록을 반환하고, 왜 선택했는지 한 줄 요약을 작성해주세요.\n반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):\n{"ids":["id1","id2"],"summary":"검색 결과 요약 (예: OO 조건에 해당하는 N명)"}`;
-                const res=await fetch("https://api.anthropic.com/v1/messages",{
-                  method:"POST",
-                  headers:{"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-                  body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
-                });
-                if(!res.ok) throw new Error(`API ${res.status}`);
-                const data=await res.json();
-                const text=data.content?.find(b=>b.type==="text")?.text||"{}";
-                const clean=text.replace(/```json|```/g,"").trim();
-                const parsed=JSON.parse(clean);
-                setSearchResult(parsed);
-              }catch(e){setSearchError("검색 중 오류가 발생했습니다: "+e.message);}
-              finally{setSearching(false);}
-            };
-
-            const goToResults=()=>{
-              if(!searchResult?.ids?.length) return;
-              // 검색 결과 ID를 전역 필터에 저장 후 리스트로 이동
-              window.__nlSearchIds=searchResult.ids;
-              window.__nlSearchSummary=searchResult.summary;
-              setMainMenu("list");
-            };
-
             return(
               <div className="land-container" style={{minHeight:"calc(100vh - 80px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"48px 60px 48px",background:"transparent"}}>
                 <style>{`
                   @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
                   @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.7}}
-                  @keyframes searchPulse{0%,100%{box-shadow:0 4px 24px rgba(29,78,216,0.10)}50%{box-shadow:0 4px 32px rgba(29,78,216,0.22)}}
                   .land-card:hover{transform:translateY(-6px)!important;box-shadow:0 20px 48px rgba(29,78,216,0.15)!important;}
                   .land-card:hover .land-cta{background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;color:#fff!important;}
-                  .nl-search-box{transition:box-shadow 0.2s,border-color 0.2s;}
-                  .nl-search-box:focus-within{box-shadow:0 4px 32px rgba(29,78,216,0.18)!important;border-color:#3b82f6!important;}
                 `}</style>
 
                 {/* 서비스명 + 슬로건 */}
@@ -1631,77 +1603,19 @@ export default function ApplicantManager() {
                 </div>
 
                 {/* 인사말 */}
-                <div style={{fontSize:"22px",fontWeight:700,color:C.text,marginBottom:"24px",animation:"fadeUp 0.5s 0.1s ease both",textAlign:"center"}}>
-                  {userName&&<><span style={{color:C.blue}}>{userName}</span>님, 안녕하세요.</>} 무엇을 찾고 계신가요?
-                </div>
-
-                {/* 자연어 검색창 */}
-                <div style={{width:"100%",maxWidth:"720px",marginBottom:"16px",animation:"fadeUp 0.5s 0.2s ease both"}}>
-                  <div className="nl-search-box" style={{display:"flex",alignItems:"center",gap:"12px",background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:"32px",padding:"14px 20px",boxShadow:"0 4px 24px rgba(29,78,216,0.08)"}}>
-                    <span style={{fontSize:"18px",flexShrink:0}}>🔍</span>
-                    <input
-                      value={query}
-                      onChange={e=>setQuery(e.target.value)}
-                      onKeyDown={e=>e.key==="Enter"&&runSearch()}
-                      placeholder="예: IaaS 개발실에서 1차 불합격하고 아직 재응시 안 한 사람 찾아줘"
-                      style={{flex:1,border:"none",outline:"none",fontSize:"15px",background:"transparent",color:C.text,fontFamily:"inherit"}}
-                    />
-                    {query&&<button onClick={()=>{setQuery("");setSearchResult(null);setSearchError("");}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"18px",padding:"0",lineHeight:1}}>✕</button>}
-                    <button onClick={runSearch} disabled={searching||!query.trim()} style={{padding:"8px 20px",borderRadius:"24px",border:"none",background:query.trim()?`linear-gradient(135deg,${C.blue},${C.blueLight})`:"#e2e8f0",color:query.trim()?"#fff":C.muted,fontSize:"13px",fontWeight:700,cursor:query.trim()?"pointer":"default",fontFamily:"inherit",whiteSpace:"nowrap",transition:"all 0.2s"}}>
-                      {searching?"검색 중…":"AI 검색"}
-                    </button>
-                  </div>
-
-                  {/* 예시 힌트 */}
-                  {!searchResult&&!searching&&(
-                    <div style={{display:"flex",gap:"8px",marginTop:"10px",flexWrap:"wrap",justifyContent:"center"}}>
-                      {["60점 이상 합격자 전체","3차까지 응시한 사람","클라우드PS팀 미응시자"].map(hint=>(
-                        <button key={hint} onClick={()=>setQuery(hint)} style={{padding:"5px 14px",borderRadius:"20px",border:`1px solid ${C.border}`,background:C.surface,color:C.subtle,fontSize:"12px",cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
-                          {hint}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 검색 결과 */}
-                  {searching&&(
-                    <div style={{marginTop:"16px",textAlign:"center",color:C.muted,fontSize:"13px",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"}}>
-                      <div style={{display:"flex",gap:"4px"}}>{[0,1,2].map(i=><div key={i} style={{width:"6px",height:"6px",borderRadius:"50%",background:C.blue,animation:`bounce 0.9s ${i*0.2}s infinite`}}/>)}</div>
-                      AI가 응시자 데이터를 분석하는 중...
-                    </div>
-                  )}
-
-                  {searchError&&(
-                    <div style={{marginTop:"12px",padding:"12px 16px",borderRadius:"12px",background:"#fef2f2",border:"1px solid #fecaca",color:C.red,fontSize:"13px"}}>{searchError}</div>
-                  )}
-
-                  {searchResult&&(
-                    <div style={{marginTop:"12px",padding:"16px 20px",borderRadius:"16px",background:C.surface,border:`1.5px solid ${C.blue}22`,boxShadow:"0 4px 16px rgba(29,78,216,0.08)",animation:"fadeUp 0.3s ease"}}>
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",flexWrap:"wrap"}}>
-                        <div>
-                          <span style={{fontWeight:700,color:C.blue,fontSize:"14px"}}>🎯 {searchResult.summary}</span>
-                          <div style={{fontSize:"12px",color:C.muted,marginTop:"3px"}}>{searchResult.ids?.length||0}명 검색됨</div>
-                        </div>
-                        {searchResult.ids?.length>0&&(
-                          <button onClick={goToResults} style={{padding:"8px 20px",borderRadius:"20px",border:"none",background:`linear-gradient(135deg,${C.blue},${C.blueLight})`,color:"#fff",fontSize:"13px",fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                            결과 보기 →
-                          </button>
-                        )}
-                        {searchResult.ids?.length===0&&<span style={{fontSize:"12px",color:C.muted}}>조건에 맞는 응시자가 없습니다</span>}
-                      </div>
-                    </div>
-                  )}
+                <div style={{fontSize:"22px",fontWeight:700,color:C.text,marginBottom:"40px",animation:"fadeUp 0.5s 0.1s ease both",textAlign:"center"}}>
+                  {userName&&<><span style={{color:C.blue}}>{userName}</span>님, 안녕하세요.</>} 무엇을 도와드릴까요?
                 </div>
 
                 {/* 카드 3장 */}
-                <div className="land-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"1100px",animation:"fadeUp 0.7s 0.3s ease both"}}>
+                <div className="land-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"1100px",animation:"fadeUp 0.7s 0.2s ease both"}}>
                   {[
                     {id:"list",icon:"📋",title:"관리 리스트",desc:"응시자 등록·수정·삭제, 점수 입력, 합격 여부 관리 및 필터링",color:C.blue,grad:`linear-gradient(135deg,${C.blue}18,${C.blue}08)`,border:`${C.blue}33`,cta:"리스트 열기"},
                     {id:"report",icon:"📊",title:"월별 보고서",desc:"월별 응시 현황, 점수 분포도, 평균 추이 등 데이터 시각화",color:C.purple,grad:`linear-gradient(135deg,${C.purple}18,${C.purple}08)`,border:`${C.purple}33`,cta:"보고서 열기"},
                     {id:"dept",icon:"🏢",title:"부서/팀 관리",desc:"조직 구조 등록·수정, 본부·팀 계층 관리 및 직책자 배정",color:C.teal,grad:`linear-gradient(135deg,${C.teal}18,${C.teal}08)`,border:`${C.teal}33`,cta:"조직 관리"},
                   ].map((card,i)=>(
                     <div key={card.id} className="land-card" onClick={()=>setMainMenu(card.id)}
-                      style={{background:card.grad,borderRadius:"20px",border:`1.5px solid ${card.border}`,padding:"28px 24px",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.06)",display:"flex",flexDirection:"column",gap:"14px",animation:`fadeUp 0.6s ${0.35+i*0.08}s ease both`}}>
+                      style={{background:card.grad,borderRadius:"20px",border:`1.5px solid ${card.border}`,padding:"28px 24px",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.06)",display:"flex",flexDirection:"column",gap:"14px",animation:`fadeUp 0.6s ${0.25+i*0.08}s ease both`}}>
                       <div style={{width:"48px",height:"48px",borderRadius:"14px",background:`${card.color}18`,border:`1.5px solid ${card.color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px"}}>{card.icon}</div>
                       <div style={{flex:1}}>
                         <div style={{fontSize:"16px",fontWeight:800,color:C.text,marginBottom:"6px"}}>{card.title}</div>
@@ -1712,7 +1626,7 @@ export default function ApplicantManager() {
                   ))}
                 </div>
 
-                <p style={{marginTop:"36px",fontSize:"11px",color:"#94a3b8",animation:"fadeUp 0.6s 0.5s ease both"}}>OKESTRO Academy · Solution Test Management System</p>
+                <p style={{marginTop:"40px",fontSize:"11px",color:"#94a3b8",animation:"fadeUp 0.6s 0.4s ease both"}}>OKESTRO Academy · Solution Test Management System</p>
               </div>
             );
           };
@@ -1722,13 +1636,6 @@ export default function ApplicantManager() {
         {/* ═══ 관리 리스트 ═══ */}
         {(isOfficer?safeMenu==="list":mainMenu==="list")&&(
           <div className="page-enter">
-          {window.__nlSearchIds&&(
-            <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px",padding:"10px 16px",borderRadius:"12px",background:`${C.blue}08`,border:`1px solid ${C.blue}22`}}>
-              <span style={{fontSize:"13px",color:C.blue,fontWeight:700}}>🎯 AI 검색 결과</span>
-              <span style={{fontSize:"12px",color:C.subtle}}>{window.__nlSearchSummary}</span>
-              <button onClick={()=>{window.__nlSearchIds=null;window.__nlSearchSummary=null;setApplicantFilter("전체");}} style={{marginLeft:"auto",padding:"3px 10px",borderRadius:"20px",border:`1px solid ${C.border}`,background:C.surface,color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>✕ 검색 해제</button>
-            </div>
-          )}
           {appViewMode==="monthly"?(
             <>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",flexWrap:"wrap",gap:"12px"}}>
@@ -1815,7 +1722,8 @@ export default function ApplicantManager() {
                 <button onClick={()=>setSelectedIds([])} style={{marginLeft:"auto",background:"none",border:`1px solid ${C.border}`,borderRadius:"7px",padding:"3px 10px",color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>선택 해제</button>
               </div>
             )}
-            <div style={{display:"flex",gap:"8px",marginBottom:"14px",flexWrap:"wrap",alignItems:"center"}}>
+            {/* 1단: 상태 필터 + 검색 */}
+            <div style={{display:"flex",gap:"8px",marginBottom:"8px",flexWrap:"wrap",alignItems:"center"}}>
               <div style={{display:"flex",gap:"3px",background:C.surface,borderRadius:"10px",padding:"3px",border:`1px solid ${C.border}`}}>
                 {["전체","합격","불합격","미응시","진행중"].map(s=>{
                   const sc=PASS_STATUS_COLORS[s==="진행중"?"":s]||{bg:`${C.blue}10`,text:C.blue};
@@ -1824,11 +1732,25 @@ export default function ApplicantManager() {
                 })}
               </div>
               <input value={applicantSearch} onChange={e=>setApplicantSearch(e.target.value)} placeholder="이름·소속·이메일·입사년월 검색..." style={{flex:1,minWidth:"180px",background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:"9px",padding:"7px 12px",color:C.text,fontSize:"13px",outline:"none",fontFamily:"inherit"}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+              {/* 활성 컬럼 필터 뱃지 */}
+              {Object.entries(colFilters).filter(([,v])=>v).map(([k,v])=>(
+                <span key={k} style={{display:"flex",alignItems:"center",gap:"5px",padding:"4px 10px",borderRadius:"20px",background:`${C.blue}10`,border:`1px solid ${C.blue}33`,fontSize:"12px",color:C.blue,fontWeight:600,whiteSpace:"nowrap"}}>
+                  {v}
+                  <span onClick={()=>setColFilters(p=>({...p,[k]:""}))} style={{cursor:"pointer",fontWeight:900,fontSize:"14px",lineHeight:1,color:C.blue}}>×</span>
+                </span>
+              ))}
+              {Object.values(colFilters).some(Boolean)&&(
+                <button onClick={()=>setColFilters({company:"",division:"",team:""})} style={{padding:"4px 10px",borderRadius:"20px",border:`1px solid ${C.border}`,background:"transparent",color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>전체 해제</button>
+              )}
+            </div>
+            {/* 2단: 액션 버튼들 */}
+            <div style={{display:"flex",gap:"8px",marginBottom:"14px",flexWrap:"wrap",alignItems:"center"}}>
               <button onClick={()=>setAppViewMode("monthly")} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📅 월별 보기</button>
               {isAdmin&&can(userRole,"import_excel")&&<><input ref={appFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importApplicantExcel(e.target.files[0]);e.target.value='';}}/>
               <button onClick={downloadApplicantTemplate} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}06`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>⬇️ 양식 다운로드</button>
               <button onClick={()=>appFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>📊 일괄등록</button></>}
               {isAdmin&&can(userRole,"backup")&&<button onClick={backupApplicantData} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>💾 데이터 백업</button>}
+              <div style={{marginLeft:"auto"}}/>
               {isAdmin&&can(userRole,"edit_applicant")&&<button onClick={()=>setApplicantModal({mode:'add',data:{...EMPTY_APPLICANT}})} style={{padding:"7px 16px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>＋ 추가</button>}
             </div>
             <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadowLg}}>
@@ -1844,20 +1766,62 @@ export default function ApplicantManager() {
                       <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{cursor:"pointer",width:"14px",height:"14px",accentColor:C.blue}}/>
                     </th>}
                     {[
-                      {label:"입사년월",key:"joinYearMonth"},{label:"이름",key:"name"},{label:"구분(회사)",key:"company"},
-                      {label:"소속본부",key:"division"},{label:"소속팀",key:"team"},{label:"이메일",key:"email"},
-                      {label:"테스트 결과",key:"testResult",bg:`${C.green}06`},{label:"최종 상태",key:"finalStatus",bg:`${C.purple}06`},
-                      {label:"메모",key:null},
-                      ...(!isOfficer?[{label:"",key:null}]:[]),
-                    ].map(({label,key,bg},i)=>{
+                      {label:"입사년월",key:"joinYearMonth",colFilter:null},
+                      {label:"이름",key:"name",colFilter:null},
+                      {label:"구분(회사)",key:"company",colFilter:"company"},
+                      {label:"소속본부",key:"division",colFilter:"division"},
+                      {label:"소속팀",key:"team",colFilter:"team"},
+                      {label:"이메일",key:"email",colFilter:null},
+                      {label:"테스트 결과",key:"testResult",bg:`${C.green}06`,colFilter:null},
+                      {label:"최종 상태",key:"finalStatus",bg:`${C.purple}06`,colFilter:null},
+                      {label:"메모",key:null,colFilter:null},
+                      ...(!isOfficer?[{label:"",key:null,colFilter:null}]:[]),
+                    ].map(({label,key,bg,colFilter},i)=>{
                       const isActive=sortConfig.key===key;
                       const arrow=!key?"":(isActive?(sortConfig.dir==="asc"?"↑":"↓"):"↕");
+                      const cfActive=colFilter&&!!colFilters[colFilter];
+                      // 드롭다운 옵션 계산
+                      const cfOptions=colFilter?[...new Set(applicants.map(a=>(a[colFilter]||"")).filter(Boolean))].sort():[];
                       return(
-                        <th key={i} onClick={key?()=>handleSort(key):undefined}
-                          style={{padding:"10px 10px",textAlign:"left",fontWeight:700,fontSize:"11px",color:isActive?C.blue:C.muted,whiteSpace:"nowrap",overflow:"hidden",borderRight:i<9?`1px solid ${C.border}`:"none",background:isActive?`${C.blue}08`:(bg||"transparent"),cursor:key?"pointer":"default",userSelect:"none",transition:"background 0.15s,color 0.15s"}}
-                          onMouseEnter={key?e=>{if(!isActive)e.currentTarget.style.background=`${C.blue}05`;}:undefined}
-                          onMouseLeave={key?e=>{if(!isActive)e.currentTarget.style.background=bg||"transparent";}:undefined}>
-                          <span style={{display:"flex",alignItems:"center",gap:"4px"}}>{label}{key&&<span style={{fontSize:"10px",color:isActive?C.blue:C.border2,fontWeight:400,lineHeight:1}}>{arrow}</span>}</span>
+                        <th key={i} style={{padding:"10px 10px",textAlign:"left",fontWeight:700,fontSize:"11px",color:isActive?C.blue:C.muted,whiteSpace:"nowrap",overflow:"hidden",borderRight:i<9?`1px solid ${C.border}`:"none",background:isActive?`${C.blue}08`:(bg||"transparent"),userSelect:"none",position:"relative"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
+                            {/* 정렬 */}
+                            <span style={{cursor:key?"pointer":"default",flex:1,display:"flex",alignItems:"center",gap:"3px"}} onClick={key?()=>handleSort(key):undefined}>
+                              {label}
+                              {key&&<span style={{fontSize:"10px",color:isActive?C.blue:"#cbd5e1",fontWeight:400}}>{arrow}</span>}
+                            </span>
+                            {/* 컬럼 필터 아이콘 */}
+                            {colFilter&&(
+                              <span
+                                onClick={e=>{e.stopPropagation();setColDropdown(colDropdown===colFilter?null:colFilter);}}
+                                title="필터"
+                                style={{cursor:"pointer",fontSize:"12px",opacity:cfActive?1:0.45,color:cfActive?C.blue:C.muted,background:cfActive?`${C.blue}15`:"transparent",borderRadius:"4px",padding:"1px 3px",transition:"all 0.15s",flexShrink:0}}
+                              >▼</span>
+                            )}
+                          </div>
+                          {/* 드롭다운 */}
+                          {colFilter&&colDropdown===colFilter&&(
+                            <div style={{position:"absolute",top:"100%",left:0,zIndex:400,background:C.surface,border:`1.5px solid ${C.blue}33`,borderRadius:"10px",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:"160px",maxHeight:"260px",overflow:"auto",padding:"4px 0",animation:"fadeUp 0.15s ease"}}
+                              onClick={e=>e.stopPropagation()}>
+                              {/* 전체(해제) */}
+                              <div onClick={()=>{setColFilters(p=>({...p,[colFilter]:""}));setColDropdown(null);}}
+                                style={{padding:"8px 14px",cursor:"pointer",fontSize:"12px",fontWeight:colFilters[colFilter]===""?700:400,color:colFilters[colFilter]===""?C.blue:C.text,background:colFilters[colFilter]===""?`${C.blue}08`:"transparent",display:"flex",alignItems:"center",gap:"6px"}}>
+                                <span style={{width:"12px",height:"12px",borderRadius:"50%",border:`1.5px solid ${colFilters[colFilter]===""?C.blue:C.border}`,background:colFilters[colFilter]===""?C.blue:"transparent",display:"inline-block",flexShrink:0}}/>
+                                전체 (필터 해제)
+                              </div>
+                              <div style={{height:"1px",background:C.border,margin:"3px 0"}}/>
+                              {cfOptions.map(opt=>(
+                                <div key={opt} onClick={()=>{setColFilters(p=>({...p,[colFilter]:opt}));setColDropdown(null);}}
+                                  style={{padding:"8px 14px",cursor:"pointer",fontSize:"12px",fontWeight:colFilters[colFilter]===opt?700:400,color:colFilters[colFilter]===opt?C.blue:C.text,background:colFilters[colFilter]===opt?`${C.blue}08`:"transparent",display:"flex",alignItems:"center",gap:"6px",whiteSpace:"nowrap"}}
+                                  onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}05`}
+                                  onMouseLeave={e=>e.currentTarget.style.background=colFilters[colFilter]===opt?`${C.blue}08`:"transparent"}>
+                                  <span style={{width:"12px",height:"12px",borderRadius:"50%",border:`1.5px solid ${colFilters[colFilter]===opt?C.blue:C.border}`,background:colFilters[colFilter]===opt?C.blue:"transparent",display:"inline-block",flexShrink:0}}/>
+                                  {opt}
+                                </div>
+                              ))}
+                              {cfOptions.length===0&&<div style={{padding:"10px 14px",color:C.muted,fontSize:"12px"}}>값 없음</div>}
+                            </div>
+                          )}
                         </th>
                       );
                     })}
@@ -3130,6 +3094,31 @@ export default function ApplicantManager() {
           <div style={{fontSize:"12px",lineHeight:1.75,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{tooltip.content}</div>
         </div>
       )}
+
+      {/* 맨 위로 가기 플로팅 버튼 */}
+      {["list","report","dept"].includes(mainMenu)&&(()=>{
+        const ScrollTopBtn=()=>{
+          const [visible,setVisible]=useState(false);
+          useEffect(()=>{
+            const onScroll=()=>setVisible(window.scrollY>300);
+            window.addEventListener("scroll",onScroll,{passive:true});
+            return()=>window.removeEventListener("scroll",onScroll);
+          },[]);
+          return visible?(
+            <button
+              onClick={()=>window.scrollTo({top:0,behavior:"smooth"})}
+              title="맨 위로 가기"
+              style={{position:"fixed",bottom:"32px",right:"32px",zIndex:500,display:"flex",flexDirection:"column",alignItems:"center",gap:"3px",padding:"12px 16px",borderRadius:"24px",border:"none",background:`linear-gradient(135deg,${C.blue},${C.blueLight})`,color:"#fff",fontSize:"12px",fontWeight:700,cursor:"pointer",fontFamily:"inherit",boxShadow:"0 4px 20px rgba(29,78,216,0.35)",animation:"fadeUp 0.25s ease",transition:"transform 0.15s,box-shadow 0.15s",whiteSpace:"nowrap"}}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 8px 28px rgba(29,78,216,0.45)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="translateY(0)";e.currentTarget.style.boxShadow="0 4px 20px rgba(29,78,216,0.35)";}}
+            >
+              <span style={{fontSize:"16px",lineHeight:1}}>↑</span>
+              <span>맨 위로</span>
+            </button>
+          ):null;
+        };
+        return <ScrollTopBtn key={`scroll-top-${mainMenu}`}/>;
+      })()}
     </div>
   );
 }
