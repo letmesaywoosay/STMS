@@ -1240,7 +1240,6 @@ export default function ApplicantManager() {
 
           /* 메인 콘텐츠 패딩 축소 */
           .main-content{padding:16px 16px 48px!important;}
-          .gnb-inner{padding:0 16px!important;}
           .main-content-home{padding:0!important;}
 
           /* 랜딩 카드: 세로 스택 */
@@ -1276,12 +1275,13 @@ export default function ApplicantManager() {
       `}</style>
 
       {/* GNB */}
-      <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100}}>
-        <div className="gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 56px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px",flexWrap:"nowrap"}}>
-          <img src={LOGO_B64} alt="OKESTRO ACADEMY" className="land-logo" style={{height:"28px",marginRight:"20px",objectFit:"contain",cursor:"pointer"}} onClick={()=>isAdmin&&setMainMenu("home")}/>
+      <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100,width:"100%"}}>
+        <div className="gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px"}}>
+          <img src={LOGO_B64} alt="OKESTRO ACADEMY" className="land-logo" style={{height:"28px",marginRight:"16px",objectFit:"contain",cursor:"pointer",flexShrink:0}} onClick={()=>isAdmin&&setMainMenu("home")}/>
 
           {/* 데스크탑 탭 메뉴 */}
-          <div className="hide-mobile" style={{display:"flex",alignItems:"center",flex:1,gap:"2px",overflow:"hidden"}}>
+          <div className="hide-mobile" style={{display:"flex",alignItems:"center",flex:1,gap:"0",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none"}}>
+            <style>{`.hide-mobile::-webkit-scrollbar{display:none}`}</style>
             {/* 직책자: 브리핑 + 응시자 목록만 */}
             {isOfficer&&(
               <>
@@ -1319,7 +1319,7 @@ export default function ApplicantManager() {
           </div>
 
           {/* 우측 뱃지/상태 - 데스크탑 */}
-          <div className="hide-mobile" style={{display:"flex",marginLeft:"auto",alignItems:"center",gap:"8px",fontSize:"11px",flexShrink:0}}>
+          <div className="hide-mobile" style={{display:"flex",marginLeft:"auto",alignItems:"center",gap:"8px",fontSize:"11px",flexShrink:0,paddingLeft:"12px"}}>
             {isAdmin&&(
               <div style={{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",background:ROLES[userRole]?.bg||`${C.blue}10`,border:`1px solid ${ROLES[userRole]?.color||C.blue}33`}}>
                 <span style={{fontSize:"12px"}}>{ROLES[userRole]?.icon||"🔑"}</span>
@@ -1389,7 +1389,7 @@ export default function ApplicantManager() {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":"28px 56px 60px"}}>
+      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":"28px 40px 60px"}}>
         {mainMenu!=="home"&&(
         <div style={{marginBottom:"20px",paddingBottom:"14px",borderBottom:`2px solid ${C.blue}22`}}>
           <h1 style={{fontSize:"20px",fontWeight:900,color:C.text,margin:0,letterSpacing:"-0.3px"}}>
