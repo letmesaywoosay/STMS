@@ -1352,29 +1352,7 @@ export default function ApplicantManager() {
             );
           })}
           {isAdmin&&ADMIN_TABS.map(tab=>{
-            const active=mainMenu===tab.id||( tab.id==="admin"&&mainMenu==="dept");
-            // 관리 탭은 드롭다운
-            if(tab.id==="admin"&&isSuperAdmin){
-              const AdminTabWithDrop=()=>{
-                const [hover,setHover]=useState(false);
-                return(
-                  <div style={{position:"relative"}} onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}>
-                    <button className="gnb-tab"
-                      style={{padding:"0 18px",height:"40px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}
-                      onClick={()=>setMainMenu("admin")}>
-                      {tab.icon} {tab.label} <span style={{fontSize:"10px",opacity:0.6}}>▾</span>
-                    </button>
-                    {hover&&(
-                      <div className="mobile-drawer" style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",background:C.surface,border:`1px solid ${C.border}`,borderRadius:"10px",boxShadow:"0 8px 24px rgba(0,0,0,0.10)",minWidth:"160px",zIndex:300,padding:"4px 0",animation:"fadeUp 0.15s ease"}}>
-                        <button onClick={()=>setMainMenu("admin")} style={{width:"100%",padding:"10px 18px",border:"none",background:mainMenu==="admin"?`${C.blue}08`:"transparent",color:mainMenu==="admin"?C.blue:C.text,fontSize:"13px",fontFamily:"inherit",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",whiteSpace:"nowrap"}}>🔧 관리자 설정</button>
-                        {can(userRole,"dept_menu")&&<button onClick={()=>setMainMenu("dept")} style={{width:"100%",padding:"10px 18px",border:"none",background:mainMenu==="dept"?`${C.blue}08`:"transparent",color:mainMenu==="dept"?C.blue:C.text,fontSize:"13px",fontFamily:"inherit",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:"8px",whiteSpace:"nowrap"}}>🏢 부서/팀 관리</button>}
-                      </div>
-                    )}
-                  </div>
-                );
-              };
-              return <AdminTabWithDrop key="admin-tab-drop"/>;
-            }
+            const active=mainMenu===tab.id||(tab.id==="admin"&&mainMenu==="dept");
             return(
               <button key={tab.id} onClick={()=>{
                 setMainMenu(tab.id);
@@ -2619,10 +2597,6 @@ export default function ApplicantManager() {
           };
           return(
             <div style={{maxWidth:"1440px",margin:"0 auto",padding:"0 56px 60px"}}>
-              <div style={{marginBottom:"24px",paddingBottom:"12px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",gap:"12px"}}>
-                <span style={{fontSize:"18px"}}>🔧</span>
-                <div style={{textAlign:"center"}}><div style={{fontWeight:800,fontSize:"15px",color:C.text}}>관리자 설정</div><div style={{fontSize:"12px",color:C.muted,marginTop:"2px"}}>직책자 코드 및 관리자 계정을 관리합니다</div></div>
-              </div>
 
               {/* 탭 */}
               {(()=>{
@@ -2637,8 +2611,11 @@ export default function ApplicantManager() {
                   return(
                     <div>
                       <div style={{display:"flex",gap:"4px",marginBottom:"20px",background:C.bg,borderRadius:"12px",padding:"4px",border:`1px solid ${C.border}`,width:"fit-content"}}>
-                        {[{id:"accounts",label:"🔑 관리자 계정"},{id:"logs",label:"📋 로그"}].map(t=>(
-                          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{padding:"8px 18px",borderRadius:"9px",border:"none",cursor:"pointer",background:activeTab===t.id?C.surface:"transparent",color:activeTab===t.id?C.blue:C.muted,fontSize:"13px",fontWeight:activeTab===t.id?700:400,fontFamily:"inherit",boxShadow:activeTab===t.id?shadow:"none",transition:"all 0.15s"}}>{t.label}</button>
+                        {[{id:"accounts",label:"🔑 관리자 계정"},{id:"logs",label:"📋 로그"},{id:"dept",label:"🏢 부서/팀 관리"}].map(t=>(
+                          <button key={t.id} onClick={()=>{
+                            setActiveTab(t.id);
+                            if(t.id==="dept") setMainMenu("dept");
+                          }} style={{padding:"8px 18px",borderRadius:"9px",border:"none",cursor:"pointer",background:activeTab===t.id?C.surface:"transparent",color:activeTab===t.id?C.blue:C.muted,fontSize:"13px",fontWeight:activeTab===t.id?700:400,fontFamily:"inherit",boxShadow:activeTab===t.id?shadow:"none",transition:"all 0.15s"}}>{t.label}</button>
                         ))}
                       </div>
 
