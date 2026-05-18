@@ -766,7 +766,7 @@ export default function ApplicantManager() {
             <span style={{marginLeft:"auto",fontSize:"11px",color:C.muted,background:C.bg,padding:"4px 10px",borderRadius:"20px",border:`1px solid ${C.border}`}}>👁 읽기 전용</span>
           </div>
 
-          <div style={{maxWidth:"960px",margin:"0 auto",padding:"32px 24px 60px",animation:"fadeIn 0.4s ease"}}>
+          <div style={{maxWidth:"1200px",margin:"0 auto",padding:"32px 24px 60px",animation:"fadeIn 0.4s ease"}}>
             {/* 월 선택 탭 */}
             <div style={{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"24px"}}>
               {ymList.map(ym=>{
@@ -1167,7 +1167,7 @@ export default function ApplicantManager() {
   }
 
   return(
-    <div style={{background:C.bg,minHeight:"100vh"}}>
+    <div style={{background:mainMenu==="home"?`linear-gradient(135deg,#f0f4ff 0%,#f8f0ff 50%,#f0f8ff 100%)`:C.bg,minHeight:"100vh",transition:"background 0.4s"}}>
       <style>{`
         @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-7px);opacity:1}}
@@ -1240,6 +1240,7 @@ export default function ApplicantManager() {
 
           /* 메인 콘텐츠 패딩 축소 */
           .main-content{padding:16px 16px 48px!important;}
+          .gnb-inner{padding:0 16px!important;}
           .main-content-home{padding:0!important;}
 
           /* 랜딩 카드: 세로 스택 */
@@ -1276,7 +1277,7 @@ export default function ApplicantManager() {
 
       {/* GNB */}
       <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100}}>
-        <div className="gnb-inner" style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px",flexWrap:"nowrap"}}>
+        <div className="gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 56px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px",flexWrap:"nowrap"}}>
           <img src={LOGO_B64} alt="OKESTRO ACADEMY" className="land-logo" style={{height:"28px",marginRight:"20px",objectFit:"contain",cursor:"pointer"}} onClick={()=>isAdmin&&setMainMenu("home")}/>
 
           {/* 데스크탑 탭 메뉴 */}
@@ -1388,7 +1389,7 @@ export default function ApplicantManager() {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1200px",margin:"0 auto",padding:mainMenu==="home"?"0":"28px 40px 60px"}}>
+      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":"28px 56px 60px"}}>
         {mainMenu!=="home"&&(
         <div style={{marginBottom:"20px",paddingBottom:"14px",borderBottom:`2px solid ${C.blue}22`}}>
           <h1 style={{fontSize:"20px",fontWeight:900,color:C.text,margin:0,letterSpacing:"-0.3px"}}>
@@ -1583,7 +1584,7 @@ export default function ApplicantManager() {
 
         {/* ═══ 홈 랜딩 ═══ */}
         {isAdmin&&mainMenu==="home"&&(
-          <div className="land-container" style={{minHeight:"calc(100vh - 52px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"48px 40px 40px",background:`linear-gradient(135deg,#f0f4ff 0%,#f8f0ff 50%,#f0f8ff 100%)`}}>
+          <div className="land-container" style={{minHeight:"calc(100vh - 52px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"56px 60px 48px",background:"transparent"}}>
             <style>{`
               @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
               @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.7}}
@@ -1602,7 +1603,7 @@ export default function ApplicantManager() {
             </div>
 
             {/* 카드 3장 */}
-            <div className="land-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"900px",animation:"fadeUp 0.7s 0.1s ease both"}}>
+            <div className="land-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"1100px",animation:"fadeUp 0.7s 0.1s ease both"}}>
               {[
                 {
                   id:"list",
@@ -2612,7 +2613,7 @@ export default function ApplicantManager() {
             );
           };
           return(
-            <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px 60px"}}>
+            <div style={{maxWidth:"1440px",margin:"0 auto",padding:"0 56px 60px"}}>
               <div style={{marginBottom:"24px",paddingBottom:"12px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:"12px"}}>
                 <span style={{fontSize:"18px"}}>🔧</span>
                 <div><div style={{fontWeight:800,fontSize:"15px",color:C.text}}>관리자 설정</div><div style={{fontSize:"12px",color:C.muted,marginTop:"2px"}}>직책자 코드 및 관리자 계정을 관리합니다</div></div>
