@@ -1125,7 +1125,7 @@ export default function ApplicantManager() {
         <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.purple}11,${C.blue}06,${C.bg})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
           <style>{`@keyframes modalIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
           <div style={{textAlign:"center",marginBottom:"36px",animation:"modalIn 0.4s ease"}}>
-            <img src={LOGO_B64} alt="OKESTRO ACADEMY" style={{height:"52px",objectFit:"contain",marginBottom:"8px"}}/>
+            <img src={LOGO_B64} alt="OKESTRO ACADEMY" style={{height:"31px",objectFit:"contain",marginBottom:"8px"}}/>
             <div style={{fontSize:"12px",color:C.muted,marginTop:"4px"}}>직책자 전용 로그인</div>
           </div>
           <div style={{width:"100%",maxWidth:"380px",animation:"modalIn 0.5s ease"}}>
