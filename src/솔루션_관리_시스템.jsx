@@ -606,7 +606,10 @@ export default function ApplicantManager() {
     const matchStatus=applicantFilter==="전체"?true:applicantFilter==="진행중"?!lp:lp===applicantFilter;
     const q=applicantSearch.toLowerCase();
     const matchSearch=!q||(a.name||"").toLowerCase().includes(q)||(a.company||"").toLowerCase().includes(q)||(a.division||"").toLowerCase().includes(q)||(a.team||"").toLowerCase().includes(q)||(a.email||"").toLowerCase().includes(q)||(a.joinYearMonth||"").includes(q);
-    return matchStatus&&matchSearch;
+    // 자연어 검색 결과 필터
+    const nlIds=window.__nlSearchIds;
+    const matchNL=!nlIds||nlIds.includes(a.id);
+    return matchStatus&&matchSearch&&matchNL;
   });
 
   const handleSort=key=>{
@@ -654,9 +657,9 @@ export default function ApplicantManager() {
 
   const ADMIN_TABS = isAdmin ? [
     {id:"list",   icon:"≡",  label:"관리 리스트"},
-    ...(can(userRole,"ai_menu")     ?[{id:"ai",    icon:"🤖",label:"AI 자동분류"}]:[]),
     ...(can(userRole,"report_menu") ?[{id:"report",icon:"📊",label:"월별 보고서"}]:[]),
     ...(can(userRole,"dept_menu")   ?[{id:"dept",  icon:"🏢",label:"부서/팀 관리"}]:[]),
+    ...(can(userRole,"ai_menu")     ?[{id:"ai",    icon:"🤖",label:"AI 자동분류"}]:[]),
     ...(isSuperAdmin                ?[{id:"admin", icon:"🔧",label:"관리"}]:[]),
   ] : [];
 
@@ -1567,88 +1570,165 @@ export default function ApplicantManager() {
         })()}
 
         {/* ═══ 홈 랜딩 ═══ */}
-        {isAdmin&&mainMenu==="home"&&(
-          <div className="land-container" style={{minHeight:"calc(100vh - 52px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"56px 60px 48px",background:"transparent"}}>
-            <style>{`
-              @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-              @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.7}}
-              .land-card:hover{transform:translateY(-6px)!important;box-shadow:0 20px 48px rgba(29,78,216,0.15)!important;}
-              .land-card:hover .land-cta{background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;color:#fff!important;}
-            `}</style>
+        {isAdmin&&mainMenu==="home"&&(()=>{
+          const LandingPage=()=>{
+            const [query,setQuery]=useState("");
+            const [searching,setSearching]=useState(false);
+            const [searchResult,setSearchResult]=useState(null); // {summary, ids}
+            const [searchError,setSearchError]=useState("");
 
-            {/* 서비스명 + 슬로건 */}
-            <div className="land-heading" style={{textAlign:"center",marginBottom:"36px",animation:"fadeUp 0.6s ease"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"12px",marginBottom:"16px"}}>
-                <img src={LOGO_B64} alt="OKESTRO" style={{height:"36px",objectFit:"contain"}}/>
-                <div style={{width:"1.5px",height:"32px",background:"#cbd5e1"}}/>
-                <span style={{fontSize:"28px",fontWeight:900,background:"linear-gradient(135deg,#1d4ed8,#7c3aed)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:"-0.5px"}}>OKESTRO Proof</span>
-              </div>
-              <p style={{fontSize:"16px",color:"#64748b",fontWeight:500,letterSpacing:"0.5px",animation:"shimmer 3s ease infinite"}}>Proof of Skill, Master of Cloud</p>
-            </div>
+            const userName=loginUser?.name||loginUser?.username||"";
 
-            {/* 카드 3장 */}
-            <div className="land-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"1100px",animation:"fadeUp 0.7s 0.1s ease both"}}>
-              {[
-                {
-                  id:"list",
-                  icon:"📋",
-                  title:"관리 리스트",
-                  desc:"응시자 등록·수정·삭제, 점수 입력, 합격 여부 관리 및 필터링",
-                  color:C.blue,
-                  grad:`linear-gradient(135deg,${C.blue}18,${C.blue}08)`,
-                  border:`${C.blue}33`,
-                  cta:"리스트 열기",
-                },
-                {
-                  id:"report",
-                  icon:"📊",
-                  title:"월별 보고서",
-                  desc:"월별 응시 현황, 점수 분포도, 평균 추이 등 데이터 시각화",
-                  color:C.purple,
-                  grad:`linear-gradient(135deg,${C.purple}18,${C.purple}08)`,
-                  border:`${C.purple}33`,
-                  cta:"보고서 열기",
-                },
-                {
-                  id:"dept",
-                  icon:"🏢",
-                  title:"부서/팀 관리",
-                  desc:"조직 구조 등록·수정, 본부·팀 계층 관리 및 직책자 배정",
-                  color:C.teal,
-                  grad:`linear-gradient(135deg,${C.teal}18,${C.teal}08)`,
-                  border:`${C.teal}33`,
-                  cta:"조직 관리",
-                },
-              ].map((card,i)=>(
-                <div key={card.id} className="land-card" onClick={()=>setMainMenu(card.id)}
-                  style={{background:card.grad,borderRadius:"20px",border:`1.5px solid ${card.border}`,padding:"32px 28px",cursor:"pointer",transition:"transform 0.25s,box-shadow 0.25s",boxShadow:"0 4px 20px rgba(0,0,0,0.06)",display:"flex",flexDirection:"column",gap:"16px",animation:`fadeUp 0.6s ${0.15+i*0.1}s ease both`}}>
-                  {/* 아이콘 */}
-                  <div style={{width:"52px",height:"52px",borderRadius:"14px",background:`${card.color}18`,border:`1.5px solid ${card.color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px"}}>
-                    {card.icon}
+            const runSearch=async()=>{
+              if(!query.trim()||searching) return;
+              setSearching(true);setSearchResult(null);setSearchError("");
+              try{
+                const appSummary=applicants.map(a=>`ID:${a.id}|이름:${a.name}|소속:${a.division||""}|팀:${a.team||""}|회사:${a.company||""}|1차점수:${a.score1||""}|1차합불:${a.pass1||""}|2차점수:${a.score2||""}|2차합불:${a.pass2||""}|3차점수:${a.score3||""}|3차합불:${a.pass3||""}|최종상태:${a.finalStatus||""}`).join("\n");
+                const prompt=`당신은 응시자 데이터 검색 도우미입니다.\n\n아래는 전체 응시자 데이터입니다:\n${appSummary}\n\n사용자 검색어: "${query}"\n\n위 검색어에 해당하는 응시자의 ID 목록을 반환하고, 왜 선택했는지 한 줄 요약을 작성해주세요.\n반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):\n{"ids":["id1","id2"],"summary":"검색 결과 요약 (예: OO 조건에 해당하는 N명)"}`;
+                const res=await fetch("https://api.anthropic.com/v1/messages",{
+                  method:"POST",
+                  headers:{"Content-Type":"application/json","x-api-key":ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+                  body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})
+                });
+                if(!res.ok) throw new Error(`API ${res.status}`);
+                const data=await res.json();
+                const text=data.content?.find(b=>b.type==="text")?.text||"{}";
+                const clean=text.replace(/```json|```/g,"").trim();
+                const parsed=JSON.parse(clean);
+                setSearchResult(parsed);
+              }catch(e){setSearchError("검색 중 오류가 발생했습니다: "+e.message);}
+              finally{setSearching(false);}
+            };
+
+            const goToResults=()=>{
+              if(!searchResult?.ids?.length) return;
+              // 검색 결과 ID를 전역 필터에 저장 후 리스트로 이동
+              window.__nlSearchIds=searchResult.ids;
+              window.__nlSearchSummary=searchResult.summary;
+              setMainMenu("list");
+            };
+
+            return(
+              <div className="land-container" style={{minHeight:"calc(100vh - 80px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"48px 60px 48px",background:"transparent"}}>
+                <style>{`
+                  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+                  @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.7}}
+                  @keyframes searchPulse{0%,100%{box-shadow:0 4px 24px rgba(29,78,216,0.10)}50%{box-shadow:0 4px 32px rgba(29,78,216,0.22)}}
+                  .land-card:hover{transform:translateY(-6px)!important;box-shadow:0 20px 48px rgba(29,78,216,0.15)!important;}
+                  .land-card:hover .land-cta{background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;color:#fff!important;}
+                  .nl-search-box{transition:box-shadow 0.2s,border-color 0.2s;}
+                  .nl-search-box:focus-within{box-shadow:0 4px 32px rgba(29,78,216,0.18)!important;border-color:#3b82f6!important;}
+                `}</style>
+
+                {/* 서비스명 + 슬로건 */}
+                <div className="land-heading" style={{textAlign:"center",marginBottom:"28px",animation:"fadeUp 0.6s ease"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"12px",marginBottom:"12px"}}>
+                    <img src={LOGO_B64} alt="OKESTRO" style={{height:"36px",objectFit:"contain"}}/>
+                    <div style={{width:"1.5px",height:"32px",background:"#cbd5e1"}}/>
+                    <span style={{fontSize:"28px",fontWeight:900,background:"linear-gradient(135deg,#1d4ed8,#7c3aed)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:"-0.5px"}}>OKESTRO Proof</span>
                   </div>
-                  {/* 텍스트 */}
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:"17px",fontWeight:800,color:C.text,marginBottom:"8px"}}>{card.title}</div>
-                    <div style={{fontSize:"12px",color:C.muted,lineHeight:"1.7"}}>{card.desc}</div>
-                  </div>
-                  {/* CTA 버튼 */}
-                  <div className="land-cta" style={{padding:"10px 0",borderRadius:"10px",border:`1.5px solid ${card.color}55`,background:"transparent",color:card.color,fontSize:"13px",fontWeight:700,textAlign:"center",transition:"all 0.2s"}}>
-                    {card.cta} →
-                  </div>
+                  <p style={{fontSize:"16px",color:"#64748b",fontWeight:500,letterSpacing:"0.5px",animation:"shimmer 3s ease infinite"}}>Proof of Skill, Master of Cloud</p>
                 </div>
-              ))}
-            </div>
 
-            {/* 하단 문구 */}
-            <p style={{marginTop:"48px",fontSize:"11px",color:"#94a3b8",animation:"fadeUp 0.6s 0.45s ease both"}}>
-              OKESTRO Academy · Solution Test Management System
-            </p>
-          </div>
-        )}
+                {/* 인사말 */}
+                <div style={{fontSize:"22px",fontWeight:700,color:C.text,marginBottom:"24px",animation:"fadeUp 0.5s 0.1s ease both",textAlign:"center"}}>
+                  {userName&&<><span style={{color:C.blue}}>{userName}</span>님, 안녕하세요.</>} 무엇을 찾고 계신가요?
+                </div>
+
+                {/* 자연어 검색창 */}
+                <div style={{width:"100%",maxWidth:"720px",marginBottom:"16px",animation:"fadeUp 0.5s 0.2s ease both"}}>
+                  <div className="nl-search-box" style={{display:"flex",alignItems:"center",gap:"12px",background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:"32px",padding:"14px 20px",boxShadow:"0 4px 24px rgba(29,78,216,0.08)"}}>
+                    <span style={{fontSize:"18px",flexShrink:0}}>🔍</span>
+                    <input
+                      value={query}
+                      onChange={e=>setQuery(e.target.value)}
+                      onKeyDown={e=>e.key==="Enter"&&runSearch()}
+                      placeholder="예: IaaS 개발실에서 1차 불합격하고 아직 재응시 안 한 사람 찾아줘"
+                      style={{flex:1,border:"none",outline:"none",fontSize:"15px",background:"transparent",color:C.text,fontFamily:"inherit"}}
+                    />
+                    {query&&<button onClick={()=>{setQuery("");setSearchResult(null);setSearchError("");}} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"18px",padding:"0",lineHeight:1}}>✕</button>}
+                    <button onClick={runSearch} disabled={searching||!query.trim()} style={{padding:"8px 20px",borderRadius:"24px",border:"none",background:query.trim()?`linear-gradient(135deg,${C.blue},${C.blueLight})`:"#e2e8f0",color:query.trim()?"#fff":C.muted,fontSize:"13px",fontWeight:700,cursor:query.trim()?"pointer":"default",fontFamily:"inherit",whiteSpace:"nowrap",transition:"all 0.2s"}}>
+                      {searching?"검색 중…":"AI 검색"}
+                    </button>
+                  </div>
+
+                  {/* 예시 힌트 */}
+                  {!searchResult&&!searching&&(
+                    <div style={{display:"flex",gap:"8px",marginTop:"10px",flexWrap:"wrap",justifyContent:"center"}}>
+                      {["60점 이상 합격자 전체","3차까지 응시한 사람","클라우드PS팀 미응시자"].map(hint=>(
+                        <button key={hint} onClick={()=>setQuery(hint)} style={{padding:"5px 14px",borderRadius:"20px",border:`1px solid ${C.border}`,background:C.surface,color:C.subtle,fontSize:"12px",cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
+                          {hint}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 검색 결과 */}
+                  {searching&&(
+                    <div style={{marginTop:"16px",textAlign:"center",color:C.muted,fontSize:"13px",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"}}>
+                      <div style={{display:"flex",gap:"4px"}}>{[0,1,2].map(i=><div key={i} style={{width:"6px",height:"6px",borderRadius:"50%",background:C.blue,animation:`bounce 0.9s ${i*0.2}s infinite`}}/>)}</div>
+                      AI가 응시자 데이터를 분석하는 중...
+                    </div>
+                  )}
+
+                  {searchError&&(
+                    <div style={{marginTop:"12px",padding:"12px 16px",borderRadius:"12px",background:"#fef2f2",border:"1px solid #fecaca",color:C.red,fontSize:"13px"}}>{searchError}</div>
+                  )}
+
+                  {searchResult&&(
+                    <div style={{marginTop:"12px",padding:"16px 20px",borderRadius:"16px",background:C.surface,border:`1.5px solid ${C.blue}22`,boxShadow:"0 4px 16px rgba(29,78,216,0.08)",animation:"fadeUp 0.3s ease"}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"12px",flexWrap:"wrap"}}>
+                        <div>
+                          <span style={{fontWeight:700,color:C.blue,fontSize:"14px"}}>🎯 {searchResult.summary}</span>
+                          <div style={{fontSize:"12px",color:C.muted,marginTop:"3px"}}>{searchResult.ids?.length||0}명 검색됨</div>
+                        </div>
+                        {searchResult.ids?.length>0&&(
+                          <button onClick={goToResults} style={{padding:"8px 20px",borderRadius:"20px",border:"none",background:`linear-gradient(135deg,${C.blue},${C.blueLight})`,color:"#fff",fontSize:"13px",fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                            결과 보기 →
+                          </button>
+                        )}
+                        {searchResult.ids?.length===0&&<span style={{fontSize:"12px",color:C.muted}}>조건에 맞는 응시자가 없습니다</span>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 카드 3장 */}
+                <div className="land-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"1100px",animation:"fadeUp 0.7s 0.3s ease both"}}>
+                  {[
+                    {id:"list",icon:"📋",title:"관리 리스트",desc:"응시자 등록·수정·삭제, 점수 입력, 합격 여부 관리 및 필터링",color:C.blue,grad:`linear-gradient(135deg,${C.blue}18,${C.blue}08)`,border:`${C.blue}33`,cta:"리스트 열기"},
+                    {id:"report",icon:"📊",title:"월별 보고서",desc:"월별 응시 현황, 점수 분포도, 평균 추이 등 데이터 시각화",color:C.purple,grad:`linear-gradient(135deg,${C.purple}18,${C.purple}08)`,border:`${C.purple}33`,cta:"보고서 열기"},
+                    {id:"dept",icon:"🏢",title:"부서/팀 관리",desc:"조직 구조 등록·수정, 본부·팀 계층 관리 및 직책자 배정",color:C.teal,grad:`linear-gradient(135deg,${C.teal}18,${C.teal}08)`,border:`${C.teal}33`,cta:"조직 관리"},
+                  ].map((card,i)=>(
+                    <div key={card.id} className="land-card" onClick={()=>setMainMenu(card.id)}
+                      style={{background:card.grad,borderRadius:"20px",border:`1.5px solid ${card.border}`,padding:"28px 24px",cursor:"pointer",boxShadow:"0 4px 20px rgba(0,0,0,0.06)",display:"flex",flexDirection:"column",gap:"14px",animation:`fadeUp 0.6s ${0.35+i*0.08}s ease both`}}>
+                      <div style={{width:"48px",height:"48px",borderRadius:"14px",background:`${card.color}18`,border:`1.5px solid ${card.color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px"}}>{card.icon}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:"16px",fontWeight:800,color:C.text,marginBottom:"6px"}}>{card.title}</div>
+                        <div style={{fontSize:"12px",color:C.muted,lineHeight:"1.7"}}>{card.desc}</div>
+                      </div>
+                      <div className="land-cta" style={{padding:"9px 0",borderRadius:"10px",border:`1.5px solid ${card.color}55`,background:"transparent",color:card.color,fontSize:"13px",fontWeight:700,textAlign:"center",transition:"all 0.2s"}}>{card.cta} →</div>
+                    </div>
+                  ))}
+                </div>
+
+                <p style={{marginTop:"36px",fontSize:"11px",color:"#94a3b8",animation:"fadeUp 0.6s 0.5s ease both"}}>OKESTRO Academy · Solution Test Management System</p>
+              </div>
+            );
+          };
+          return <LandingPage key="landing"/>;
+        })()}
 
         {/* ═══ 관리 리스트 ═══ */}
         {(isOfficer?safeMenu==="list":mainMenu==="list")&&(
           <div className="page-enter">
+          {window.__nlSearchIds&&(
+            <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px",padding:"10px 16px",borderRadius:"12px",background:`${C.blue}08`,border:`1px solid ${C.blue}22`}}>
+              <span style={{fontSize:"13px",color:C.blue,fontWeight:700}}>🎯 AI 검색 결과</span>
+              <span style={{fontSize:"12px",color:C.subtle}}>{window.__nlSearchSummary}</span>
+              <button onClick={()=>{window.__nlSearchIds=null;window.__nlSearchSummary=null;setApplicantFilter("전체");}} style={{marginLeft:"auto",padding:"3px 10px",borderRadius:"20px",border:`1px solid ${C.border}`,background:C.surface,color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>✕ 검색 해제</button>
+            </div>
+          )}
           {appViewMode==="monthly"?(
             <>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",flexWrap:"wrap",gap:"12px"}}>
