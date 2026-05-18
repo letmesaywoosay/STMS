@@ -671,7 +671,17 @@ export default function ApplicantManager() {
       const [yy,mo]=selYM?selYM.split("-"):["",""];
       const mLabel=selYM?(yy+"년 "+parseInt(mo)+"월"):"";
 
-      // 명단
+      // 전월 평균
+      const pubPrevYM=(ym)=>{if(!ym) return "";const [y,m]=ym.split("-").map(Number);return m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`;};
+      const pubPrevM=pubPrevYM(selYM);
+      const pubPrevApps=applicants.flatMap(a=>[
+        a.date1?.startsWith(pubPrevM)?{score:a.score1}:null,
+        a.date2?.startsWith(pubPrevM)?{score:a.score2}:null,
+        a.date3?.startsWith(pubPrevM)?{score:a.score3}:null,
+      ].filter(Boolean));
+      const pubPrevScores=pubPrevApps.map(a=>parseFloat(a.score)).filter(v=>!isNaN(v));
+      const pubPrevAvg=pubPrevScores.length?Math.round(pubPrevScores.reduce((a,b)=>a+b,0)/pubPrevScores.length*10)/10:null;
+      const pubAvgDiff=avg!==null&&pubPrevAvg!==null?Math.round((avg-pubPrevAvg)*10)/10:null;
       const nthCols=["1차","2차","3차"];
 
       // 차시별
@@ -814,6 +824,12 @@ export default function ApplicantManager() {
               <div style={{padding:"24px",textAlign:"center"}}>
                 <div style={{fontSize:"56px",fontWeight:900,color:avg!==null&&avg>=60?C.green:C.red,lineHeight:1}}>{avg!==null?avg:"—"}<span style={{fontSize:"20px",fontWeight:500,color:C.muted}}>점</span></div>
                 <div style={{fontSize:"12px",color:C.muted,marginTop:"10px"}}>총 {scores.length}명 점수 기준</div>
+                {pubPrevAvg!==null&&(
+                  <div style={{marginTop:"12px",padding:"8px 16px",borderRadius:"10px",background:pubAvgDiff>=0?"#f0fdf4":"#fef2f2",border:`1px solid ${pubAvgDiff>=0?"#bbf7d0":"#fecaca"}`,display:"inline-flex",alignItems:"center",gap:"8px"}}>
+                    <span style={{fontSize:"12px",color:C.muted}}>전월({pubPrevAvg}점) 대비</span>
+                    <span style={{fontSize:"16px",fontWeight:800,color:pubAvgDiff>=0?C.green:C.red}}>{pubAvgDiff>=0?"+":""}{pubAvgDiff}점</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -979,7 +995,7 @@ export default function ApplicantManager() {
   // ── 직책자 로그인 화면 ────────────────────────────────────────
   if(!loginUser){
     // ★ EmailJS 설정값을 여기에 입력하세요
-    const EMAILJS_SERVICE_ID  = "service_dqh2rka";
+    const EMAILJS_SERVICE_ID  = "service_w9dhfpy";
     const EMAILJS_TEMPLATE_ID = "template_crmker8";
     const EMAILJS_PUBLIC_KEY  = "kzHB8e8yCF3r0OnaA";
 
