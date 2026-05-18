@@ -134,13 +134,13 @@ export default function ApplicantManager() {
   const [aiMailModal,     setAiMailModal]      = useState(null);
   const [tooltip,         setTooltip]          = useState(null);
   const [colFilters,      setColFilters]       = useState({company:"",division:"",team:""});
-  const [colDropdown,     setColDropdown]      = useState(null); // "company"|"division"|"team"|null
+  const [colDropdown,     setColDropdown]      = useState(null); // {field, x, y}
 
   useEffect(()=>{
     if(!colDropdown) return;
-    const close=()=>setColDropdown(null);
-    document.addEventListener("click",close);
-    return()=>document.removeEventListener("click",close);
+    const close=(e)=>{ if(!e.target.closest?.('.col-dd')) setColDropdown(null); };
+    document.addEventListener("mousedown",close);
+    return()=>document.removeEventListener("mousedown",close);
   },[colDropdown]);
   const [deleteConfirm,   setDeleteConfirm]    = useState(null);
   const [mainMenu, setMainMenu] = useState(()=>{
@@ -615,11 +615,10 @@ export default function ApplicantManager() {
     const matchStatus=applicantFilter==="전체"?true:applicantFilter==="진행중"?!lp:lp===applicantFilter;
     const q=applicantSearch.toLowerCase();
     const matchSearch=!q||(a.name||"").toLowerCase().includes(q)||(a.company||"").toLowerCase().includes(q)||(a.division||"").toLowerCase().includes(q)||(a.team||"").toLowerCase().includes(q)||(a.email||"").toLowerCase().includes(q)||(a.joinYearMonth||"").includes(q);
-    const matchCol=
-      (!colFilters.company||(a.company||"")=== colFilters.company)&&
-      (!colFilters.division||(a.division||"")=== colFilters.division)&&
-      (!colFilters.team||(a.team||"")=== colFilters.team);
-    return matchStatus&&matchSearch&&matchCol;
+    return matchStatus&&matchSearch&&
+      (!colFilters.company||(a.company||"")===colFilters.company)&&
+      (!colFilters.division||(a.division||"")===colFilters.division)&&
+      (!colFilters.team||(a.team||"")===colFilters.team);
   });
 
   const handleSort=key=>{
@@ -1766,62 +1765,20 @@ export default function ApplicantManager() {
                       <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{cursor:"pointer",width:"14px",height:"14px",accentColor:C.blue}}/>
                     </th>}
                     {[
-                      {label:"입사년월",key:"joinYearMonth",colFilter:null},
-                      {label:"이름",key:"name",colFilter:null},
-                      {label:"구분(회사)",key:"company",colFilter:"company"},
-                      {label:"소속본부",key:"division",colFilter:"division"},
-                      {label:"소속팀",key:"team",colFilter:"team"},
-                      {label:"이메일",key:"email",colFilter:null},
-                      {label:"테스트 결과",key:"testResult",bg:`${C.green}06`,colFilter:null},
-                      {label:"최종 상태",key:"finalStatus",bg:`${C.purple}06`,colFilter:null},
-                      {label:"메모",key:null,colFilter:null},
-                      ...(!isOfficer?[{label:"",key:null,colFilter:null}]:[]),
-                    ].map(({label,key,bg,colFilter},i)=>{
+                      {label:"입사년월",key:"joinYearMonth"},{label:"이름",key:"name"},{label:"구분(회사)",key:"company"},
+                      {label:"소속본부",key:"division"},{label:"소속팀",key:"team"},{label:"이메일",key:"email"},
+                      {label:"테스트 결과",key:"testResult",bg:`${C.green}06`},{label:"최종 상태",key:"finalStatus",bg:`${C.purple}06`},
+                      {label:"메모",key:null},
+                      ...(!isOfficer?[{label:"",key:null}]:[]),
+                    ].map(({label,key,bg},i)=>{
                       const isActive=sortConfig.key===key;
                       const arrow=!key?"":(isActive?(sortConfig.dir==="asc"?"↑":"↓"):"↕");
-                      const cfActive=colFilter&&!!colFilters[colFilter];
-                      // 드롭다운 옵션 계산
-                      const cfOptions=colFilter?[...new Set(applicants.map(a=>(a[colFilter]||"")).filter(Boolean))].sort():[];
                       return(
-                        <th key={i} style={{padding:"10px 10px",textAlign:"left",fontWeight:700,fontSize:"11px",color:isActive?C.blue:C.muted,whiteSpace:"nowrap",overflow:"hidden",borderRight:i<9?`1px solid ${C.border}`:"none",background:isActive?`${C.blue}08`:(bg||"transparent"),userSelect:"none",position:"relative"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
-                            {/* 정렬 */}
-                            <span style={{cursor:key?"pointer":"default",flex:1,display:"flex",alignItems:"center",gap:"3px"}} onClick={key?()=>handleSort(key):undefined}>
-                              {label}
-                              {key&&<span style={{fontSize:"10px",color:isActive?C.blue:"#cbd5e1",fontWeight:400}}>{arrow}</span>}
-                            </span>
-                            {/* 컬럼 필터 아이콘 */}
-                            {colFilter&&(
-                              <span
-                                onClick={e=>{e.stopPropagation();setColDropdown(colDropdown===colFilter?null:colFilter);}}
-                                title="필터"
-                                style={{cursor:"pointer",fontSize:"12px",opacity:cfActive?1:0.45,color:cfActive?C.blue:C.muted,background:cfActive?`${C.blue}15`:"transparent",borderRadius:"4px",padding:"1px 3px",transition:"all 0.15s",flexShrink:0}}
-                              >▼</span>
-                            )}
-                          </div>
-                          {/* 드롭다운 */}
-                          {colFilter&&colDropdown===colFilter&&(
-                            <div style={{position:"absolute",top:"100%",left:0,zIndex:400,background:C.surface,border:`1.5px solid ${C.blue}33`,borderRadius:"10px",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:"160px",maxHeight:"260px",overflow:"auto",padding:"4px 0",animation:"fadeUp 0.15s ease"}}
-                              onClick={e=>e.stopPropagation()}>
-                              {/* 전체(해제) */}
-                              <div onClick={()=>{setColFilters(p=>({...p,[colFilter]:""}));setColDropdown(null);}}
-                                style={{padding:"8px 14px",cursor:"pointer",fontSize:"12px",fontWeight:colFilters[colFilter]===""?700:400,color:colFilters[colFilter]===""?C.blue:C.text,background:colFilters[colFilter]===""?`${C.blue}08`:"transparent",display:"flex",alignItems:"center",gap:"6px"}}>
-                                <span style={{width:"12px",height:"12px",borderRadius:"50%",border:`1.5px solid ${colFilters[colFilter]===""?C.blue:C.border}`,background:colFilters[colFilter]===""?C.blue:"transparent",display:"inline-block",flexShrink:0}}/>
-                                전체 (필터 해제)
-                              </div>
-                              <div style={{height:"1px",background:C.border,margin:"3px 0"}}/>
-                              {cfOptions.map(opt=>(
-                                <div key={opt} onClick={()=>{setColFilters(p=>({...p,[colFilter]:opt}));setColDropdown(null);}}
-                                  style={{padding:"8px 14px",cursor:"pointer",fontSize:"12px",fontWeight:colFilters[colFilter]===opt?700:400,color:colFilters[colFilter]===opt?C.blue:C.text,background:colFilters[colFilter]===opt?`${C.blue}08`:"transparent",display:"flex",alignItems:"center",gap:"6px",whiteSpace:"nowrap"}}
-                                  onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}05`}
-                                  onMouseLeave={e=>e.currentTarget.style.background=colFilters[colFilter]===opt?`${C.blue}08`:"transparent"}>
-                                  <span style={{width:"12px",height:"12px",borderRadius:"50%",border:`1.5px solid ${colFilters[colFilter]===opt?C.blue:C.border}`,background:colFilters[colFilter]===opt?C.blue:"transparent",display:"inline-block",flexShrink:0}}/>
-                                  {opt}
-                                </div>
-                              ))}
-                              {cfOptions.length===0&&<div style={{padding:"10px 14px",color:C.muted,fontSize:"12px"}}>값 없음</div>}
-                            </div>
-                          )}
+                        <th key={i} onClick={key?()=>handleSort(key):undefined}
+                          style={{padding:"10px 10px",textAlign:"left",fontWeight:700,fontSize:"11px",color:isActive?C.blue:C.muted,whiteSpace:"nowrap",overflow:"hidden",borderRight:i<9?`1px solid ${C.border}`:"none",background:isActive?`${C.blue}08`:(bg||"transparent"),cursor:key?"pointer":"default",userSelect:"none",transition:"background 0.15s,color 0.15s"}}
+                          onMouseEnter={key?e=>{if(!isActive)e.currentTarget.style.background=`${C.blue}05`;}:undefined}
+                          onMouseLeave={key?e=>{if(!isActive)e.currentTarget.style.background=bg||"transparent";}:undefined}>
+                          <span style={{display:"flex",alignItems:"center",gap:"4px"}}>{label}{key&&<span style={{fontSize:"10px",color:isActive?C.blue:"#cbd5e1",fontWeight:400,lineHeight:1}}>{arrow}</span>}</span>
                         </th>
                       );
                     })}
@@ -1851,11 +1808,17 @@ export default function ApplicantManager() {
                           onClick={(isAdmin&&can(userRole,"edit_applicant"))?()=>setApplicantModal({mode:'edit',data:{...a}}):undefined}
                           title={(isAdmin&&can(userRole,"edit_applicant"))?"클릭하여 상세 정보 수정":""}
                         >{a.name}</td>
-                        <td style={{padding:"8px 10px",borderRight:`1px solid ${C.border}`,overflow:"hidden"}}>
-                          <span style={{fontSize:"11px",padding:"2px 7px",borderRadius:"6px",background:`${C.blue}10`,color:C.blue,fontWeight:600,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.company||"—"}</span>
+                        <td style={{padding:"8px 10px",borderRight:`1px solid ${C.border}`,overflow:"hidden",position:"relative",cursor:"pointer"}}
+                          onClick={e=>{e.stopPropagation();if(a.company){const r=e.currentTarget.getBoundingClientRect();setColDropdown(d=>d?.field==="company"&&d.id===a.id?null:{field:"company",id:a.id,top:r.bottom+window.scrollY+4,left:r.left+window.scrollX});} }}
+                          title="클릭하여 이 회사로 필터">
+                          <span style={{fontSize:"11px",padding:"2px 7px",borderRadius:"6px",background:colFilters.company===a.company?`${C.blue}25`:`${C.blue}10`,color:C.blue,fontWeight:600,display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",outline:colFilters.company===a.company?`1.5px solid ${C.blue}`:""}}>{a.company||"—"}</span>
                         </td>
-                        <td style={{padding:"8px 10px",color:C.subtle,fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{a.division||"—"}</td>
-                        <td style={{padding:"8px 10px",color:C.muted,fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{a.team||"—"}</td>
+                        <td style={{padding:"8px 10px",color:colFilters.division===a.division&&a.division?C.blue:C.subtle,fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`,cursor:"pointer",fontWeight:colFilters.division===a.division&&a.division?700:400}}
+                          onClick={e=>{e.stopPropagation();if(a.division){const r=e.currentTarget.getBoundingClientRect();setColDropdown(d=>d?.field==="division"&&d.id===a.id?null:{field:"division",id:a.id,top:r.bottom+window.scrollY+4,left:r.left+window.scrollX});} }}
+                          title="클릭하여 이 본부로 필터">{a.division||"—"}</td>
+                        <td style={{padding:"8px 10px",color:colFilters.team===a.team&&a.team?C.blue:C.muted,fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`,cursor:"pointer",fontWeight:colFilters.team===a.team&&a.team?700:400}}
+                          onClick={e=>{e.stopPropagation();if(a.team){const r=e.currentTarget.getBoundingClientRect();setColDropdown(d=>d?.field==="team"&&d.id===a.id?null:{field:"team",id:a.id,top:r.bottom+window.scrollY+4,left:r.left+window.scrollX});} }}
+                          title="클릭하여 이 팀으로 필터">{a.team||"—"}</td>
                         <td style={{padding:"8px 10px",color:C.muted,fontSize:"11px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{a.email||"—"}</td>
                         <td style={{padding:"8px 10px",borderRight:`1px solid ${C.border}`,background:`${C.green}04`}}>
                           {lat.pass||lat.score?(
@@ -3086,6 +3049,35 @@ export default function ApplicantManager() {
           );
         };
         return <PasswordModal key="pw-modal"/>;
+      })()}
+
+      {/* 컬럼 필터 드롭다운 팝업 */}
+      {colDropdown&&(()=>{
+        const {field,top,left}=colDropdown;
+        const fieldLabel={company:"구분(회사)",division:"소속본부",team:"소속팀"}[field];
+        const allOpts=[...new Set(applicants.map(a=>(a[field]||"")).filter(Boolean))].sort();
+        return(
+          <div className="col-dd" style={{position:"absolute",top,left,zIndex:1000,background:C.surface,border:`1.5px solid ${C.blue}33`,borderRadius:"12px",boxShadow:"0 8px 28px rgba(0,0,0,0.14)",minWidth:"200px",maxHeight:"280px",overflow:"auto",padding:"6px 0",animation:"fadeUp 0.15s ease"}}>
+            <div style={{padding:"8px 14px 6px",fontSize:"10px",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",borderBottom:`1px solid ${C.border}`,marginBottom:"4px"}}>{fieldLabel} 필터</div>
+            {/* 전체 해제 */}
+            <div className="col-dd" onClick={()=>{setColFilters(p=>({...p,[field]:""}));setColDropdown(null);}}
+              style={{padding:"8px 14px",cursor:"pointer",fontSize:"12px",fontWeight:colFilters[field]===""?700:400,color:colFilters[field]===""?C.blue:C.muted,display:"flex",alignItems:"center",gap:"8px",background:colFilters[field]===""?`${C.blue}08`:"transparent"}}
+              onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}05`}
+              onMouseLeave={e=>e.currentTarget.style.background=colFilters[field]===""?`${C.blue}08`:"transparent"}>
+              <span style={{fontSize:"13px"}}>✕</span> 전체 (필터 해제)
+            </div>
+            <div style={{height:"1px",background:C.border,margin:"3px 8px"}}/>
+            {allOpts.map(opt=>(
+              <div className="col-dd" key={opt} onClick={()=>{setColFilters(p=>({...p,[field]:opt}));setColDropdown(null);}}
+                style={{padding:"8px 14px",cursor:"pointer",fontSize:"12px",fontWeight:colFilters[field]===opt?700:400,color:colFilters[field]===opt?C.blue:C.text,background:colFilters[field]===opt?`${C.blue}08`:"transparent",display:"flex",alignItems:"center",gap:"8px",whiteSpace:"nowrap"}}
+                onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}05`}
+                onMouseLeave={e=>e.currentTarget.style.background=colFilters[field]===opt?`${C.blue}08`:"transparent"}>
+                <span style={{width:"8px",height:"8px",borderRadius:"50%",background:colFilters[field]===opt?C.blue:C.border,display:"inline-block",flexShrink:0,transition:"background 0.15s"}}/>
+                {opt}
+              </div>
+            ))}
+          </div>
+        );
       })()}
 
       {tooltip&&(
