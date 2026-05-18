@@ -306,6 +306,19 @@ export default function ApplicantManager() {
     else setApplicants(p=>p.map(a=>a.id===data.id?data:a));
     setApplicantModal(null);
   };
+
+  // ── 수정 모달 자동저장 (1.5초 디바운스) ───────────────────
+  const [autoSaveStatus, setAutoSaveStatus] = useState(""); // "saving"|"saved"|""
+  useEffect(()=>{
+    if(!applicantModal||applicantModal.mode!=='edit'||!applicantModal.data.name?.trim()) return;
+    setAutoSaveStatus("saving");
+    const t=setTimeout(()=>{
+      setApplicants(p=>p.map(a=>a.id===applicantModal.data.id?applicantModal.data:a));
+      setAutoSaveStatus("saved");
+      setTimeout(()=>setAutoSaveStatus(""),2000);
+    },1500);
+    return()=>clearTimeout(t);
+  },[applicantModal?.data]);
   const deleteApplicant=id=>{
     confirmDelete("이 응시자를 삭제하시겠습니까?",()=>{
       setApplicants(p=>p.filter(a=>a.id!==id));
@@ -2819,6 +2832,13 @@ export default function ApplicantManager() {
             <div style={{background:C.surface,borderRadius:"20px",width:"100%",maxWidth:"600px",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,0.18)",border:`1px solid ${C.border}`,animation:"modalIn 0.2s ease"}}>
               <div style={{padding:"20px 24px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:C.surface,zIndex:1}}>
                 <div style={{fontWeight:900,fontSize:"16px",color:C.text}}>{applicantModal.mode==="add"?"👥 응시자 추가":"✏️ 응시자 수정"}</div>
+                {applicantModal.mode==="edit"&&(
+                  <span style={{fontSize:"11px",color:autoSaveStatus==="saved"?C.green:C.muted,display:"flex",alignItems:"center",gap:"4px",transition:"color 0.3s"}}>
+                    {autoSaveStatus==="saving"&&<><span style={{width:"6px",height:"6px",borderRadius:"50%",background:C.amber,display:"inline-block",animation:"pulse 1s infinite"}}/>저장 중...</>}
+                    {autoSaveStatus==="saved"&&<><span style={{width:"6px",height:"6px",borderRadius:"50%",background:C.green,display:"inline-block"}}/>자동 저장됨</>}
+                    {autoSaveStatus===""&&applicantModal.mode==="edit"&&<span style={{color:C.border}}>자동 저장</span>}
+                  </span>
+                )}
                 <button onClick={()=>setApplicantModal(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"18px",padding:"2px 6px",borderRadius:"6px"}}>✕</button>
               </div>
               <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:"14px"}}>
