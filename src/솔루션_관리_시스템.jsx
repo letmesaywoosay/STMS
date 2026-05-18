@@ -1234,37 +1234,19 @@ export default function ApplicantManager() {
         @media(max-width:768px){
           .hide-mobile{display:none!important;}
           .show-mobile{display:flex!important;}
-
-          /* GNB 패딩 축소 */
           .gnb-inner{padding:0 16px!important;}
-
-          /* 메인 콘텐츠 패딩 축소 */
           .main-content{padding:16px 16px 48px!important;}
           .main-content-home{padding:0!important;}
-
-          /* 랜딩 카드: 세로 스택 */
           .land-grid{grid-template-columns:1fr!important;max-width:100%!important;}
           .land-card{padding:24px 20px!important;}
           .land-card:hover{transform:none!important;}
-
-          /* 제목 크기 */
           .land-title{font-size:20px!important;}
-          .land-logo{height:24px!important;}
-
-          /* 섹션 카드 패딩 축소 */
+          .land-logo{height:20px!important;}
           .resp-card-pad{padding:14px 14px!important;}
-
-          /* 그리드 1열 */
           .resp-grid-2{grid-template-columns:1fr!important;}
-
-          /* 버튼 full-width */
           .resp-btn-full{width:100%!important;}
-
-          /* 필터 wrap */
           .resp-filter-wrap{flex-wrap:wrap!important;gap:8px!important;}
-
-          /* 페이지 상단 여백 */
-          .land-container{padding:32px 16px 32px!important;}
+          .land-container{padding:24px 16px 24px!important;}
         }
 
         @media(max-width:480px){
@@ -1274,70 +1256,35 @@ export default function ApplicantManager() {
         }
       `}</style>
 
-      {/* GNB */}
+      {/* GNB - 2단 구조 */}
       <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100,width:"100%"}}>
-        <div className="gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px"}}>
-          <img src={LOGO_B64} alt="OKESTRO ACADEMY" className="land-logo" style={{height:"28px",marginRight:"16px",objectFit:"contain",cursor:"pointer",flexShrink:0}} onClick={()=>isAdmin&&setMainMenu("home")}/>
 
-          {/* 데스크탑 탭 메뉴 */}
-          <div className="hide-mobile" style={{display:"flex",alignItems:"center",flex:1,gap:"0",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none"}}>
-            <style>{`.hide-mobile::-webkit-scrollbar{display:none}`}</style>
-            {/* 직책자: 브리핑 + 응시자 목록만 */}
-            {isOfficer&&(
-              <>
-                {[{id:"briefing",icon:"📋",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}].map(tab=>{
-                  const active=safeMenu===tab.id;
-                  return(
-                    <button key={tab.id} onClick={()=>setMainMenu(tab.id)}
-                      className="gnb-tab"
-                      style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.purple}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.purple:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
-                      {tab.icon} {tab.label}
-                    </button>
-                  );
-                })}
-              </>
-            )}
-            {/* 관리자: 역할별 메뉴 */}
-            {isAdmin&&ADMIN_TABS.map(tab=>{
-              const active=mainMenu===tab.id;
-              return(
-                <button key={tab.id} onClick={()=>{
-                  setMainMenu(tab.id);
-                  if(tab.id==="ai"&&!aiMailModal){
-                    const yms=new Set();
-                    applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>yms.add(d.slice(0,7)));});
-                    const list=[...yms].sort().reverse();
-                    setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
-                  }
-                }}
-                style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}
-                className="gnb-tab">
-                  {tab.icon} {tab.label}
-                </button>
-              );
-            })}
-          </div>
+        {/* 상단 바: 로고 + 뱃지/상태/로그아웃 */}
+        <div className="gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",height:"40px",borderBottom:`1px solid ${C.border}88`}}>
+          {/* 로고 */}
+          <img src={LOGO_B64} alt="OKESTRO ACADEMY" className="land-logo" style={{height:"22px",objectFit:"contain",cursor:"pointer",flexShrink:0}} onClick={()=>isAdmin&&setMainMenu("home")}/>
 
-          {/* 우측 뱃지/상태 - 데스크탑 */}
-          <div className="hide-mobile" style={{display:"flex",marginLeft:"auto",alignItems:"center",gap:"8px",fontSize:"11px",flexShrink:0,paddingLeft:"12px"}}>
+          {/* 우측: 뱃지 + DB상태 + 로그아웃 (데스크탑) */}
+          <div className="hide-mobile" style={{display:"flex",marginLeft:"auto",alignItems:"center",gap:"8px",fontSize:"11px"}}>
             {isAdmin&&(
-              <div style={{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",background:ROLES[userRole]?.bg||`${C.blue}10`,border:`1px solid ${ROLES[userRole]?.color||C.blue}33`}}>
-                <span style={{fontSize:"12px"}}>{ROLES[userRole]?.icon||"🔑"}</span>
-                <span style={{fontWeight:700,color:ROLES[userRole]?.color||C.blue,fontSize:"12px",whiteSpace:"nowrap"}}>{loginUser?.name||loginUser?.username}</span>
+              <div style={{display:"flex",alignItems:"center",gap:"5px",padding:"3px 10px",borderRadius:"20px",background:ROLES[userRole]?.bg||`${C.blue}10`,border:`1px solid ${ROLES[userRole]?.color||C.blue}22`}}>
+                <span style={{fontSize:"11px"}}>{ROLES[userRole]?.icon||"🔑"}</span>
+                <span style={{fontWeight:700,color:ROLES[userRole]?.color||C.blue,fontSize:"11px",whiteSpace:"nowrap"}}>{loginUser?.name||loginUser?.username}</span>
                 <span style={{fontSize:"10px",color:ROLES[userRole]?.color||C.blue,opacity:0.7,whiteSpace:"nowrap"}}>{ROLES[userRole]?.label}</span>
               </div>
             )}
-            {isOfficer&&<div style={{display:"flex",alignItems:"center",gap:"6px",padding:"4px 10px",borderRadius:"20px",background:`${C.purple}10`,border:`1px solid ${C.purple}33`}}>
-              <span style={{fontSize:"13px"}}>👤</span>
-              <span style={{fontWeight:700,color:C.purple,whiteSpace:"nowrap"}}>{loginUser?.name||"직책자"}</span>
+            {isOfficer&&<div style={{display:"flex",alignItems:"center",gap:"5px",padding:"3px 10px",borderRadius:"20px",background:`${C.purple}10`,border:`1px solid ${C.purple}22`}}>
+              <span style={{fontSize:"11px"}}>👤</span>
+              <span style={{fontWeight:700,color:C.purple,fontSize:"11px",whiteSpace:"nowrap"}}>{loginUser?.name||"직책자"}</span>
+              <span style={{fontSize:"10px",color:C.muted,whiteSpace:"nowrap"}}>{loginUser?.type_code==="division"?"본부장":"팀장"}{loginUser?.division?` · ${loginUser.division}`:""}</span>
             </div>}
-            {dbStatus==="firebase"&&<span style={{color:C.green,fontWeight:700,display:"flex",alignItems:"center",gap:"5px",background:"#f0fdf4",padding:"4px 10px",borderRadius:"20px",border:"1px solid #bbf7d0",whiteSpace:"nowrap"}}><span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.green,display:"inline-block",flexShrink:0}}/>Firebase 연결됨</span>}
-            {dbStatus==="local"&&<span style={{color:C.amber,fontWeight:700,display:"flex",alignItems:"center",gap:"5px",padding:"4px 10px",borderRadius:"20px",border:`1px solid ${C.amber}55`,background:"#fffbeb",whiteSpace:"nowrap",cursor:"pointer"}}>로컬 저장 ⚠️</span>}
-            {dbStatus?.startsWith("error:")&&<span style={{color:C.red,fontWeight:700,display:"flex",alignItems:"center",gap:"5px",padding:"4px 10px",borderRadius:"20px",border:`1px solid #fecaca`,background:"#fef2f2",whiteSpace:"nowrap"}}>DB 오류 ⚠️</span>}
-            {(isOfficer||isAdmin)&&<button onClick={doLogout} style={{padding:"4px 12px",borderRadius:"20px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap"}}>로그아웃</button>}
+            {dbStatus==="firebase"&&<span style={{color:C.green,fontWeight:600,display:"flex",alignItems:"center",gap:"4px",fontSize:"10px",whiteSpace:"nowrap"}}><span style={{width:"6px",height:"6px",borderRadius:"50%",background:C.green,display:"inline-block"}}/>Firebase 연결됨</span>}
+            {dbStatus==="local"&&<span style={{color:C.amber,fontWeight:600,fontSize:"10px",whiteSpace:"nowrap"}}>⚠️ 로컬 저장</span>}
+            {dbStatus?.startsWith("error:")&&<span style={{color:C.red,fontWeight:600,fontSize:"10px",whiteSpace:"nowrap"}}>⚠️ DB 오류</span>}
+            {(isOfficer||isAdmin)&&<button onClick={doLogout} style={{padding:"3px 10px",borderRadius:"20px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"10px",fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap"}}>로그아웃</button>}
           </div>
 
-          {/* 모바일: 햄버거 버튼 */}
+          {/* 모바일: DB 상태 dot + 햄버거 */}
           <div className="show-mobile" style={{marginLeft:"auto",alignItems:"center",gap:"8px"}}>
             {dbStatus==="firebase"&&<span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.green,display:"inline-block"}}/>}
             {dbStatus==="local"&&<span style={{width:"7px",height:"7px",borderRadius:"50%",background:C.amber,display:"inline-block"}}/>}
@@ -1350,11 +1297,11 @@ export default function ApplicantManager() {
                 const curMenu=isOfficer?safeMenu:mainMenu;
                 return(
                   <div style={{position:"relative"}}>
-                    <button onClick={()=>setOpen(o=>!o)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:"8px",padding:"6px 10px",cursor:"pointer",fontSize:"18px",lineHeight:1,color:C.text}}>
+                    <button onClick={()=>setOpen(o=>!o)} style={{background:"none",border:`1px solid ${C.border}`,borderRadius:"8px",padding:"4px 9px",cursor:"pointer",fontSize:"16px",lineHeight:1,color:C.text}}>
                       {open?"✕":"☰"}
                     </button>
                     {open&&(
-                      <div className="mobile-drawer" style={{position:"fixed",top:"52px",left:0,right:0,background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,padding:"8px 0"}}>
+                      <div className="mobile-drawer" style={{position:"fixed",top:"76px",left:0,right:0,background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,padding:"8px 0"}}>
                         {allTabs.map(tab=>{
                           const active=curMenu===tab.id;
                           return(
@@ -1385,6 +1332,37 @@ export default function ApplicantManager() {
               return <MobileMenu key="mobile-menu"/>;
             })()}
           </div>
+        </div>
+
+        {/* 하단 바: 탭 메뉴 (데스크탑) */}
+        <div className="hide-mobile gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",justifyContent:"center",height:"40px",gap:"0",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none"}}>
+          <style>{`.gnb-tabs-bar::-webkit-scrollbar{display:none}`}</style>
+          {isOfficer&&[{id:"briefing",icon:"📋",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}].map(tab=>{
+            const active=safeMenu===tab.id;
+            return(
+              <button key={tab.id} onClick={()=>setMainMenu(tab.id)} className="gnb-tab"
+                style={{padding:"0 18px",height:"40px",border:"none",borderBottom:active?`2.5px solid ${C.purple}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.purple:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+                {tab.icon} {tab.label}
+              </button>
+            );
+          })}
+          {isAdmin&&ADMIN_TABS.map(tab=>{
+            const active=mainMenu===tab.id;
+            return(
+              <button key={tab.id} onClick={()=>{
+                setMainMenu(tab.id);
+                if(tab.id==="ai"&&!aiMailModal){
+                  const yms=new Set();
+                  applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>yms.add(d.slice(0,7)));});
+                  const list=[...yms].sort().reverse();
+                  setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
+                }
+              }} className="gnb-tab"
+              style={{padding:"0 18px",height:"40px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+                {tab.icon} {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
