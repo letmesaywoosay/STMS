@@ -143,7 +143,7 @@ export default function ApplicantManager() {
         return"briefing";
       }
     }catch{}
-    return "list";
+    return "home";
   });
   const [deptData,        setDeptData]         = useState([]);
   const [deptModal,       setDeptModal]        = useState(null);
@@ -257,8 +257,24 @@ export default function ApplicantManager() {
     try{ sessionStorage.setItem('aida:login',JSON.stringify(user)); }catch{};
     if(user.type==="officer"){
       setMainMenu("briefing");
+      // 직책자 로그인 기록 저장
+      (async()=>{
+        try{
+          const prev=await fbGet("aida:loginLogs_v1").catch(()=>null);
+          const logs=prev||[];
+          logs.unshift({
+            id: Date.now().toString(),
+            ts: new Date().toISOString(),
+            name: user.name||"",
+            division: user.division||"",
+            team: user.team||"",
+            loginMethod: user.isOtpLogin?"이메일 OTP":"직책자 코드",
+            code: user.code||"",
+          });
+          await fbSet("aida:loginLogs_v1", logs.slice(0,500)); // 최대 500건 보관
+        }catch(e){ console.warn("로그 저장 실패",e); }
+      })();
     } else {
-      // URL에 menu 파라미터가 있으면 해당 메뉴로 이동
       const params=new URLSearchParams(window.location.search);
       const menuParam=params.get("menu");
       if(menuParam) setMainMenu(menuParam);
@@ -976,7 +992,7 @@ export default function ApplicantManager() {
                   onFocus={e=>e.target.style.borderColor=err?C.red:C.blueLight} onBlur={e=>e.target.style.borderColor=err?C.red:C.border}/>
                 {err&&<div style={{fontSize:"11px",color:C.red,marginTop:"6px"}}>⚠️ {err}</div>}
               </div>
-              <button onClick={handleLogin} disabled={loading}
+              <button className="anim-btn" onClick={handleLogin} disabled={loading}
                 style={{padding:"13px",borderRadius:"10px",border:"none",cursor:loading?"not-allowed":"pointer",background:loading?C.border:`linear-gradient(135deg,${C.blue}dd,${C.blue})`,color:"#fff",fontSize:"14px",fontWeight:800,fontFamily:"inherit",transition:"all 0.15s"}}>
                 {loading?"로그인 중...":"로그인"}
               </button>
@@ -1127,7 +1143,7 @@ export default function ApplicantManager() {
                     placeholder="이메일 주소 입력" disabled={otpSending}
                     style={{flex:1,background:C.bg,border:`1.5px solid ${emailErr?C.red:otpSent?C.green:C.border}`,borderRadius:"10px",padding:"10px 12px",fontSize:"13px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}
                     onFocus={e=>e.target.style.borderColor=emailErr?C.red:C.purple} onBlur={e=>e.target.style.borderColor=emailErr?C.red:otpSent?C.green:C.border}/>
-                  <button onClick={sendOtp} disabled={otpSending||!email.trim()}
+                  <button className="anim-btn" onClick={sendOtp} disabled={otpSending||!email.trim()}
                     style={{padding:"10px 14px",borderRadius:"10px",border:"none",cursor:(otpSending||!email.trim())?"not-allowed":"pointer",background:(otpSending||!email.trim())?C.border:`linear-gradient(135deg,${C.teal}cc,${C.teal})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap",transition:"all 0.15s"}}>
                     {otpSending?"발송 중...":(otpSent?"재발송":"코드 받기")}
                   </button>
@@ -1137,7 +1153,7 @@ export default function ApplicantManager() {
               </div>
 
               {/* 로그인 버튼 */}
-              <button onClick={tryLogin}
+              <button className="anim-btn" onClick={tryLogin}
                 style={{padding:"13px",borderRadius:"10px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"14px",fontWeight:800,fontFamily:"inherit",marginTop:"4px"}}>
                 로그인
               </button>
@@ -1152,12 +1168,57 @@ export default function ApplicantManager() {
 
   return(
     <div style={{background:C.bg,minHeight:"100vh"}}>
-      <style>{`@keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-7px);opacity:1}}`}</style>
+      <style>{`
+        @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-7px);opacity:1}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(29,78,216,0.15)}50%{box-shadow:0 0 0 6px rgba(29,78,216,0)}}
+
+        /* GNB 탭 hover */
+        .gnb-tab{transition:color 0.15s,border-color 0.15s,background 0.15s!important;}
+        .gnb-tab:hover{color:#1d4ed8!important;background:rgba(29,78,216,0.04)!important;}
+
+        /* 카드 공통 hover */
+        .anim-card{transition:transform 0.22s cubic-bezier(.34,1.56,.64,1),box-shadow 0.22s ease!important;}
+        .anim-card:hover{transform:translateY(-4px) scale(1.01)!important;box-shadow:0 12px 32px rgba(0,0,0,0.10)!important;}
+
+        /* 버튼 hover */
+        .anim-btn{transition:filter 0.15s,transform 0.12s,box-shadow 0.15s!important;}
+        .anim-btn:hover{filter:brightness(1.08);transform:translateY(-1px)!important;box-shadow:0 4px 14px rgba(29,78,216,0.18)!important;}
+        .anim-btn:active{transform:translateY(0)!important;}
+
+        /* 테이블 행 hover */
+        .anim-row{transition:background 0.15s!important;}
+        .anim-row:hover{background:rgba(29,78,216,0.04)!important;}
+
+        /* 입력 필드 포커스 */
+        .anim-input{transition:border-color 0.15s,box-shadow 0.15s!important;}
+        .anim-input:focus{border-color:#3b82f6!important;box-shadow:0 0 0 3px rgba(59,130,246,0.12)!important;outline:none!important;}
+
+        /* 페이지 컨텐츠 진입 */
+        .page-enter{animation:fadeUp 0.35s ease both;}
+        .page-enter-fast{animation:fadeUp 0.25s ease both;}
+
+        /* 배지/태그 hover */
+        .anim-badge{transition:transform 0.15s,filter 0.15s!important;}
+        .anim-badge:hover{transform:scale(1.06)!important;filter:brightness(1.05)!important;}
+
+        /* 사이드 슬라이드 */
+        .slide-in{animation:slideIn 0.3s ease both;}
+
+        /* 랜딩 카드 */
+        .land-card{transition:transform 0.25s cubic-bezier(.34,1.56,.64,1),box-shadow 0.25s ease!important;}
+        .land-card:hover{transform:translateY(-8px) scale(1.02)!important;box-shadow:0 24px 52px rgba(29,78,216,0.13)!important;}
+        .land-card:hover .land-cta{background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;color:#fff!important;border-color:transparent!important;}
+        @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.65}}
+      `}</style>
 
       {/* GNB */}
       <div style={{background:C.surface,borderBottom:`1.5px solid ${C.border}`,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",position:"sticky",top:0,zIndex:100}}>
         <div style={{maxWidth:"1200px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",minHeight:"52px",gap:"2px",flexWrap:"nowrap"}}>
-          <img src={LOGO_B64} alt="OKESTRO ACADEMY" style={{height:"28px",marginRight:"20px",objectFit:"contain",cursor:"default"}}/>
+          <img src={LOGO_B64} alt="OKESTRO ACADEMY" style={{height:"28px",marginRight:"20px",objectFit:"contain",cursor:"pointer"}} onClick={()=>isAdmin&&setMainMenu("home")}/>
 
           {/* 직책자: 브리핑 + 응시자 목록만 */}
           {isOfficer&&(
@@ -1166,7 +1227,8 @@ export default function ApplicantManager() {
                 const active=safeMenu===tab.id;
                 return(
                   <button key={tab.id} onClick={()=>setMainMenu(tab.id)}
-                    style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.purple}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.purple:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+                    className="gnb-tab"
+                    style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.purple}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.purple:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
                     {tab.icon} {tab.label}
                   </button>
                 );
@@ -1187,7 +1249,8 @@ export default function ApplicantManager() {
                   setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
                 }
               }}
-              style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",transition:"all 0.15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+              style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}
+              className="gnb-tab">
                 {tab.icon} {tab.label}
               </button>
             );
@@ -1233,7 +1296,8 @@ export default function ApplicantManager() {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div style={{maxWidth:"1200px",margin:"0 auto",padding:"28px 40px 60px"}}>
+      <div style={{maxWidth:"1200px",margin:"0 auto",padding:mainMenu==="home"?"0":"28px 40px 60px"}}>
+        {mainMenu!=="home"&&(
         <div style={{marginBottom:"20px",paddingBottom:"14px",borderBottom:`2px solid ${C.blue}22`}}>
           <h1 style={{fontSize:"20px",fontWeight:900,color:C.text,margin:0,letterSpacing:"-0.3px"}}>
             {({
@@ -1246,6 +1310,7 @@ export default function ApplicantManager() {
             })[safeMenu] || "관리 리스트"}
           </h1>
         </div>
+        )}
 
         {/* ═══ 브리핑 (직책자 전용) ═══ */}
         {safeMenu==="briefing"&&isOfficer&&(()=>{
@@ -1397,7 +1462,7 @@ export default function ApplicantManager() {
                           const sNum=parseFloat(att.score);
                           const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
                           return(
-                            <tr key={att.id+att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                            <tr className="anim-row" key={att.id+att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                               <td style={{padding:"10px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>{att.name}</td>
                               <td style={{padding:"10px 14px",color:C.muted,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{att.team||att.division||"—"}</td>
                               <td style={{padding:"10px 14px",textAlign:"center",borderRight:`1px solid ${C.border}`}}><span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"20px",background:`${C.blue}10`,color:C.blue,fontWeight:700}}>{att.nth}</span></td>
@@ -1424,9 +1489,89 @@ export default function ApplicantManager() {
           return <BriefingPage key={`briefing-${loginUser.code}`}/>;
         })()}
 
+        {/* ═══ 홈 랜딩 ═══ */}
+        {isAdmin&&mainMenu==="home"&&(
+          <div style={{minHeight:"calc(100vh - 52px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"48px 40px 40px",background:`linear-gradient(135deg,#f0f4ff 0%,#f8f0ff 50%,#f0f8ff 100%)`}}>
+            <style>{`
+              @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+              @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.7}}
+              .land-card:hover{transform:translateY(-6px)!important;box-shadow:0 20px 48px rgba(29,78,216,0.15)!important;}
+              .land-card:hover .land-cta{background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;color:#fff!important;}
+            `}</style>
+
+            {/* 서비스명 + 슬로건 */}
+            <div style={{textAlign:"center",marginBottom:"36px",animation:"fadeUp 0.6s ease"}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"12px",marginBottom:"16px"}}>
+                <img src={LOGO_B64} alt="OKESTRO" style={{height:"36px",objectFit:"contain"}}/>
+                <div style={{width:"1.5px",height:"32px",background:"#cbd5e1"}}/>
+                <span style={{fontSize:"28px",fontWeight:900,background:"linear-gradient(135deg,#1d4ed8,#7c3aed)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:"-0.5px"}}>OKESTRO Proof</span>
+              </div>
+              <p style={{fontSize:"16px",color:"#64748b",fontWeight:500,letterSpacing:"0.5px",animation:"shimmer 3s ease infinite"}}>Proof of Skill, Master of Cloud</p>
+            </div>
+
+            {/* 카드 3장 */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"900px",animation:"fadeUp 0.7s 0.1s ease both"}}>
+              {[
+                {
+                  id:"list",
+                  icon:"📋",
+                  title:"관리 리스트",
+                  desc:"응시자 등록·수정·삭제, 점수 입력, 합격 여부 관리 및 필터링",
+                  color:C.blue,
+                  grad:`linear-gradient(135deg,${C.blue}18,${C.blue}08)`,
+                  border:`${C.blue}33`,
+                  cta:"리스트 열기",
+                },
+                {
+                  id:"report",
+                  icon:"📊",
+                  title:"월별 보고서",
+                  desc:"월별 응시 현황, 점수 분포도, 평균 추이 등 데이터 시각화",
+                  color:C.purple,
+                  grad:`linear-gradient(135deg,${C.purple}18,${C.purple}08)`,
+                  border:`${C.purple}33`,
+                  cta:"보고서 열기",
+                },
+                {
+                  id:"dept",
+                  icon:"🏢",
+                  title:"부서/팀 관리",
+                  desc:"조직 구조 등록·수정, 본부·팀 계층 관리 및 직책자 배정",
+                  color:C.teal,
+                  grad:`linear-gradient(135deg,${C.teal}18,${C.teal}08)`,
+                  border:`${C.teal}33`,
+                  cta:"조직 관리",
+                },
+              ].map((card,i)=>(
+                <div key={card.id} className="land-card" onClick={()=>setMainMenu(card.id)}
+                  style={{background:card.grad,borderRadius:"20px",border:`1.5px solid ${card.border}`,padding:"32px 28px",cursor:"pointer",transition:"transform 0.25s,box-shadow 0.25s",boxShadow:"0 4px 20px rgba(0,0,0,0.06)",display:"flex",flexDirection:"column",gap:"16px",animation:`fadeUp 0.6s ${0.15+i*0.1}s ease both`}}>
+                  {/* 아이콘 */}
+                  <div style={{width:"52px",height:"52px",borderRadius:"14px",background:`${card.color}18`,border:`1.5px solid ${card.color}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"24px"}}>
+                    {card.icon}
+                  </div>
+                  {/* 텍스트 */}
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:"17px",fontWeight:800,color:C.text,marginBottom:"8px"}}>{card.title}</div>
+                    <div style={{fontSize:"12px",color:C.muted,lineHeight:"1.7"}}>{card.desc}</div>
+                  </div>
+                  {/* CTA 버튼 */}
+                  <div className="land-cta" style={{padding:"10px 0",borderRadius:"10px",border:`1.5px solid ${card.color}55`,background:"transparent",color:card.color,fontSize:"13px",fontWeight:700,textAlign:"center",transition:"all 0.2s"}}>
+                    {card.cta} →
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 하단 문구 */}
+            <p style={{marginTop:"48px",fontSize:"11px",color:"#94a3b8",animation:"fadeUp 0.6s 0.45s ease both"}}>
+              OKESTRO Academy · Solution Test Management System
+            </p>
+          </div>
+        )}
+
         {/* ═══ 관리 리스트 ═══ */}
         {(isOfficer?safeMenu==="list":mainMenu==="list")&&(
-          <>
+          <div className="page-enter">
           {appViewMode==="monthly"?(
             <>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",flexWrap:"wrap",gap:"12px"}}>
@@ -1473,7 +1618,7 @@ export default function ApplicantManager() {
                         const sNum=parseFloat(item._score);
                         const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
                         return(
-                          <tr key={item.id+item._nth} style={{borderBottom:idx<items.length-1?`1px solid ${C.border}`:"none",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <tr className="anim-row" key={item.id+item._nth} style={{borderBottom:idx<items.length-1?`1px solid ${C.border}`:"none",transition:"background 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                             <td style={{padding:"10px 14px",fontWeight:700,color:C.text,whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`}}>{item.name}</td>
                             <td style={{padding:"10px 14px",borderRight:`1px solid ${C.border}`}}>
                               <div style={{fontSize:"12px",color:C.blue,fontWeight:600}}>{item.company}</div>
@@ -1576,7 +1721,7 @@ export default function ApplicantManager() {
                     const tryCnt=[a.pass1,a.pass2,a.pass3].filter(p=>p).length;
                     const isSel=selectedIds.includes(a.id);
                     return(
-                      <tr key={a.id} style={{borderBottom:idx<sorted.length-1?`1px solid ${C.border}`:"none",background:isSel?`${C.blue}06`:"transparent",transition:"background 0.15s"}} onMouseEnter={e=>{if(!isSel)e.currentTarget.style.background=`${C.blue}04`;}} onMouseLeave={e=>{if(!isSel)e.currentTarget.style.background="transparent";}}>
+                      <tr className="anim-row" key={a.id} style={{borderBottom:idx<sorted.length-1?`1px solid ${C.border}`:"none",background:isSel?`${C.blue}06`:"transparent",transition:"background 0.15s"}} onMouseEnter={e=>{if(!isSel)e.currentTarget.style.background=`${C.blue}04`;}} onMouseLeave={e=>{if(!isSel)e.currentTarget.style.background="transparent";}}>
                         {!isOfficer&&<td style={{padding:"8px 0",textAlign:"center",borderRight:`1px solid ${C.border}`}}>
                           <input type="checkbox" checked={isSel} onChange={()=>toggleSelect(a.id)} style={{cursor:"pointer",width:"14px",height:"14px",accentColor:C.blue}}/>
                         </td>}
@@ -1634,7 +1779,7 @@ export default function ApplicantManager() {
             </div>
             </>
           )}
-          </>
+          </div>
         )}
 
         {/* AI 자동분류 페이지 */}
@@ -1933,7 +2078,6 @@ export default function ApplicantManager() {
           applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>allYMs.add(d.slice(0,7)));});
           const ymList=[...allYMs].sort().reverse();
           const selYM=reportMonth||(ymList[0]||"");
-
           // 선택 월 응시자 추출
           const mApps=applicants.flatMap(a=>{
             const atts=[
@@ -2074,7 +2218,7 @@ export default function ApplicantManager() {
                       const sNum=parseFloat(a._att.score);
                       const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
                       return(
-                        <tr key={a.id+a._att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <tr className="anim-row" key={a.id+a._att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                           <td style={{padding:"9px 14px",color:C.muted,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{idx+1}</td>
                           <td style={{padding:"9px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>{a.name}</td>
                           <td style={{padding:"9px 14px",color:C.subtle,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{a.division||"—"}</td>
@@ -2385,16 +2529,71 @@ export default function ApplicantManager() {
               {/* 탭 */}
               {(()=>{
                 const AdminMgmtPanel=()=>{
-                  const [activeTab,setActiveTab]=useState("officer");
+                  const [activeTab,setActiveTab]=useState("accounts");
+                  const [logs,setLogs]=useState(null);
+                  const loadLogs=async()=>{
+                    const data=await fbGet("aida:loginLogs_v1").catch(()=>[]);
+                    setLogs(data||[]);
+                  };
+                  useEffect(()=>{ if(activeTab==="logs") loadLogs(); },[activeTab]);
                   return(
                     <div>
                       <div style={{display:"flex",gap:"4px",marginBottom:"20px",background:C.bg,borderRadius:"12px",padding:"4px",border:`1px solid ${C.border}`,width:"fit-content"}}>
-                        {[{id:"officer",label:"👤 직책자 코드"},{id:"accounts",label:"🔑 관리자 계정"}].map(t=>(
+                        {[{id:"accounts",label:"🔑 관리자 계정"},{id:"logs",label:"📋 로그"}].map(t=>(
                           <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{padding:"8px 18px",borderRadius:"9px",border:"none",cursor:"pointer",background:activeTab===t.id?C.surface:"transparent",color:activeTab===t.id?C.blue:C.muted,fontSize:"13px",fontWeight:activeTab===t.id?700:400,fontFamily:"inherit",boxShadow:activeTab===t.id?shadow:"none",transition:"all 0.15s"}}>{t.label}</button>
                         ))}
                       </div>
 
-                      {activeTab==="officer"&&<AdminTree key="admin-tree"/>}
+                      {activeTab==="logs"&&(
+                        <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
+                          <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.blue}04)`,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                            <div>
+                              <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>📋 직책자 로그인 기록</div>
+                              <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>직책자 페이지 로그인 이력 (최대 500건)</div>
+                            </div>
+                            <button onClick={loadLogs} style={{padding:"6px 14px",borderRadius:"20px",border:`1px solid ${C.border}`,background:C.bg,color:C.subtle,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>🔄 새로고침</button>
+                          </div>
+                          {logs===null?(
+                            <div style={{padding:"40px",textAlign:"center",color:C.muted,fontSize:"12px"}}>불러오는 중...</div>
+                          ):logs.length===0?(
+                            <div style={{padding:"40px",textAlign:"center",color:C.muted,fontSize:"12px"}}>로그인 기록이 없습니다</div>
+                          ):(
+                            <table style={{borderCollapse:"collapse",width:"100%",fontSize:"12px"}}>
+                              <thead>
+                                <tr style={{background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+                                  {["#","일시","이름","소속본부","팀","로그인 방식","코드"].map((h,i)=>(
+                                    <th key={i} style={{padding:"9px 14px",textAlign:"left",fontSize:"11px",fontWeight:700,color:C.muted,borderRight:i<6?`1px solid ${C.border}`:"none",whiteSpace:"nowrap"}}>{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {logs.map((l,idx)=>{
+                                  const dt=new Date(l.ts);
+                                  const dateStr=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`;
+                                  const timeStr=`${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}:${String(dt.getSeconds()).padStart(2,"0")}`;
+                                  const isOtp=l.loginMethod==="이메일 OTP";
+                                  return(
+                                    <tr className="anim-row" key={l.id} style={{borderBottom:`1px solid ${C.border}`,background:idx%2===0?"transparent":C.bg+"55"}}>
+                                      <td style={{padding:"9px 14px",color:C.muted,borderRight:`1px solid ${C.border}`}}>{idx+1}</td>
+                                      <td style={{padding:"9px 14px",borderRight:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>
+                                        <div style={{fontWeight:600,color:C.text,fontSize:"12px"}}>{dateStr}</div>
+                                        <div style={{color:C.muted,fontSize:"11px"}}>{timeStr}</div>
+                                      </td>
+                                      <td style={{padding:"9px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>{l.name||"—"}</td>
+                                      <td style={{padding:"9px 14px",color:C.subtle,borderRight:`1px solid ${C.border}`}}>{l.division||"—"}</td>
+                                      <td style={{padding:"9px 14px",color:C.subtle,borderRight:`1px solid ${C.border}`}}>{l.team||"—"}</td>
+                                      <td style={{padding:"9px 14px",borderRight:`1px solid ${C.border}`}}>
+                                        <span style={{fontSize:"11px",padding:"3px 8px",borderRadius:"20px",fontWeight:700,background:isOtp?`${C.purple}15`:`${C.blue}15`,color:isOtp?C.purple:C.blue,border:`1px solid ${isOtp?C.purple:C.blue}33`}}>{l.loginMethod}</span>
+                                      </td>
+                                      <td style={{padding:"9px 14px",color:C.muted,fontFamily:"monospace",fontSize:"11px"}}>{l.code||"—"}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
+                      )}
 
                       {activeTab==="accounts"&&(()=>{
                         const AccountMgr=()=>{
@@ -2437,7 +2636,7 @@ export default function ApplicantManager() {
                                   </div>
                                   {msg&&<div style={{fontSize:"12px",color:msg.includes("저장")?C.green:C.red,background:msg.includes("저장")?"#f0fdf4":"#fef2f2",padding:"8px 12px",borderRadius:"8px"}}>{msg}</div>}
                                   <div style={{display:"flex",gap:"8px"}}>
-                                    <button onClick={saveAccount} style={{flex:1,padding:"10px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>{editId?"저장":"등록"}</button>
+                                    <button className="anim-btn" onClick={saveAccount} style={{flex:1,padding:"10px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.purple}dd,${C.purple})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>{editId?"저장":"등록"}</button>
                                     {editId&&<button onClick={()=>{setEditId(null);setForm({username:"",password:"",name:"",role:"admin"});}} style={{padding:"10px 16px",borderRadius:"9px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"13px",fontFamily:"inherit"}}>취소</button>}
                                   </div>
                                 </div>
@@ -2459,7 +2658,7 @@ export default function ApplicantManager() {
                                       const ri=ROLES[acct.role]||{label:acct.role,color:C.muted,bg:C.bg,icon:"?"};
                                       const isSelf=acct.id===loginUser?.id;
                                       return(
-                                        <tr key={acct.id} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                                        <tr className="anim-row" key={acct.id} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                                           <td style={{padding:"10px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>
                                             {acct.username}{isSelf&&<span style={{marginLeft:"6px",fontSize:"10px",color:C.blue,background:`${C.blue}10`,padding:"1px 6px",borderRadius:"10px"}}>나</span>}
                                           </td>
@@ -2761,7 +2960,7 @@ export default function ApplicantManager() {
                 </div>
                 <div style={{display:"flex",gap:"8px"}}>
                   <button onClick={()=>setDeleteConfirm(null)} style={{flex:1,padding:"10px",borderRadius:"9px",border:"1px solid #e2e8f0",cursor:"pointer",background:"transparent",color:"#64748b",fontSize:"13px",fontWeight:600,fontFamily:"inherit"}}>취소</button>
-                  <button onClick={handleSubmit} style={{flex:1,padding:"10px",borderRadius:"9px",border:"none",cursor:"pointer",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>삭제</button>
+                  <button className="anim-btn" onClick={handleSubmit} style={{flex:1,padding:"10px",borderRadius:"9px",border:"none",cursor:"pointer",background:"linear-gradient(135deg,#ef4444,#dc2626)",color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>삭제</button>
                 </div>
               </div>
             </div>
