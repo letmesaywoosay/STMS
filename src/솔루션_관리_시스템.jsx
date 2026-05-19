@@ -328,10 +328,32 @@ export default function ApplicantManager() {
   const confirmDelete=(msg,action)=>setDeleteConfirm({msg,action});
 
   // ── CRUD ──────────────────────────────────────────────────
+
+  // 저장 시점의 과목 정보를 스냅샷으로 고정 (타입 변경 후에도 기존 데이터 보존)
+  const buildSnapshots=(data)=>{
+    const typeSubjects = data.testType && subjectTypes[data.testType]
+      ? subjectTypes[data.testType]
+      : null;
+    if(!typeSubjects) return data; // 타입 없으면 스냅샷 불필요
+    const snap={};
+    [1,2,3].forEach(n=>{
+      const ss=data[`subScores${n}`]||{};
+      if(Object.keys(ss).length>0){
+        snap[`subScoresSnapshot${n}`]=typeSubjects.map(({name,max})=>({
+          subjectName:name,
+          score: parseFloat(ss[name])||0,
+          max: max||100,
+        }));
+      }
+    });
+    return{...data,...snap};
+  };
+
   const saveApplicant=data=>{
     if(!data.name.trim()) return;
-    if(applicantModal.mode==='add') setApplicants(p=>[...p,{...data,id:uid()}]);
-    else setApplicants(p=>p.map(a=>a.id===data.id?data:a));
+    const final=buildSnapshots(data);
+    if(applicantModal.mode==='add') setApplicants(p=>[...p,{...final,id:uid()}]);
+    else setApplicants(p=>p.map(a=>a.id===data.id?final:a));
     setApplicantModal(null);
   };
 
@@ -341,7 +363,8 @@ export default function ApplicantManager() {
     if(!applicantModal||applicantModal.mode!=='edit'||!applicantModal.data.name?.trim()) return;
     setAutoSaveStatus("saving");
     const t=setTimeout(()=>{
-      setApplicants(p=>p.map(a=>a.id===applicantModal.data.id?applicantModal.data:a));
+      const final=buildSnapshots(applicantModal.data);
+      setApplicants(p=>p.map(a=>a.id===applicantModal.data.id?final:a));
       setAutoSaveStatus("saved");
       setTimeout(()=>setAutoSaveStatus(""),2000);
     },1500);
@@ -3044,6 +3067,17 @@ export default function ApplicantManager() {
                   const subjects = applicantModal.data.testType && subjectTypes[applicantModal.data.testType]
                     ? subjectTypes[applicantModal.data.testType].map(s=>s.name)
                     : DEPARTMENT_SUBJECTS[applicantModal.data.division] || DEFAULT_SUBJECTS;
+
+                  // 스냅샷에서 읽어 subScores에 반영 (열람 시 기존 저장 데이터 복원)
+                  const resolvedSubScores=(n)=>{
+                    const snap=applicantModal.data[`subScoresSnapshot${n}`];
+                    if(snap&&snap.length>0){
+                      const obj={};
+                      snap.forEach(({subjectName,score})=>{obj[subjectName]=String(score);});
+                      return obj;
+                    }
+                    return applicantModal.data[`subScores${n}`]||{};
+                  };
                   const hasSubScores = n => {
                     const ss = applicantModal.data[`subScores${n}`]||{};
                     return Object.keys(ss).length > 0 && Object.values(ss).some(v=>v!=="");
@@ -3058,7 +3092,8 @@ export default function ApplicantManager() {
                     const sc=PASS_STATUS_COLORS[applicantModal.data[passKey]]||PASS_STATUS_COLORS[""];
                     const sNum=parseFloat(applicantModal.data[scoreKey]);
                     const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
-                    const subScores = applicantModal.data[subKey]||{};
+                    const nNum=nth.replace("차","");
+                    const subScores = resolvedSubScores(nNum);
                     // 과목별 점수가 있으면 상세 모드, 없으면 레거시/단순 모드
                     const isDetailMode = hasSubScores(nth.replace("차","")) || 
                       !applicantModal.data[scoreKey]; // 점수 없으면 상세 모드로 시작
@@ -3075,19 +3110,22 @@ export default function ApplicantManager() {
                           {!isLocked&&applicantModal.data[passKey]==="불합격"&&<span style={{fontSize:"10px",color:C.red,fontWeight:700}}>❌ 불합격</span>}
                           {/* 상세/단순 토글 */}
                           {!isLocked&&(
-                            <button onClick={()=>{
-                              if(Object.keys(subScores).length>0){
-                                // 상세→단순: subScores 초기화, 기존 총점 유지
-                                setAM({[subKey]:{}});
-                              } else {
-                                // 단순→상세: subScores 초기화로 상세 모드 진입
-                                const init={};
-                                subjects.forEach(s=>{init[s]="";});
-                                setAM({[subKey]:init,[scoreKey]:""});
-                              }
-                            }} style={{marginLeft:"auto",fontSize:"10px",padding:"2px 8px",borderRadius:"12px",border:`1px solid ${C.border}`,background:Object.keys(subScores).length>0?`${C.purple}10`:"transparent",color:Object.keys(subScores).length>0?C.purple:C.muted,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                              {Object.keys(subScores).length>0?"📝 과목별 입력 중":"📊 과목별 입력"}
-                            </button>
+                            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:"6px"}}>
+                              {applicantModal.data[`subScoresSnapshot${nNum}`]?.length>0&&(
+                                <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",background:`${C.teal}10`,color:C.teal,border:`1px solid ${C.teal}33`,whiteSpace:"nowrap"}}>📌 스냅샷 저장됨</span>
+                              )}
+                              <button onClick={()=>{
+                                if(Object.keys(subScores).length>0){
+                                  setAM({[subKey]:{},[`subScoresSnapshot${nNum}`]:undefined});
+                                } else {
+                                  const init={};
+                                  subjects.forEach(s=>{init[s]="";});
+                                  setAM({[subKey]:init,[scoreKey]:""});
+                                }
+                              }} style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",border:`1px solid ${C.border}`,background:Object.keys(subScores).length>0?`${C.purple}10`:"transparent",color:Object.keys(subScores).length>0?C.purple:C.muted,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                {Object.keys(subScores).length>0?"📝 과목별 입력 중":"📊 과목별 입력"}
+                              </button>
+                            </div>
                           )}
                         </div>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px"}}>
