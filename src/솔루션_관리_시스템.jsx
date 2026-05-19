@@ -145,16 +145,20 @@ export default function ApplicantManager() {
   const [applicantSearch, setApplicantSearch] = useState("");
   const [selectedIds,     setSelectedIds]     = useState([]);
   const [appViewMode,     setAppViewMode]      = useState("list");
-  const [sortConfig,      setSortConfig]       = useState({key:null,dir:"asc"});
+  const [sortConfig,      setSortConfig]       = useState({key:"latestDate",dir:"desc"});
   const [aiMailModal,     setAiMailModal]      = useState(null);
   const [tooltip,         setTooltip]          = useState(null);
   const [colFilters,      setColFilters]       = useState({company:"",division:"",team:""});
   const [colDropdown,     setColDropdown]      = useState(null);
+  const [listPage,        setListPage]         = useState(1);
+  const LIST_PAGE_SIZE = 10;
   const [subjectTypes,    setSubjectTypes]     = useState({
     A:{ label:"A타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100}] },
     B:{ label:"B타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100},{name:"DevOps 실무",max:100}] },
   });
   const [subjectTypesLoaded, setSubjectTypesLoaded] = useState(false); // {field, x, y}
+
+  useEffect(()=>setListPage(1),[applicantFilter,applicantSearch,colFilters]);
 
   useEffect(()=>{
     if(!colDropdown) return;
@@ -689,21 +693,33 @@ export default function ApplicantManager() {
   });
 
   const handleSort=key=>{
-    setSortConfig(p=>p.key===key?{key,dir:p.dir==="asc"?"desc":"asc"}:{key,dir:"asc"});
+    setSortConfig(p=>p.key===key?{key,dir:p.dir==="asc"?"desc":"asc"}:{key,dir:"desc"});
   };
+  // 최신 응시일 계산 헬퍼
+  const getLatestDate=a=>[a.date1,a.date2,a.date3].filter(Boolean).sort().reverse()[0]||a.joinYearMonth||"";
+
   const sorted=[...filtered].sort((a,b)=>{
-    if(!sortConfig.key) return 0;
-    if(sortConfig.key==="testResult"){
+    const key=sortConfig.key||"latestDate";
+    if(key==="testResult"){
       const va=parseFloat(getLatest(a).score)||((getLatest(a).pass==="미응시")?-1:-2);
       const vb=parseFloat(getLatest(b).score)||((getLatest(b).pass==="미응시")?-1:-2);
       return sortConfig.dir==="asc"?va-vb:vb-va;
     }
-    const va=(a[sortConfig.key]||"").toLowerCase();
-    const vb=(b[sortConfig.key]||"").toLowerCase();
+    if(key==="latestDate"){
+      const va=getLatestDate(a);
+      const vb=getLatestDate(b);
+      return sortConfig.dir==="asc"?va.localeCompare(vb):vb.localeCompare(va);
+    }
+    const va=(a[key]||"").toLowerCase();
+    const vb=(b[key]||"").toLowerCase();
     if(va<vb) return sortConfig.dir==="asc"?-1:1;
     if(va>vb) return sortConfig.dir==="asc"?1:-1;
     return 0;
   });
+
+  const totalPages=Math.max(1,Math.ceil(sorted.length/LIST_PAGE_SIZE));
+  const safePage=Math.min(listPage,totalPages);
+  const paged=sorted.slice((safePage-1)*LIST_PAGE_SIZE, safePage*LIST_PAGE_SIZE);
 
   const allSelected=sorted.length>0&&sorted.every(a=>selectedIds.includes(a.id));
   const toggleSelect=id=>setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
@@ -1856,7 +1872,7 @@ export default function ApplicantManager() {
                       <div style={{fontSize:"32px",marginBottom:"8px"}}>👥</div>
                       <div style={{fontWeight:600,color:C.subtle}}>등록된 응시자가 없습니다</div>
                     </td></tr>
-                  ):sorted.map((a,idx)=>{
+                  ):paged.map((a,idx)=>{
                     const lat=getLatest(a);
                     const pc=PASS_STATUS_COLORS[lat.pass]||PASS_STATUS_COLORS[""];
                     const fc=FINAL_STATUS_COLORS[a.finalStatus]||FINAL_STATUS_COLORS[""];
@@ -1922,10 +1938,40 @@ export default function ApplicantManager() {
                 </tbody>
               </table></div>
               <div style={{padding:"8px 16px",borderTop:`1px solid ${C.border}`,background:C.bg,fontSize:"11px",color:C.muted,display:"flex",gap:"14px",flexWrap:"wrap",alignItems:"center"}}>
-                <span>전체 <b style={{color:C.blue}}>{visibleApplicants.length}</b>명 · 검색결과 <b style={{color:C.purple}}>{sorted.length}</b>명{sortConfig.key&&<span style={{color:C.blue,marginLeft:"6px"}}>· {["입사년월","이름","구분(회사)","소속본부","소속팀","이메일","테스트 결과","최종 상태"][["joinYearMonth","name","company","division","team","email","testResult","finalStatus"].indexOf(sortConfig.key)]} {sortConfig.dir==="asc"?"↑":"↓"} 정렬 중</span>}</span>
+                <span>전체 <b style={{color:C.blue}}>{visibleApplicants.length}</b>명 · 검색결과 <b style={{color:C.purple}}>{sorted.length}</b>명{sortConfig.key&&<span style={{color:C.blue,marginLeft:"6px"}}>· {["입사년월","이름","구분(회사)","소속본부","소속팀","이메일","테스트 결과","최종 상태","최신응시일"][["joinYearMonth","name","company","division","team","email","testResult","finalStatus","latestDate"].indexOf(sortConfig.key)]} {sortConfig.dir==="asc"?"↑":"↓"} 정렬 중</span>}</span>
                 {passRate!==null&&<span>합격률 <b style={{color:passRate>=60?C.green:C.red}}>{passRate}%</b> ({cntPass("합격")}/{tested}명)</span>}
                 {!isOfficer&&applicants.length>0&&<button onClick={()=>confirmDelete("응시자 전체를 초기화하시겠습니까?",()=>setApplicants([]))} style={{marginLeft:"auto",background:"none",border:`1px solid ${C.border}`,borderRadius:"7px",padding:"3px 10px",color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>전체 초기화</button>}
               </div>
+
+              {/* 페이지네이션 */}
+              {totalPages>1&&(
+                <div style={{padding:"12px 16px",borderTop:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",gap:"4px",flexWrap:"wrap"}}>
+                  {/* 이전 */}
+                  <button onClick={()=>setListPage(p=>Math.max(1,p-1))} disabled={safePage===1}
+                    style={{padding:"6px 12px",borderRadius:"8px",border:`1px solid ${C.border}`,background:safePage===1?C.bg:C.surface,color:safePage===1?C.muted:C.text,cursor:safePage===1?"not-allowed":"pointer",fontSize:"13px",fontFamily:"inherit",transition:"all 0.15s"}}>‹</button>
+
+                  {/* 페이지 번호 */}
+                  {Array.from({length:totalPages},(_,i)=>i+1).map(p=>{
+                    // 현재 페이지 앞뒤 2개 + 처음/끝 항상 표시
+                    const show=p===1||p===totalPages||Math.abs(p-safePage)<=2;
+                    const isEllipsis=!show&&(p===2||p===totalPages-1);
+                    if(isEllipsis) return <span key={p} style={{padding:"0 4px",color:C.muted,fontSize:"13px"}}>…</span>;
+                    if(!show) return null;
+                    return(
+                      <button key={p} onClick={()=>setListPage(p)}
+                        style={{minWidth:"34px",padding:"6px 10px",borderRadius:"8px",border:`1.5px solid ${p===safePage?C.blue:C.border}`,background:p===safePage?`${C.blue}10`:C.surface,color:p===safePage?C.blue:C.text,fontWeight:p===safePage?700:400,cursor:"pointer",fontSize:"13px",fontFamily:"inherit",transition:"all 0.15s"}}>
+                        {p}
+                      </button>
+                    );
+                  })}
+
+                  {/* 다음 */}
+                  <button onClick={()=>setListPage(p=>Math.min(totalPages,p+1))} disabled={safePage===totalPages}
+                    style={{padding:"6px 12px",borderRadius:"8px",border:`1px solid ${C.border}`,background:safePage===totalPages?C.bg:C.surface,color:safePage===totalPages?C.muted:C.text,cursor:safePage===totalPages?"not-allowed":"pointer",fontSize:"13px",fontFamily:"inherit",transition:"all 0.15s"}}>›</button>
+
+                  <span style={{marginLeft:"8px",fontSize:"11px",color:C.muted}}>{safePage}/{totalPages} 페이지 · {sorted.length}명</span>
+                </div>
+              )}
             </div>
             </>
           )}
