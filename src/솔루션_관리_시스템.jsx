@@ -1417,13 +1417,13 @@ export default function ApplicantManager() {
         </div>
 
         {/* 하단 바: 탭 메뉴 (데스크탑) */}
-        <div className="hide-mobile gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",justifyContent:"center",height:"40px",gap:"0",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none"}}>
+        <div className="hide-mobile gnb-inner" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",justifyContent:"center",height:"52px",gap:"0",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none"}}>
           <style>{`.gnb-tabs-bar::-webkit-scrollbar{display:none}`}</style>
           {isOfficer&&[{id:"briefing",icon:"📋",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}].map(tab=>{
             const active=safeMenu===tab.id;
             return(
               <button key={tab.id} onClick={()=>setMainMenu(tab.id)} className="gnb-tab"
-                style={{padding:"0 18px",height:"40px",border:"none",borderBottom:active?`2.5px solid ${C.purple}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.purple:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+                style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.purple}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.purple:C.muted,fontSize:"15px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
                 {tab.icon} {tab.label}
               </button>
             );
@@ -1440,7 +1440,7 @@ export default function ApplicantManager() {
                   setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
                 }
               }} className="gnb-tab"
-              style={{padding:"0 18px",height:"40px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"13px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+              style={{padding:"0 18px",height:"52px",border:"none",borderBottom:active?`2.5px solid ${C.blue}`:"2.5px solid transparent",cursor:"pointer",background:"transparent",color:active?C.blue:C.muted,fontSize:"15px",fontWeight:active?700:500,fontFamily:"inherit",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
                 {tab.icon} {tab.label}
               </button>
             );
