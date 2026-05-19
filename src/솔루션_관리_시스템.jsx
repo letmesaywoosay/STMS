@@ -1607,7 +1607,7 @@ export default function ApplicantManager() {
                 {/* 서비스명 + 슬로건 */}
                 <div className="land-heading" style={{textAlign:"center",marginBottom:"28px",animation:"fadeUp 0.6s ease"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"12px",marginBottom:"12px"}}>
-                    <span style={{fontSize:"34px",fontWeight:900,background:"linear-gradient(135deg,#1d4ed8,#7c3aed)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:"-0.5px"}}>OKESTRO Proof</span>
+                    <span style={{fontSize:"34px",fontWeight:900,background:"linear-gradient(135deg,#1d4ed8,#7c3aed)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:"-0.5px",paddingBottom:"4px",lineHeight:1.3,display:"inline-block"}}>OKESTRO Proof</span>
                   </div>
                   <p style={{fontSize:"16px",color:"#64748b",fontWeight:500,letterSpacing:"0.5px",animation:"shimmer 3s ease infinite"}}>Proof of Skill, Master of Cloud</p>
                 </div>
