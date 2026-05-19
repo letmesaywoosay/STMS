@@ -3150,11 +3150,23 @@ export default function ApplicantManager() {
                           {!isLocked&&(
                             <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:"6px"}}>
                               {applicantModal.data[`subScoresSnapshot${nNum}`]?.length>0&&(
-                                <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",background:`${C.teal}10`,color:C.teal,border:`1px solid ${C.teal}33`,whiteSpace:"nowrap"}}>📌 스냅샷 저장됨</span>
+                                <button
+                                  onClick={()=>{
+                                    // 스냅샷 해제 → subScores에 현재 스냅샷 값 복원 후 잠금 해제
+                                    const snap=applicantModal.data[`subScoresSnapshot${nNum}`];
+                                    const restored={};
+                                    snap.forEach(({subjectName,score})=>{restored[subjectName]=String(score);});
+                                    setAM({[subKey]:restored,[`subScoresSnapshot${nNum}`]:null});
+                                  }}
+                                  style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",background:`${C.amber}10`,color:C.amber,border:`1px solid ${C.amber}44`,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}
+                                  title="스냅샷을 해제하고 점수를 수정합니다"
+                                >
+                                  🔓 수정하기
+                                </button>
                               )}
                               <button onClick={()=>{
                                 if(Object.keys(subScores).length>0){
-                                  setAM({[subKey]:{},[`subScoresSnapshot${nNum}`]:undefined});
+                                  setAM({[subKey]:{},[`subScoresSnapshot${nNum}`]:null});
                                 } else {
                                   const init={};
                                   subjects.forEach(s=>{init[s]="";});
