@@ -148,8 +148,8 @@ export default function ApplicantManager() {
   const [colFilters,      setColFilters]       = useState({company:"",division:"",team:""});
   const [colDropdown,     setColDropdown]      = useState(null);
   const [subjectTypes,    setSubjectTypes]     = useState({
-    A:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100}],
-    B:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100},{name:"DevOps 실무",max:100}],
+    A:{ label:"A타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100}] },
+    B:{ label:"B타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100},{name:"DevOps 실무",max:100}] },
   });
   const [subjectTypesLoaded, setSubjectTypesLoaded] = useState(false); // {field, x, y}
 
@@ -332,7 +332,7 @@ export default function ApplicantManager() {
   // 저장 시점의 과목 정보를 스냅샷으로 고정 (타입 변경 후에도 기존 데이터 보존)
   const buildSnapshots=(data)=>{
     const typeSubjects = data.testType && subjectTypes[data.testType]
-      ? subjectTypes[data.testType]
+      ? (subjectTypes[data.testType].subjects||subjectTypes[data.testType])
       : null;
     if(!typeSubjects) return data; // 타입 없으면 스냅샷 불필요
     const snap={};
@@ -2741,8 +2741,17 @@ export default function ApplicantManager() {
 
                       {activeTab==="subjects"&&(()=>{
                         const SubjectSettings=()=>{
-                          const [types, setTypes]=useState(subjectTypes);
+                          const [types, setTypes]=useState(()=>{
+                            // 기존 배열 형태 마이그레이션
+                            const t={};
+                            Object.entries(subjectTypes).forEach(([k,v])=>{
+                              if(Array.isArray(v)) t[k]={label:k+"타입",subjects:v};
+                              else t[k]={label:v.label||k+"타입",subjects:v.subjects||[]};
+                            });
+                            return t;
+                          });
                           const [saved, setSaved]=useState(false);
+                          const [editingLabel, setEditingLabel]=useState(null); // key
 
                           const save=()=>{
                             setSubjectTypes(types);
@@ -2750,70 +2759,99 @@ export default function ApplicantManager() {
                             setTimeout(()=>setSaved(false),2000);
                           };
 
-                          const addSubject=(type)=>{
-                            setTypes(p=>({...p,[type]:[...(p[type]||[]),{name:"",max:100}]}));
+                          const addSubject=(key)=>{
+                            setTypes(p=>({...p,[key]:{...p[key],subjects:[...(p[key].subjects||[]),{name:"",max:100}]}}));
                           };
-                          const removeSubject=(type,idx)=>{
-                            setTypes(p=>({...p,[type]:p[type].filter((_,i)=>i!==idx)}));
+                          const removeSubject=(key,idx)=>{
+                            setTypes(p=>({...p,[key]:{...p[key],subjects:p[key].subjects.filter((_,i)=>i!==idx)}}));
                           };
-                          const updateSubject=(type,idx,field,val)=>{
+                          const updateSubject=(key,idx,field,val)=>{
                             setTypes(p=>{
-                              const arr=[...p[type]];
+                              const arr=[...p[key].subjects];
                               arr[idx]={...arr[idx],[field]:val};
-                              return{...p,[type]:arr};
+                              return{...p,[key]:{...p[key],subjects:arr}};
                             });
                           };
+                          const updateLabel=(key,val)=>{
+                            setTypes(p=>({...p,[key]:{...p[key],label:val}}));
+                          };
+
+                          const typeColors={A:C.blue,B:C.purple};
+                          const getColor=(key)=>typeColors[key]||C.teal;
 
                           return(
                             <div style={{display:"flex",flexDirection:"column",gap:"20px"}}>
                               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                                <div style={{fontSize:"13px",color:C.muted}}>타입별로 과목과 만점을 설정하세요. 응시자 등록 시 타입 선택에 반영됩니다.</div>
+                                <div style={{fontSize:"13px",color:C.muted}}>타입별로 이름·과목·만점을 설정하세요. 응시자 등록 시 타입 선택에 반영됩니다.</div>
                                 <button onClick={save} style={{padding:"8px 20px",borderRadius:"20px",border:"none",background:saved?C.green:`linear-gradient(135deg,${C.blue},${C.blueLight})`,color:"#fff",fontSize:"12px",fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all 0.2s"}}>
                                   {saved?"✅ 저장됨":"💾 저장"}
                                 </button>
                               </div>
 
-                              {["A","B"].map(type=>(
-                                <div key={type} style={{background:C.surface,borderRadius:"16px",border:`1px solid ${type==="A"?C.blue:C.purple}33`,overflow:"hidden",boxShadow:shadow}}>
-                                  <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${type==="A"?C.blue:C.purple}10,${type==="A"?C.blue:C.purple}05)`,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                                    <div>
-                                      <span style={{fontSize:"16px",fontWeight:900,color:type==="A"?C.blue:C.purple,marginRight:"8px"}}>{type}타입</span>
-                                      <span style={{fontSize:"11px",color:C.muted}}>{(types[type]||[]).length}과목 · 만점합계 {(types[type]||[]).reduce((s,o)=>s+(parseInt(o.max)||0),0)}점</span>
-                                    </div>
-                                    <button onClick={()=>addSubject(type)} style={{padding:"5px 12px",borderRadius:"20px",border:`1px solid ${type==="A"?C.blue:C.purple}44`,background:`${type==="A"?C.blue:C.purple}08`,color:type==="A"?C.blue:C.purple,fontSize:"12px",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>＋ 과목 추가</button>
-                                  </div>
-                                  <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:"10px"}}>
-                                    {(types[type]||[]).length===0&&(
-                                      <div style={{textAlign:"center",padding:"20px",color:C.muted,fontSize:"12px"}}>과목을 추가해주세요</div>
-                                    )}
-                                    {(types[type]||[]).map((subj,idx)=>(
-                                      <div key={idx} style={{display:"flex",gap:"10px",alignItems:"center"}}>
-                                        <span style={{fontSize:"12px",fontWeight:700,color:C.muted,minWidth:"24px",textAlign:"center"}}>{idx+1}</span>
-                                        <input
-                                          value={subj.name}
-                                          onChange={e=>updateSubject(type,idx,"name",e.target.value)}
-                                          placeholder="과목명 (예: 클라우드 기초)"
-                                          style={{flex:1,...inp({padding:"8px 12px",fontSize:"13px"})}}
-                                          onFocus={e=>e.target.style.borderColor=type==="A"?C.blue:C.purple}
-                                          onBlur={e=>e.target.style.borderColor=C.border}
-                                        />
-                                        <div style={{display:"flex",alignItems:"center",gap:"4px",minWidth:"100px"}}>
+                              {Object.entries(types).map(([key,typeObj])=>{
+                                const col=getColor(key);
+                                const subjList=typeObj.subjects||[];
+                                return(
+                                  <div key={key} style={{background:C.surface,borderRadius:"16px",border:`1px solid ${col}33`,overflow:"hidden",boxShadow:shadow}}>
+                                    <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${col}10,${col}05)`,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:"10px"}}>
+                                      <div style={{display:"flex",alignItems:"center",gap:"10px",flex:1}}>
+                                        {/* 타입명 인라인 편집 */}
+                                        {editingLabel===key?(
                                           <input
-                                            type="number" min="1" max="100"
-                                            value={subj.max}
-                                            onChange={e=>updateSubject(type,idx,"max",parseInt(e.target.value)||100)}
-                                            style={{width:"64px",...inp({padding:"8px 10px",fontSize:"13px",textAlign:"center"})}}
-                                            onFocus={e=>e.target.style.borderColor=type==="A"?C.blue:C.purple}
+                                            autoFocus
+                                            value={typeObj.label}
+                                            onChange={e=>updateLabel(key,e.target.value)}
+                                            onBlur={()=>setEditingLabel(null)}
+                                            onKeyDown={e=>e.key==="Enter"&&setEditingLabel(null)}
+                                            style={{fontSize:"16px",fontWeight:900,color:col,background:"transparent",border:"none",borderBottom:`2px solid ${col}`,outline:"none",fontFamily:"inherit",width:"140px",padding:"2px 4px"}}
+                                          />
+                                        ):(
+                                          <span
+                                            style={{fontSize:"16px",fontWeight:900,color:col,cursor:"pointer",display:"flex",alignItems:"center",gap:"6px"}}
+                                            onClick={()=>setEditingLabel(key)}
+                                            title="클릭하여 이름 편집"
+                                          >
+                                            {typeObj.label}
+                                            <span style={{fontSize:"11px",fontWeight:400,color:`${col}88`}}>✏️</span>
+                                          </span>
+                                        )}
+                                        <span style={{fontSize:"11px",color:C.muted}}>{subjList.length}과목 · 만점합계 {subjList.reduce((s,o)=>s+(parseInt(o.max)||0),0)}점</span>
+                                      </div>
+                                      <button onClick={()=>addSubject(key)} style={{padding:"5px 12px",borderRadius:"20px",border:`1px solid ${col}44`,background:`${col}08`,color:col,fontSize:"12px",fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>＋ 과목 추가</button>
+                                    </div>
+                                    <div style={{padding:"16px 20px",display:"flex",flexDirection:"column",gap:"10px"}}>
+                                      {subjList.length===0&&(
+                                        <div style={{textAlign:"center",padding:"20px",color:C.muted,fontSize:"12px"}}>과목을 추가해주세요</div>
+                                      )}
+                                      {subjList.map((subj,idx)=>(
+                                        <div key={idx} style={{display:"flex",gap:"10px",alignItems:"center"}}>
+                                          <span style={{fontSize:"12px",fontWeight:700,color:C.muted,minWidth:"24px",textAlign:"center"}}>{idx+1}</span>
+                                          <input
+                                            value={subj.name}
+                                            onChange={e=>updateSubject(key,idx,"name",e.target.value)}
+                                            placeholder="과목명 (예: 클라우드 기초)"
+                                            style={{flex:1,...inp({padding:"8px 12px",fontSize:"13px"})}}
+                                            onFocus={e=>e.target.style.borderColor=col}
                                             onBlur={e=>e.target.style.borderColor=C.border}
                                           />
-                                          <span style={{fontSize:"11px",color:C.muted}}>점</span>
+                                          <div style={{display:"flex",alignItems:"center",gap:"4px",minWidth:"100px"}}>
+                                            <input
+                                              type="number" min="1" max="200"
+                                              value={subj.max}
+                                              onChange={e=>updateSubject(key,idx,"max",parseInt(e.target.value)||100)}
+                                              style={{width:"64px",...inp({padding:"8px 10px",fontSize:"13px",textAlign:"center"})}}
+                                              onFocus={e=>e.target.style.borderColor=col}
+                                              onBlur={e=>e.target.style.borderColor=C.border}
+                                            />
+                                            <span style={{fontSize:"11px",color:C.muted}}>점</span>
+                                          </div>
+                                          <button onClick={()=>removeSubject(key,idx)} style={{padding:"4px 8px",borderRadius:"8px",border:`1px solid #fecaca`,background:"#fef2f2",color:C.red,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>✕</button>
                                         </div>
-                                        <button onClick={()=>removeSubject(type,idx)} style={{padding:"4px 8px",borderRadius:"8px",border:`1px solid #fecaca`,background:"#fef2f2",color:C.red,fontSize:"12px",cursor:"pointer",fontFamily:"inherit"}}>✕</button>
-                                      </div>
-                                    ))}
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           );
                         };
@@ -3056,7 +3094,7 @@ export default function ApplicantManager() {
                     {["","A","B"].map(t=>(
                       <button key={t} onClick={()=>setAM({testType:t,subScores1:{},subScores2:{},subScores3:{}})}
                         style={{padding:"3px 10px",borderRadius:"20px",border:`1.5px solid ${applicantModal.data.testType===t?(t==="A"?C.blue:t==="B"?C.purple:C.muted):C.border}`,background:applicantModal.data.testType===t?(t==="A"?`${C.blue}10`:t==="B"?`${C.purple}10`:C.bg):"transparent",color:applicantModal.data.testType===t?(t==="A"?C.blue:t==="B"?C.purple:C.subtle):C.muted,fontSize:"11px",fontWeight:applicantModal.data.testType===t?700:400,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
-                        {t===""?"직접입력":t+"타입"}
+                        {t===""?"직접입력":(subjectTypes[t]?.label||t+"타입")}
                       </button>
                     ))}
                   </div>
@@ -3065,7 +3103,7 @@ export default function ApplicantManager() {
                 {/* 차시별 동적 과목 점수 입력 */}
                 {(()=>{
                   const subjects = applicantModal.data.testType && subjectTypes[applicantModal.data.testType]
-                    ? subjectTypes[applicantModal.data.testType].map(s=>s.name)
+                    ? (subjectTypes[applicantModal.data.testType].subjects||subjectTypes[applicantModal.data.testType]).map(s=>s.name)
                     : DEPARTMENT_SUBJECTS[applicantModal.data.division] || DEFAULT_SUBJECTS;
 
                   // 스냅샷에서 읽어 subScores에 반영 (열람 시 기존 저장 데이터 복원)
@@ -3162,7 +3200,7 @@ export default function ApplicantManager() {
                               {subjects.map(subject=>{
                                 const val=subScores[subject]??"";
                                 const num=parseFloat(val);
-                                const typeSubj=(applicantModal.data.testType&&subjectTypes[applicantModal.data.testType]||[]).find(s=>s.name===subject);
+                                const typeSubj=((applicantModal.data.testType&&subjectTypes[applicantModal.data.testType]?.subjects)||[]).find(s=>s.name===subject);
                                 const maxScore=typeSubj?.max||100;
                                 const sc2=isNaN(num)||val===""?"":num>=maxScore*0.6?C.green:C.red;
                                 return(
