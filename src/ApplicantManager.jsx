@@ -2412,39 +2412,58 @@ export default function ApplicantManager() {
                 {comp.divisions.length===0&&<div style={{padding:"24px",textAlign:"center",color:C.muted,fontSize:"12px"}}>본부를 추가하세요</div>}
                 {comp.divisions.map((div,di)=>(
                   <div key={div.id} style={{borderBottom:di<comp.divisions.length-1?`1px solid ${C.border}`:"none"}}>
-                    <div style={{padding:"12px 20px 12px 28px",background:`${C.purple}04`,display:"flex",alignItems:"center",gap:"10px",borderBottom:`1px solid ${C.border}44`}}>
-                      <span style={{fontSize:"13px"}}></span>
-                      <div style={{flex:1}}>
+                    <div style={{padding:"12px 20px 12px 28px",background:`${C.purple}04`,display:"flex",alignItems:"center",borderBottom:`1px solid ${C.border}44`}}>
+                      <div style={{width:"32px",display:"flex",alignItems:"center"}}>
+                        {/* 아이콘 컬럼 정렬용 빈 공간 */}
+                      </div>
+                      <div style={{width:"220px",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:"10px"}}>
                         <span style={{fontWeight:800,fontSize:"13px",color:C.text}}>{div.name}</span>
-                        {(div.headName||div.headEmail)&&(
-                          <span style={{marginLeft:"10px",fontSize:"11px",color:C.purple}}>
-                            {div.headName&&<span>본부장: {div.headName}</span>}
-                            {div.headEmail&&<span style={{marginLeft:"6px",color:C.muted}}>({div.headEmail})</span>}
-                          </span>
+                      </div>
+                      <div style={{flex:1,textAlign:"left",fontSize:"11px",color:C.purple,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {div.headName ? (
+                          <>
+                            <span>본부장: {div.headName}</span>
+                            {div.headEmail && <span style={{marginLeft:"6px",color:C.muted}}>({div.headEmail})</span>}
+                          </>
+                        ) : (
+                          <span style={{color:C.muted}}>—</span>
                         )}
                       </div>
-                      <span style={{fontSize:"11px",color:C.muted,marginRight:"6px"}}>{div.teams.length}개 팀</span>
+                      <span style={{fontSize:"11px",color:C.muted,marginRight:"12px",width:"80px",textAlign:"right"}}>{div.teams.length}개 팀</span>
                       <button onClick={()=>setDeptModal({type:"team",mode:"add",cid:comp.id,did:div.id,data:{name:"",leaderName:"",leaderEmail:""}})} style={{padding:"4px 10px",borderRadius:"6px",border:`1px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}08`,color:C.teal,fontSize:"11px",fontWeight:700,fontFamily:"inherit"}}>+ 팀</button>
                       <button onClick={()=>setDeptModal({type:"division",mode:"edit",cid:comp.id,did:div.id,data:{name:div.name,headName:div.headName||"",headEmail:div.headEmail||""}})} style={{padding:"4px 8px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
                       <button onClick={()=>confirmDelete(`'${div.name}' 본부를 삭제하시겠습니까?`,()=>delDivision(comp.id,div.id))} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
                     </div>
                     {div.teams.map((team,ti)=>(
-                      <div key={team.id} style={{padding:"9px 20px 9px 52px",display:"flex",alignItems:"center",gap:"10px",background:ti%2===0?"transparent":`${C.bg}88`,borderTop:`1px solid ${C.border}22`}}>
-                        <span style={{fontSize:"12px"}}>👥</span>
-                        <div style={{flex:1}}>
+                      <div key={team.id} style={{padding:"9px 20px 9px 28px",display:"flex",alignItems:"center",background:ti%2===0?"transparent":`${C.bg}88`,borderTop:`1px solid ${C.border}22`}}>
+                        <div style={{width:"32px",display:"flex",alignItems:"center",fontSize:"12px",textAlign:"left"}}>
+                          👥
+                        </div>
+                        <div style={{width:"220px",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:"10px"}}>
                           <span style={{fontWeight:700,fontSize:"12px",color:C.subtle}}>{team.name}</span>
-                          {(team.leaderName||team.leaderEmail)&&(
-                            <span style={{marginLeft:"10px",fontSize:"11px",color:C.blue}}>
-                              {team.leaderName&&<span>팀장: {team.leaderName}</span>}
-                              {team.leaderEmail&&<span style={{marginLeft:"6px",color:C.muted}}>({team.leaderEmail})</span>}
-                            </span>
+                        </div>
+                        <div style={{flex:1,textAlign:"left",fontSize:"11px",color:C.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                          {team.leaderName ? (
+                            <>
+                              <span>팀장: {team.leaderName}</span>
+                              {team.leaderEmail && <span style={{marginLeft:"6px",color:C.muted}}>({team.leaderEmail})</span>}
+                            </>
+                          ) : (
+                            <span style={{color:C.muted}}>—</span>
                           )}
                         </div>
-                        <button onClick={()=>setDeptModal({type:"team",mode:"edit",cid:comp.id,did:div.id,tid:team.id,data:{name:team.name,leaderName:team.leaderName||"",leaderEmail:team.leaderEmail||""}})} style={{padding:"3px 8px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
-                        <button onClick={()=>confirmDelete(`'${team.name}' 팀을 삭제하시겠습니까?`,()=>delTeam(comp.id,div.id,team.id))} style={{padding:"3px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
+                        <div style={{width:"80px",marginRight:"12px"}}>
+                          {/* 본부의 N개팀 열과 넓이를 맞추기 위한 빈 컬럼 */}
+                        </div>
+                        <div style={{display:"flex",gap:"4px",alignItems:"center",minWidth:"154px",justifyContent:"flex-end"}}>
+                          {/* GNB 본부의 '+ 팀' 버튼과 여백을 맞추기 위한 Spacer */}
+                          <div style={{width:"48px"}} />
+                          <button onClick={()=>setDeptModal({type:"team",mode:"edit",cid:comp.id,did:div.id,tid:team.id,data:{name:team.name,leaderName:team.leaderName||"",leaderEmail:team.leaderEmail||""}})} style={{padding:"3px 8px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
+                          <button onClick={()=>confirmDelete(`'${team.name}' 팀을 삭제하시겠습니까?`,()=>delTeam(comp.id,div.id,team.id))} style={{padding:"3px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
+                        </div>
                       </div>
                     ))}
-                    {div.teams.length===0&&<div style={{padding:"8px 52px",fontSize:"11px",color:C.muted}}>팀을 추가하세요</div>}
+                    {div.teams.length===0&&<div style={{padding:"8px 60px",fontSize:"11px",color:C.muted}}>팀을 추가하세요</div>}
                   </div>
                 ))}
               </div>
