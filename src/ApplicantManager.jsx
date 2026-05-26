@@ -2860,9 +2860,34 @@ export default function ApplicantManager() {
                       </div>
 
                       {/* X축 과목명 */}
-                      <div style={{display:"flex",paddingLeft:"36px",marginTop:"0px"}}>
+                      <div style={{display:"flex",paddingLeft:"36px",marginTop:"8px"}}>
                         {allSubjects.map((sub,i)=>(
-                          <div key={i} style={{flex:1,minWidth:`${colWidth}px`,textAlign:"center",fontSize:"11px",color:C.subtle,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",padding:"0 4px"}}>{sub}</div>
+                          <div key={i} style={{flex:1,minWidth:`${colWidth}px`,textAlign:"center",padding:"0 4px"}}>
+                            {/* 과목 뱃지 */}
+                            <div style={{display:"flex",justifyContent:"center",marginBottom:"6px"}}>
+                              <span style={{
+                                fontSize:"9px",
+                                fontWeight:800,
+                                color:"#fff",
+                                background: [
+                                  `linear-gradient(135deg, ${C.blue}, ${C.blueLight})`,
+                                  `linear-gradient(135deg, ${C.purple}, #a855f7)`,
+                                  `linear-gradient(135deg, ${C.teal}, #2dd4bf)`
+                                ][i % 3],
+                                padding:"3px 9px",
+                                borderRadius:"12px",
+                                boxShadow: [
+                                  `0 2px 6px ${C.blue}44`,
+                                  `0 2px 6px ${C.purple}44`,
+                                  `0 2px 6px ${C.teal}44`
+                                ][i % 3]
+                              }}>
+                                과목 {i+1}
+                              </span>
+                            </div>
+                            {/* 과목명 */}
+                            <div style={{fontSize:"11px",color:C.subtle,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sub}</div>
+                          </div>
                         ))}
                       </div>
                     </div>
