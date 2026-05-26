@@ -2747,6 +2747,13 @@ export default function ApplicantManager() {
                 const DotPlot=()=>{
                   const [hovered,setHovered]=useState(null);
                   const chartH=180;
+                  const getSubjectMax = (subjectName) => {
+                    for (const a of detailApps) {
+                      const s = a.snap.find(x => x.subjectName === subjectName);
+                      if (s && s.max) return s.max;
+                    }
+                    return 100;
+                  };
 
                   // Y축 최대값: 실제 최고점에서 10 올림 (ex. 43 → 50)
                   const allScores=detailApps.flatMap(a=>a.snap.map(s=>parseFloat(s.score)||0));
@@ -2886,7 +2893,9 @@ export default function ApplicantManager() {
                               </span>
                             </div>
                             {/* 과목명 */}
-                            <div style={{fontSize:"11px",color:C.subtle,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sub}</div>
+                            <div style={{fontSize:"11px",color:C.subtle,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                              {sub} <span style={{fontSize:"10px",color:C.muted,fontWeight:500}}>({getSubjectMax(sub)}점)</span>
+                            </div>
                           </div>
                         ))}
                       </div>
