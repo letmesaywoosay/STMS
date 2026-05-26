@@ -3019,12 +3019,9 @@ export default function ApplicantManager() {
                 </div>
                 {/* 패널 헤더 */}
                 <div style={{padding:"18px 24px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",background:C.surface,position:"sticky",top:0,zIndex:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
                     <span style={{fontSize:"18px"}}>⚙️</span>
-                    <div>
-                      <div style={{fontWeight:800,fontSize:"16px",color:C.text}}>관리</div>
-                      <div style={{fontSize:"11px",color:C.muted}}>관리자 계정 · 로그 · 과목설정 · 업무처리</div>
-                    </div>
+                    <span style={{fontWeight:800,fontSize:"16px",color:C.text}}>관리</span>
                   </div>
                   <button onClick={()=>setAdminPanelOpen(false)} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:"16px",color:C.muted,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
                 </div>
