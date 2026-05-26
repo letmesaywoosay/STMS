@@ -2059,7 +2059,7 @@ export default function ApplicantManager() {
                         )}
                         
                         
-                        <td style={{padding:"8px 10px",fontWeight:700,color:(isAdmin&&can(userRole,"edit_applicant"))?C.blue:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`,cursor:(isAdmin&&can(userRole,"edit_applicant"))?"pointer":"default",textDecoration:(isAdmin&&can(userRole,"edit_applicant"))?"underline":"none",textUnderlineOffset:"2px"}}
+                        <td style={{padding:"8px 10px",fontWeight:700,color:(isAdmin&&can(userRole,"edit_applicant"))?C.blue:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`,cursor:(isAdmin&&can(userRole,"edit_applicant"))?"pointer":"default",textDecoration:"none",textUnderlineOffset:"2px"}}
                           onClick={(isAdmin&&can(userRole,"edit_applicant"))?()=>setApplicantModal({mode:'edit',data:{...a}}):undefined}
                           title={(isAdmin&&can(userRole,"edit_applicant"))?"클릭하여 상세 정보 수정":""}
                         >{a.name}</td>
@@ -4328,3 +4328,4 @@ export default function ApplicantManager() {
     </div>
   );
 }
+
