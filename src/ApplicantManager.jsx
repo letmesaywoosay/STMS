@@ -1499,7 +1499,7 @@ export default function ApplicantManager() {
       <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:"none",position:"sticky",top:0,zIndex:100,width:"100%"}}>
 
         {/* 상단 바: 로고 + 뱃지/상태/로그아웃 */}
-        <div className="gnb-inner gnb-top-bar" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",height:"44px",borderBottom:`1px solid ${C.border}88`}}>
+        <div className="gnb-inner gnb-top-bar" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",height:"56px",borderBottom:`1px solid ${C.border}88`}}>
           {/* 로고 */}
           <img src={LOGO_B64} alt="OKESTRO ACADEMY" className="land-logo" style={{height:"44px",objectFit:"contain",cursor:"pointer",flexShrink:0}} onClick={()=>isAdmin&&setMainMenu("home")}/>
 
@@ -1551,7 +1551,7 @@ export default function ApplicantManager() {
                       {open?"✕":"☰"}
                     </button>
                     {open&&(
-                      <div className="mobile-drawer" style={{position:"fixed",top:"76px",left:0,right:0,background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,padding:"8px 0",paddingBottom:"max(8px,env(safe-area-inset-bottom))"}}>
+                      <div className="mobile-drawer" style={{position:"fixed",top:"56px",left:0,right:0,background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:"0 8px 24px rgba(0,0,0,0.12)",zIndex:200,padding:"8px 0",paddingBottom:"max(8px,env(safe-area-inset-bottom))"}}>
                         {allTabs.map(tab=>{
                           const active=curMenu===tab.id;
                           return(
@@ -1617,7 +1617,7 @@ export default function ApplicantManager() {
       </div>
 
       {/* 메인 콘텐츠 */}
-      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 96px)"}}>
+      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 108px)"}}>
         {mainMenu!=="home"&&(
         <div style={{marginBottom:"20px",paddingBottom:"14px",borderBottom:`2px solid ${C.blue}22`}}>
           <h1 style={{fontSize:"20px",fontWeight:900,color:C.text,margin:0,letterSpacing:"-0.3px"}}>
