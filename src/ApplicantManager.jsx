@@ -2585,7 +2585,7 @@ export default function ApplicantManager() {
               }
             };
 
-            // Gemini API 호출 및 문제 출제
+            // Gemini API 호출 및 문제 출제 (이중 페일오버 + 철통 슬라이싱 파서)
             const generateQuestions = async () => {
               if (!apiKey) {
                 setShowKeyModal(true);
@@ -2624,43 +2624,73 @@ You must return the response as a valid JSON object matching this schema:
 }
 Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw JSON.`;
 
+              let rawText = "";
+              
+              // 1차 시도: v1 엔드포인트
               try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`, {
                   method: "POST",
-                  headers: {
-                    "Content-Type": "application/json"
-                  },
-                  body: JSON.stringify({
-                    contents: [{
-                      parts: [{
-                        text: prompt
-                      }]
-                    }]
-                  })
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
 
                 if (!response.ok) {
                   const errJson = await response.json().catch(() => ({}));
-                  throw new Error(errJson?.error?.message || `API Error (Code: ${response.status})`);
+                  throw new Error(errJson?.error?.message || `Status: ${response.status}`);
                 }
 
                 const resJson = await response.json();
-                const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+                rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+              } catch (firstErr) {
+                console.warn("v1 API failed, trying v1beta failover...", firstErr);
+                
+                // 2차 시도 (Failover): v1beta 엔드포인트로 자동 전환 우회
+                try {
+                  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                  });
+
+                  if (!response.ok) {
+                    const errJson = await response.json().catch(() => ({}));
+                    throw new Error(errJson?.error?.message || `Status: ${response.status}`);
+                  }
+
+                  const resJson = await response.json();
+                  rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (secondErr) {
+                  console.error("Both v1 and v1beta APIs failed: ", secondErr);
+                  setErrorMsg(`[연동 실패] 구글 서버와 통신할 수 없습니다. 원인: ${secondErr.message} (1차 오류: ${firstErr.message}). 본인의 API Key가 유효한지, 혹은 무료 할당량이 초과되지 않았는지 확인해 주세요.`);
+                  setIsGenerating(false);
+                  return;
+                }
+              }
+
+              // 텍스트 수신 완료 및 파싱 시작
+              try {
                 if (!rawText) {
-                  throw new Error("API에서 유효한 문제 데이터가 수신되지 않았습니다.");
+                  throw new Error("AI로부터 퀴즈 데이터 수신에 실패했습니다.");
                 }
 
-                // Markdown 코드 블록 (```json ... ```) 제거 디펜스 코드 보강
-                const cleanText = rawText.replace(/```json|```/g, "").trim();
-                const parsed = JSON.parse(cleanText);
+                // 중괄호 { } 인덱스 컷팅 기반 100% 완벽 JSON 추출 디펜스
+                const startIdx = rawText.indexOf("{");
+                const endIdx = rawText.lastIndexOf("}");
+                if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
+                  throw new Error(`AI가 규정된 JSON 형태로 응답하지 않았습니다. 수신 내용: ${rawText.slice(0, 100)}...`);
+                }
+
+                const cleanJson = rawText.slice(startIdx, endIdx + 1);
+                const parsed = JSON.parse(cleanJson);
+                
                 if (!parsed.questions || !Array.isArray(parsed.questions)) {
-                  throw new Error("응답 JSON 형식이 올바르지 않습니다.");
+                  throw new Error("추출된 결과 내에 퀴즈 문항 목록(questions)이 누락되었습니다.");
                 }
 
                 setQuestions(parsed.questions);
               } catch (e) {
-                console.error("Gemini AI API Call Failed: ", e);
-                setErrorMsg(e.message || "문제 출제 중 오류가 발생했습니다. API Key를 다시 한 번 확인해 주세요.");
+                console.error("JSON Parse Failed: ", e);
+                setErrorMsg(`[퀴즈 생성 실패] ${e.message}`);
               } finally {
                 setIsGenerating(false);
               }
