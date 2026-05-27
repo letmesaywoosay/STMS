@@ -838,6 +838,7 @@ export default function ApplicantManager() {
     ...(can(userRole,"report_menu") ?[{id:"report",icon:"",label:"월별 보고서"}]:[]),
     ...(can(userRole,"dept_menu")   ?[{id:"dept",  icon:"",label:"부서/팀 관리"}]:[]),
     ...(can(userRole,"ai_menu")     ?[{id:"ai",    icon:"",label:"AI 자동분류"}]:[]),
+    ...(can(userRole,"ai_menu")     ?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
   ] : [];
 
   const fmtYML=ym=>{if(!ym)return"";const[y,m]=ym.split("-");return`${y}년 ${parseInt(m)}월`;};
@@ -1540,6 +1541,7 @@ export default function ApplicantManager() {
                   :[
                     {id:"list",icon:"≡",label:"관리 리스트"},
                     ...(can(userRole,"ai_menu")?[{id:"ai",icon:"",label:"AI 자동분류"}]:[]),
+                    ...(can(userRole,"ai_menu")?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
                     ...(can(userRole,"report_menu")?[{id:"report",icon:"",label:"월별 보고서"}]:[]),
                     ...(isSuperAdmin?[{id:"admin",icon:"",label:"관리자 설정"}]:[]),
                     ...(can(userRole,"dept_menu")?[{id:"dept",icon:"",label:"부서/팀 관리",indent:true}]:[]),
@@ -1624,6 +1626,7 @@ export default function ApplicantManager() {
             {({
               list:   "관리 리스트",
               ai:     "AI 자동분류",
+              ai_exam:"AI 시험출제",
               report: "월별 보고서",
               dept:   "부서/팀 관리",
               admin:  "관리",
@@ -2379,6 +2382,622 @@ export default function ApplicantManager() {
               </div>
             </div>
           );
+        })()}
+
+        {/* AI 시험출제 페이지 */}
+        {isAdmin&&mainMenu==="ai_exam"&&(()=>{
+          const AiExamGenerator=()=>{
+            const [apiKey, setApiKey] = useState(() => localStorage.getItem("gemini_api_key") || "");
+            const [showKey, setShowKey] = useState(false);
+            const [tempKey, setTempKey] = useState("");
+            const [showKeyModal, setShowKeyModal] = useState(false);
+            
+            const [fileText, setFileText] = useState("");
+            const [fileName, setFileName] = useState("");
+            const [isDragging, setIsDragging] = useState(false);
+            
+            const [qType, setQType] = useState("choice"); // choice: 객관식, ox: O/X, short: 주관식
+            const [qCount, setQCount] = useState(5);
+            const [difficulty, setDifficulty] = useState("medium"); // easy, medium, hard
+            const [guidelines, setGuidelines] = useState("");
+            
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [questions, setQuestions] = useState([]);
+            const [expandedQ, setExpandedQ] = useState(null);
+            const [errorMsg, setErrorMsg] = useState("");
+            const [copySuccess, setCopySuccess] = useState(false);
+
+            // API 키 저장
+            const saveApiKey = (key) => {
+              const cleanKey = key.trim();
+              if (cleanKey) {
+                localStorage.setItem("gemini_api_key", cleanKey);
+                setApiKey(cleanKey);
+                setShowKeyModal(false);
+                setErrorMsg("");
+              }
+            };
+
+            // API 키 제거
+            const removeApiKey = () => {
+              localStorage.removeItem("gemini_api_key");
+              setApiKey("");
+              setTempKey("");
+            };
+
+            // 파일 로드 및 파싱 (FileReader)
+            const handleFileChange = (e) => {
+              const file = e.target.files[0];
+              if (file) {
+                processFile(file);
+              }
+            };
+
+            const processFile = (file) => {
+              if (!file.name.match(/\.(txt|json|csv)$/i)) {
+                alert("지원하지 않는 파일 형식입니다. .txt, .json, .csv 파일만 업로드해 주세요.");
+                return;
+              }
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const text = event.target.result;
+                if (text.length > 100000) {
+                  alert("학습 문서 크기가 너무 큽니다. (최대 100,000자까지 지원)");
+                  return;
+                }
+                setFileText(text);
+                setFileName(file.name);
+                setErrorMsg("");
+              };
+              reader.readAsText(file, "UTF-8");
+            };
+
+            const handleDragOver = (e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            };
+
+            const handleDragLeave = () => {
+              setIsDragging(false);
+            };
+
+            const handleDrop = (e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              const file = e.dataTransfer.files[0];
+              if (file) {
+                processFile(file);
+              }
+            };
+
+            // Gemini API 호출 및 문제 출제
+            const generateQuestions = async () => {
+              if (!apiKey) {
+                setShowKeyModal(true);
+                return;
+              }
+              if (!fileText) {
+                setErrorMsg("문제 출제를 위해 학습 문서를 먼저 업로드해 주세요.");
+                return;
+              }
+
+              setIsGenerating(true);
+              setErrorMsg("");
+              setQuestions([]);
+              setExpandedQ(null);
+
+              const prompt = `You are a professional corporate educator. Based on the following learning materials, create exactly ${qCount} quiz questions of type '${qType}' and difficulty '${difficulty}'.
+All output must be in Korean. Options array should ONLY contain options for multiple-choice questions (e.g. 4 strings). For O/X type, options should strictly be ["O", "X"] and options size is 2. For short-answer (주관식) questions, options must be an empty array [].
+The correctAnswer must be one of the option strings for multiple-choice and O/X, or the correct answer text for short-answer questions.
+${guidelines ? `Strictly follow these custom guidelines: ${guidelines}` : ""}
+
+Learning Materials:
+---
+${fileText}
+---
+
+You must return the response as a valid JSON object matching this schema:
+{
+  "questions": [
+    {
+      "question": "The question description in Korean.",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"], 
+      "answer": "The exact string representing the correct answer",
+      "explanation": "Detailed explanation of the correct answer in Korean."
+    }
+  ]
+}
+Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw JSON.`;
+
+              try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    contents: [{
+                      parts: [{
+                        text: prompt
+                      }]
+                    }],
+                    generationConfig: {
+                      responseMimeType: "application/json"
+                    }
+                  })
+                });
+
+                if (!response.ok) {
+                  const errJson = await response.json().catch(() => ({}));
+                  throw new Error(errJson?.error?.message || `API Error (Code: ${response.status})`);
+                }
+
+                const resJson = await response.json();
+                const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!rawText) {
+                  throw new Error("API에서 유효한 문제 데이터가 수신되지 않았습니다.");
+                }
+
+                const parsed = JSON.parse(rawText.trim());
+                if (!parsed.questions || !Array.isArray(parsed.questions)) {
+                  throw new Error("응답 JSON 형식이 올바르지 않습니다.");
+                }
+
+                setQuestions(parsed.questions);
+              } catch (e) {
+                console.error("Gemini AI API Call Failed: ", e);
+                setErrorMsg(e.message || "문제 출제 중 오류가 발생했습니다. API Key를 다시 한 번 확인해 주세요.");
+              } finally {
+                setIsGenerating(false);
+              }
+            };
+
+            // 결과 다운로드 (텍스트 형식)
+            const downloadAsTxt = () => {
+              if (questions.length === 0) return;
+              
+              let content = `====== AI 출제 시험지 ======\n\n`;
+              content += `출제 문서: ${fileName}\n`;
+              content += `문제 유형: ${qType === "choice" ? "객관식 4지선다" : qType === "ox" ? "O/X 퀴즈" : "주관식 단답형"}\n`;
+              content += `난이도: ${difficulty === "easy" ? "쉬움" : difficulty === "medium" ? "보통" : "어려움"}\n`;
+              content += `총 문항 수: ${questions.length}문항\n`;
+              content += `=========================\n\n`;
+
+              questions.forEach((q, i) => {
+                content += `Q${i + 1}. ${q.question}\n`;
+                if (q.options && q.options.length > 0) {
+                  q.options.forEach((opt, oi) => {
+                    content += `  ${oi + 1}) ${opt}\n`;
+                  });
+                }
+                content += `\n[정답] ${q.answer}\n`;
+                content += `[해설] ${q.explanation}\n`;
+                content += `\n-------------------------\n\n`;
+              });
+
+              const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `AI_시험출제_결과_${new Date().toISOString().slice(0,10)}.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+            };
+
+            // 결과 다운로드 (JSON 형식)
+            const downloadAsJson = () => {
+              if (questions.length === 0) return;
+              const blob = new Blob([JSON.stringify(questions, null, 2)], { type: "application/json;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `AI_시험출제_결과_${new Date().toISOString().slice(0,10)}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            };
+
+            // 일괄 클립보드 복사
+            const copyToClipboard = () => {
+              if (questions.length === 0) return;
+              let content = `====== AI 출제 문제 일괄 복사 ======\n\n`;
+              questions.forEach((q, i) => {
+                content += `Q${i + 1}. ${q.question}\n`;
+                if (q.options && q.options.length > 0) {
+                  q.options.forEach((opt, oi) => {
+                    content += `  ${oi + 1}) ${opt}\n`;
+                  });
+                }
+                content += `[정답] ${q.answer}\n[해설] ${q.explanation}\n\n`;
+              });
+
+              navigator.clipboard.writeText(content).then(() => {
+                setCopySuccess(true);
+                setTimeout(() => setCopySuccess(false), 2000);
+              });
+            };
+
+            return (
+              <div className="page-enter" style={{display:"flex", flexDirection:"column", gap:"24px"}}>
+                
+                {/* 1. API 키 설정 카드 */}
+                <div style={{background:C.surface, borderRadius:"20px", border:`1px solid ${C.border}`, boxShadow:shadow, overflow:"hidden"}}>
+                  <div style={{padding:"16px 24px", background:`linear-gradient(135deg, ${C.blue}0a, transparent)`, borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"10px"}}>
+                    <div style={{display:"flex", alignItems:"center", gap:"8px"}}>
+                      <span style={{fontSize:"20px"}}>🔑</span>
+                      <div>
+                        <div style={{fontWeight:800, fontSize:"14px", color:C.text}}>Google Gemini API 연동 설정</div>
+                        <div style={{fontSize:"11px", color:C.muted, marginTop:"2px"}}>문제 출제를 위해 본인의 Google AI Studio API 키를 등록하세요.</div>
+                      </div>
+                    </div>
+                    <div>
+                      {apiKey ? (
+                        <div style={{display:"flex", alignItems:"center", gap:"10px"}}>
+                          <span style={{fontSize:"12px", fontFamily:"monospace", color:C.green, fontWeight:700, background:"#f0fdf4", padding:"4px 10px", borderRadius:"6px", border:"1px solid #bbf7d0"}}>
+                            {showKey ? apiKey : `${apiKey.slice(0, 8)}••••••••${apiKey.slice(-4)}`}
+                          </span>
+                          <button onClick={() => setShowKey(!showKey)} style={{padding:"4px 8px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:"6px", cursor:"pointer", fontSize:"11px", color:C.subtle, fontFamily:"inherit"}}>
+                            {showKey ? "숨기기" : "보기"}
+                          </button>
+                          <button onClick={removeApiKey} style={{padding:"4px 10px", background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"6px", cursor:"pointer", fontSize:"11px", color:C.red, fontWeight:600, fontFamily:"inherit"}}>
+                            등록 해제
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setTempKey(""); setShowKeyModal(true); }} style={{padding:"6px 16px", background:`linear-gradient(135deg, ${C.blue}dd, ${C.blue})`, color:"#fff", border:"none", borderRadius:"8px", cursor:"pointer", fontSize:"12px", fontWeight:700, fontFamily:"inherit", boxShadow:`0 2px 6px ${C.blue}33`}}>
+                          API Key 등록하기
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* API Key 모달 팝업 */}
+                {showKeyModal && (
+                  <div style={{position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(15,23,42,0.6)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)"}}>
+                    <div style={{background:C.surface, width:"100%", maxWidth:"450px", borderRadius:"20px", border:`1px solid ${C.border}`, boxShadow:"0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04)", overflow:"hidden", animation:"modalEnter 0.2s ease-out"}}>
+                      <div style={{padding:"20px 24px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                        <span style={{fontWeight:800, fontSize:"15px", color:C.text}}>Google Gemini API Key 등록</span>
+                        <button onClick={() => setShowKeyModal(false)} style={{background:"none", border:"none", fontSize:"18px", color:C.muted, cursor:"pointer", fontFamily:"inherit"}}>✕</button>
+                      </div>
+                      <div style={{padding:"24px", display:"flex", flexDirection:"column", gap:"16px"}}>
+                        <div style={{fontSize:"12px", color:C.subtle, lineHeight:1.5}}>
+                          본 기능은 구글 제미나이를 통해 학습 문서에서 무제한으로 퀴즈를 출제할 수 있도록 지원합니다. Key는 암호화되어 오직 본인 브라우저(LocalStorage)에만 안전하게 보관됩니다.
+                          <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" style={{color:C.blue, marginLeft:"4px", fontWeight:700, textDecoration:"none"}}>Google AI Studio에서 무료 Key 발급 받기 ↗</a>
+                        </div>
+                        <div>
+                          <label style={{display:"block", fontSize:"11px", fontWeight:700, color:C.muted, marginBottom:"6px"}}>API KEY 입력</label>
+                          <input type="password" placeholder="AIzaSy..." value={tempKey} onChange={e=>setTempKey(e.target.value)} style={{...inp({width:"100%"}), fontFamily:"monospace"}}/>
+                        </div>
+                        <div style={{display:"flex", gap:"10px", justifyContent:"flex-end", marginTop:"8px"}}>
+                          <button onClick={() => setShowKeyModal(false)} style={{padding:"8px 16px", background:C.bg, border:`1px solid ${C.border}`, borderRadius:"8px", cursor:"pointer", fontSize:"12px", color:C.subtle, fontFamily:"inherit"}}>취소</button>
+                          <button onClick={() => saveApiKey(tempKey)} disabled={!tempKey.trim()} style={{padding:"8px 20px", background:`linear-gradient(135deg, ${C.blue}dd, ${C.blue})`, color:"#fff", border:"none", borderRadius:"8px", cursor:tempKey.trim()?"pointer":"not-allowed", fontSize:"12px", fontWeight:700, fontFamily:"inherit", opacity:tempKey.trim()?1:0.6}}>저장 완료</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. 파일 업로드 및 옵션 조절 패널 */}
+                <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(320px, 1fr))", gap:"24px"}}>
+                  
+                  {/* 파일 업로드 드롭존 */}
+                  <div style={{background:C.surface, borderRadius:"20px", border:`1px solid ${C.border}`, boxShadow:shadow, padding:"24px", display:"flex", flexDirection:"column", gap:"16px"}}>
+                    <div style={{fontWeight:800, fontSize:"14px", color:C.text, display:"flex", alignItems:"center", gap:"6px"}}>
+                      <span>📁</span> 학습할 교육 문서 등록
+                    </div>
+                    
+                    <div 
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      style={{
+                        flex: 1,
+                        minHeight: "160px",
+                        border: isDragging ? `2px dashed ${C.blue}` : `2px dashed ${C.border}`,
+                        borderRadius: "14px",
+                        background: isDragging ? `${C.blue}08` : fileText ? `${C.green}04` : `${C.bg}88`,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "20px",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                        position: "relative"
+                      }}
+                      onClick={() => document.getElementById("exam-file-input").click()}
+                    >
+                      <input id="exam-file-input" type="file" accept=".txt,.json,.csv" style={{display:"none"}} onChange={handleFileChange}/>
+                      
+                      {/* 구름 애니메이션 아이콘 */}
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={fileText ? C.green : isDragging ? C.blue : C.muted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:"12px", transform: isDragging ? "scale(1.1) translateY(-4px)" : "none", transition: "all 0.2s"}}>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                      </svg>
+                      
+                      {fileName ? (
+                        <div style={{textAlign:"center"}}>
+                          <div style={{fontSize:"13px", fontWeight:800, color:C.text, marginBottom:"4px", wordBreak:"break-all"}}>{fileName}</div>
+                          <div style={{fontSize:"11px", color:C.green, fontWeight:600}}>성공적으로 파싱되었습니다 ({fileText.length.toLocaleString()} 자)</div>
+                        </div>
+                      ) : (
+                        <div style={{textAlign:"center"}}>
+                          <div style={{fontSize:"13px", fontWeight:700, color:C.subtle, marginBottom:"4px"}}>학습 문서 드래그 & 드롭 또는 클릭</div>
+                          <div style={{fontSize:"11px", color:C.muted}}>지원 포맷: .txt, .json, .csv (최대 100,000자)</div>
+                        </div>
+                      )}
+                    </div>
+                    {fileName && (
+                      <button onClick={() => { setFileText(""); setFileName(""); }} style={{padding:"5px 12px", border:`1px solid ${C.red}44`, background:`${C.red}04`, color:C.red, borderRadius:"6px", fontSize:"11px", fontWeight:700, cursor:"pointer", width:"fit-content", alignSelf:"flex-end", fontFamily:"inherit"}}>
+                        파일 해제
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 출제 파라미터 옵션 */}
+                  <div style={{background:C.surface, borderRadius:"20px", border:`1px solid ${C.border}`, boxShadow:shadow, padding:"24px", display:"flex", flexDirection:"column", gap:"16px"}}>
+                    <div style={{fontWeight:800, fontSize:"14px", color:C.text, display:"flex", alignItems:"center", gap:"6px"}}>
+                      <span>⚙️</span> 출제 상세 옵션 튜닝
+                    </div>
+                    
+                    {/* 문제 유형 */}
+                    <div>
+                      <label style={{display:"block", fontSize:"11px", fontWeight:700, color:C.muted, marginBottom:"8px"}}>문제 유형</label>
+                      <div style={{display:"flex", gap:"8px"}}>
+                        {[
+                          {id:"choice", label:"객관식 4지선다"},
+                          {id:"ox", label:"O/X 퀴즈"},
+                          {id:"short", label:"주관식 단답형"}
+                        ].map(type => (
+                          <button key={type.id} onClick={()=>setQType(type.id)} style={{flex:1, padding:"8px 10px", borderRadius:"10px", border:`1.5px solid ${qType===type.id?C.blue:C.border}`, background:qType===type.id?`${C.blue}0c`:"transparent", color:qType===type.id?C.blue:C.subtle, fontWeight:qType===type.id?800:400, cursor:"pointer", fontSize:"12px", fontFamily:"inherit", transition:"all 0.1s"}}>{type.label}</button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 문항 수 & 난이도 */}
+                    <div style={{display:"flex", gap:"16px"}}>
+                      <div style={{flex:1}}>
+                        <label style={{display:"block", fontSize:"11px", fontWeight:700, color:C.muted, marginBottom:"8px"}}>출제 문항 수</label>
+                        <select value={qCount} onChange={e=>setQCount(Number(e.target.value))} style={{...inp({width:"100%"}), padding:"6px 12px", height:"34px"}}>
+                          <option value={3}>3 문항</option>
+                          <option value={5}>5 문항</option>
+                          <option value={10}>10 문항</option>
+                        </select>
+                      </div>
+                      <div style={{flex:1}}>
+                        <label style={{display:"block", fontSize:"11px", fontWeight:700, color:C.muted, marginBottom:"8px"}}>난이도 수준</label>
+                        <div style={{display:"flex", gap:"4px"}}>
+                          {[
+                            {id:"easy", label:"하"},
+                            {id:"medium", label:"중"},
+                            {id:"hard", label:"상"}
+                          ].map(lvl => (
+                            <button key={lvl.id} onClick={()=>setDifficulty(lvl.id)} style={{flex:1, padding:"6px 0", borderRadius:"8px", border:`1.5px solid ${difficulty===lvl.id?C.purple:C.border}`, background:difficulty===lvl.id?`${C.purple}0c`:"transparent", color:difficulty===lvl.id?C.purple:C.subtle, fontWeight:difficulty===lvl.id?800:400, cursor:"pointer", fontSize:"12px", fontFamily:"inherit", transition:"all 0.1s"}}>{lvl.label}</button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 가이드라인 추가 */}
+                    <div>
+                      <label style={{display:"block", fontSize:"11px", fontWeight:700, color:C.muted, marginBottom:"6px"}}>AI 특별 요건 가이드라인 (선택)</label>
+                      <textarea placeholder="예: 핵심 키워드 중심의 실무 위주 실전 문제를 내줘, 코드가 포함된 기술 문제를 내줘" value={guidelines} onChange={e=>setGuidelines(e.target.value)} style={{...inp({width:"100%"}), minHeight:"64px", resize:"none", fontSize:"12px", padding:"10px 12px"}}/>
+                    </div>
+
+                    {/* 출제 버튼 */}
+                    <button 
+                      onClick={generateQuestions} 
+                      disabled={isGenerating || !fileText}
+                      style={{
+                        padding: "12px 24px",
+                        background: !fileText ? C.border : isGenerating ? C.border : `linear-gradient(135deg, ${C.blue}dd, ${C.blue})`,
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "10px",
+                        cursor: isGenerating || !fileText ? "not-allowed" : "pointer",
+                        fontWeight: 800,
+                        fontSize: "13px",
+                        fontFamily: "inherit",
+                        boxShadow: !fileText ? "none" : `0 4px 12px ${C.blue}33`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        marginTop: "auto",
+                        transition: "all 0.15s"
+                      }}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <span className="spinner" style={{width:"14px", height:"14px", border:"2px solid #ffffffaa", borderTop:"2px solid #fff", borderRadius:"50%", display:"inline-block", animation:"spin 0.6s linear infinite"}}/>
+                          AI 시험문제 생성 중...
+                        </>
+                      ) : (
+                        <>
+                          <span>🤖</span> AI 시험 출제 시작
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 에러 피드백 알림 */}
+                {errorMsg && (
+                  <div style={{background:"#fef2f2", color:C.red, border:"1px solid #fecaca", borderRadius:"12px", padding:"12px 18px", fontSize:"12px", fontWeight:600, display:"flex", alignItems:"center", gap:"8px"}}>
+                    <span>⚠️</span> {errorMsg}
+                  </div>
+                )}
+
+                {/* 3. 로딩 상태 스켈레톤 UI */}
+                {isGenerating && (
+                  <div style={{display:"flex", flexDirection:"column", gap:"16px"}}>
+                    <div style={{fontSize:"13px", color:C.muted, fontWeight:700, textAlign:"center", padding:"10px 0", animation:"pulse 1.5s infinite"}}>
+                       AI가 문서를 면밀히 분석하여 최적의 평가 문제를 출제하고 있습니다. 잠시만 기다려 주세요...
+                    </div>
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="skeleton-card" style={{background:C.surface, borderRadius:"16px", border:`1px solid ${C.border}`, padding:"20px", display:"flex", flexDirection:"column", gap:"12px", opacity: 1 - (i-1)*0.25}}>
+                        <div style={{width:"40px", height:"16px", background:`${C.border}66`, borderRadius:"4px"}}/>
+                        <div style={{width:"80%", height:"20px", background:`${C.border}66`, borderRadius:"6px"}}/>
+                        <div style={{width:"40%", height:"14px", background:`${C.border}66`, borderRadius:"4px", marginTop:"6px"}}/>
+                        <div style={{width:"50%", height:"14px", background:`${C.border}66`, borderRadius:"4px"}}/>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 4. 출제된 문제 대시보드 렌더링 */}
+                {questions.length > 0 && !isGenerating && (
+                  <div style={{display:"flex", flexDirection:"column", gap:"20px"}}>
+                    
+                    {/* 결과 메뉴 바 */}
+                    <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"12px", borderBottom:`1.5px solid ${C.border}`, paddingBottom:"12px"}}>
+                      <div style={{fontWeight:800, fontSize:"14px", color:C.text}}>
+                         성공적으로 출제되었습니다! (총 {questions.length}문항)
+                      </div>
+                      
+                      <div style={{display:"flex", gap:"8px"}}>
+                        <button onClick={copyToClipboard} style={{padding:"6px 14px", borderRadius:"8px", border:`1px solid ${C.teal}44`, background:copySuccess ? "#f0fdf4" : `${C.teal}08`, color:copySuccess ? C.green : C.teal, fontSize:"12px", fontWeight:700, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s"}}>
+                          {copySuccess ? "✓ 복사 완료!" : "📋 텍스트 클립보드 복사"}
+                        </button>
+                        <button onClick={downloadAsTxt} style={{padding:"6px 14px", borderRadius:"8px", border:`1px solid ${C.blue}44`, background:`${C.blue}08`, color:C.blue, fontSize:"12px", fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
+                          💾 메모장양식(.txt) 다운
+                        </button>
+                        <button onClick={downloadAsJson} style={{padding:"6px 14px", borderRadius:"8px", border:`1px solid ${C.purple}44`, background:`${C.purple}08`, color:C.purple, fontSize:"12px", fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
+                          💾 JSON 다운로드
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 문제 카드 리스트 */}
+                    {questions.map((q, idx) => {
+                      const isExpanded = expandedQ === idx;
+                      return (
+                        <div key={idx} style={{background:C.surface, borderRadius:"16px", border:`1px solid ${C.border}`, boxShadow:shadow, overflow:"hidden", transition:"all 0.2s"}}>
+                          
+                          {/* 문제 요약 헤더 */}
+                          <div style={{padding:"20px", display:"flex", gap:"14px", alignItems:"flex-start"}}>
+                            <span style={{
+                              background: [
+                                `linear-gradient(135deg, ${C.blue}, ${C.blueLight})`,
+                                `linear-gradient(135deg, ${C.purple}, #a855f7)`,
+                                `linear-gradient(135deg, ${C.teal}, #2dd4bf)`
+                              ][idx % 3],
+                              color: "#fff",
+                              fontSize: "11px",
+                              fontWeight: 900,
+                              padding: "4px 10px",
+                              borderRadius: "20px",
+                              flexShrink: 0
+                            }}>
+                              문항 {idx + 1}
+                            </span>
+                            
+                            <div style={{flex: 1, display:"flex", flexDirection:"column", gap:"10px"}}>
+                              <div style={{fontSize:"14px", fontWeight:800, color:C.text, lineHeight:1.5}}>{q.question}</div>
+                              
+                              {/* 객관식/OX 보기 리스트 */}
+                              {q.options && q.options.length > 0 && (
+                                <div style={{display:"flex", flexDirection:"column", gap:"6px", marginTop:"6px"}}>
+                                  {q.options.map((opt, oIdx) => {
+                                    const isCorrectOpt = q.answer === opt;
+                                    return (
+                                      <div key={oIdx} style={{
+                                        display: "flex", 
+                                        alignItems: "center", 
+                                        gap: "10px", 
+                                        padding: "8px 12px", 
+                                        background: isExpanded && isCorrectOpt ? "#f0fdf4" : C.bg + "88", 
+                                        border: isExpanded && isCorrectOpt ? `1px solid ${C.green}44` : `1px solid ${C.border}`,
+                                        borderRadius: "10px",
+                                        fontSize: "12px",
+                                        color: isExpanded && isCorrectOpt ? C.green : C.text,
+                                        fontWeight: isExpanded && isCorrectOpt ? 700 : 400
+                                      }}>
+                                        <span style={{
+                                          width: "18px", 
+                                          height: "18px", 
+                                          borderRadius: "50%", 
+                                          background: isExpanded && isCorrectOpt ? C.green : `${C.border}aa`, 
+                                          color: isExpanded && isCorrectOpt ? "#fff" : C.subtle,
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          fontSize: "10px",
+                                          fontWeight: 800
+                                        }}>{oIdx + 1}</span>
+                                        <span>{opt}</span>
+                                        {isExpanded && isCorrectOpt && <span style={{marginLeft:"auto", fontSize:"10px", background:`${C.green}15`, padding:"2px 8px", borderRadius:"12px"}}>정답</span>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 정답/해설 토글 버튼 */}
+                          <div style={{borderTop:`1px solid ${C.border}44`, background:`${C.bg}33`, padding:"10px 20px", display:"flex", justifyContent:"flex-end"}}>
+                            <button 
+                              onClick={() => setExpandedQ(isExpanded ? null : idx)}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                fontSize: "12px",
+                                color: isExpanded ? C.purple : C.blue,
+                                fontWeight: 800,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                fontFamily: "inherit"
+                              }}
+                            >
+                              {isExpanded ? "정답 및 해설 닫기 ▲" : "정답 및 해설 확인하기 ▼"}
+                            </button>
+                          </div>
+
+                          {/* 정답 및 해설 패널 (아코디언) */}
+                          {isExpanded && (
+                            <div style={{padding:"20px", borderTop:`1px solid ${C.border}88`, background:`linear-gradient(to bottom, #fcfdff, ${C.surface})`, display:"flex", flexDirection:"column", gap:"10px", animation:"slideDown 0.2s ease-out"}}>
+                              <div style={{display:"flex", alignItems:"center", gap:"8px"}}>
+                                <span style={{fontSize:"11px", fontWeight:800, color:C.green, background:"#f0fdf4", border:"1px solid #bbf7d0", padding:"3px 8px", borderRadius:"6px"}}>정답 확인</span>
+                                <span style={{fontSize:"13px", fontWeight:900, color:C.text}}>{q.answer}</span>
+                              </div>
+                              <div style={{display:"flex", gap:"8px", marginTop:"4px", alignItems:"flex-start"}}>
+                                <span style={{fontSize:"11px", fontWeight:800, color:C.blue, background:"#eff6ff", border:"1px solid #bfdbfe", padding:"3px 8px", borderRadius:"6px", flexShrink:0}}>AI 문제 해설</span>
+                                <p style={{fontSize:"12px", color:C.subtle, lineHeight:1.7, margin:0}}>{q.explanation}</p>
+                              </div>
+                            </div>
+                          )}
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                
+                {/* CSS 애니메이션 추가 */}
+                <style>{`
+                  @keyframes spin {
+                    to { transform: rotate(360deg); }
+                  }
+                  @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.6; }
+                  }
+                  @keyframes modalEnter {
+                    from { transform: scale(0.95); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                  }
+                  @keyframes slideDown {
+                    from { max-height: 0; opacity: 0; }
+                    to { max-height: 500px; opacity: 1; }
+                  }
+                `}</style>
+                
+              </div>
+            );
+          };
+          return <AiExamGenerator/>;
         })()}
 
         {/* 부서/팀 관리 페이지 */}
