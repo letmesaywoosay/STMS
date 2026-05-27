@@ -2634,10 +2634,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                       parts: [{
                         text: prompt
                       }]
-                    }],
-                    generationConfig: {
-                      responseMimeType: "application/json"
-                    }
+                    }]
                   })
                 });
 
@@ -2652,7 +2649,9 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                   throw new Error("API에서 유효한 문제 데이터가 수신되지 않았습니다.");
                 }
 
-                const parsed = JSON.parse(rawText.trim());
+                // Markdown 코드 블록 (```json ... ```) 제거 디펜스 코드 보강
+                const cleanText = rawText.replace(/```json|```/g, "").trim();
+                const parsed = JSON.parse(cleanText);
                 if (!parsed.questions || !Array.isArray(parsed.questions)) {
                   throw new Error("응답 JSON 형식이 올바르지 않습니다.");
                 }
