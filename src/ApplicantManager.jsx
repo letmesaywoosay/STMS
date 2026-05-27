@@ -2425,7 +2425,22 @@ export default function ApplicantManager() {
               setTempKey("");
             };
 
-            // 파일 로드 및 파싱 (FileReader)
+            // 동적 스크립트 로더 헬퍼
+            const loadScript = (src) => {
+              return new Promise((resolve, reject) => {
+                if (document.querySelector(`script[src="${src}"]`)) {
+                  resolve();
+                  return;
+                }
+                const script = document.createElement("script");
+                script.src = src;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+                document.head.appendChild(script);
+              });
+            };
+
+            // 파일 로드 및 파싱 (FileReader + PDF/PPTX Parser)
             const handleFileChange = (e) => {
               const file = e.target.files[0];
               if (file) {
@@ -2433,23 +2448,122 @@ export default function ApplicantManager() {
               }
             };
 
-            const processFile = (file) => {
-              if (!file.name.match(/\.(txt|json|csv)$/i)) {
-                alert("지원하지 않는 파일 형식입니다. .txt, .json, .csv 파일만 업로드해 주세요.");
+            const processFile = async (file) => {
+              const extension = file.name.split('.').pop().toLowerCase();
+              
+              if (!["txt", "json", "csv", "pdf", "pptx", "ppt"].includes(extension)) {
+                alert("지원하지 않는 파일 형식입니다. .txt, .json, .csv, .pdf, .pptx 파일만 지원합니다.");
                 return;
               }
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const text = event.target.result;
-                if (text.length > 100000) {
-                  alert("학습 문서 크기가 너무 큽니다. (최대 100,000자까지 지원)");
-                  return;
+
+              if (extension === "ppt") {
+                alert("구형 .ppt 포맷은 보안 및 호환성을 위해 직접 파싱이 차단됩니다. 해당 파일을 .pptx 또는 .pdf 형식으로 저장하신 후 업로드해 주세요!");
+                return;
+              }
+
+              setFileName("문서 내용 분석 중...");
+              setFileText("");
+
+              try {
+                if (extension === "pdf") {
+                  // 1. PDF 파싱 (pdf.js 동적 연동)
+                  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+                  window.pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+                  
+                  const reader = new FileReader();
+                  reader.onload = async (event) => {
+                    try {
+                      const typedarray = new Uint8Array(event.target.result);
+                      const pdf = await window.pdfjsLib.getDocument({ data: typedarray }).promise;
+                      let fullText = "";
+                      
+                      for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(" ");
+                        fullText += pageText + "\n";
+                      }
+
+                      if (fullText.trim().length === 0) {
+                        throw new Error("PDF 문서 내에 추출할 수 있는 텍스트가 존재하지 않습니다. (이미지 전용 PDF 문서일 가능성이 있습니다)");
+                      }
+
+                      finalizeParsing(file.name, fullText);
+                    } catch (err) {
+                      setFileName("");
+                      alert("PDF 해석 오류: " + err.message);
+                    }
+                  };
+                  reader.readAsArrayBuffer(file);
+
+                } else if (extension === "pptx") {
+                  // 2. PPTX 파싱 (JSZip 동적 연동)
+                  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
+                  
+                  const reader = new FileReader();
+                  reader.onload = async (event) => {
+                    try {
+                      const arrayBuffer = event.target.result;
+                      const zip = await window.JSZip.loadAsync(arrayBuffer);
+                      
+                      // ppt/slides/ slide 파일명 매칭 및 정렬
+                      const slideFiles = Object.keys(zip.files).filter(name => name.startsWith("ppt/slides/slide") && name.endsWith(".xml"));
+                      slideFiles.sort((a, b) => {
+                        const numA = parseInt(a.replace(/[^\d]/g, ""));
+                        const numB = parseInt(b.replace(/[^\d]/g, ""));
+                        return numA - numB;
+                      });
+
+                      if (slideFiles.length === 0) {
+                        throw new Error("PPTX 슬라이드 요소를 찾을 수 없습니다.");
+                      }
+
+                      let fullText = "";
+                      const parser = new DOMParser();
+
+                      for (const slidePath of slideFiles) {
+                        const slideXmlText = await zip.files[slidePath].async("text");
+                        const xmlDoc = parser.parseFromString(slideXmlText, "text/xml");
+                        const textElements = xmlDoc.getElementsByTagName("a:t");
+                        const slideText = Array.from(textElements).map(el => el.textContent).join(" ");
+                        fullText += slideText + "\n";
+                      }
+
+                      if (fullText.trim().length === 0) {
+                        throw new Error("PPTX 슬라이드에서 텍스트 콘텐츠를 읽을 수 없습니다.");
+                      }
+
+                      finalizeParsing(file.name, fullText);
+                    } catch (err) {
+                      setFileName("");
+                      alert("PPTX 해석 오류: " + err.message);
+                    }
+                  };
+                  reader.readAsArrayBuffer(file);
+
+                } else {
+                  // 3. 기존 일반 텍스트 포맷 파싱 (.txt, .json, .csv)
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    finalizeParsing(file.name, event.target.result);
+                  };
+                  reader.readAsText(file, "UTF-8");
                 }
-                setFileText(text);
-                setFileName(file.name);
-                setErrorMsg("");
-              };
-              reader.readAsText(file, "UTF-8");
+              } catch (e) {
+                setFileName("");
+                alert("파일 읽기 도중 오류가 발생했습니다: " + e.message);
+              }
+            };
+
+            const finalizeParsing = (name, text) => {
+              if (text.length > 100000) {
+                alert("학습 문서의 총 글자수(" + text.length.toLocaleString() + "자)가 허용 제한(100,000자)을 초과했습니다. 문서를 분할하여 등록해 주세요.");
+                setFileName("");
+                return;
+              }
+              setFileText(text);
+              setFileName(name);
+              setErrorMsg("");
             };
 
             const handleDragOver = (e) => {
@@ -2707,7 +2821,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                       }}
                       onClick={() => document.getElementById("exam-file-input").click()}
                     >
-                      <input id="exam-file-input" type="file" accept=".txt,.json,.csv" style={{display:"none"}} onChange={handleFileChange}/>
+                      <input id="exam-file-input" type="file" accept=".txt,.json,.csv,.pdf,.pptx,.ppt" style={{display:"none"}} onChange={handleFileChange}/>
                       
                       {/* 구름 애니메이션 아이콘 */}
                       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={fileText ? C.green : isDragging ? C.blue : C.muted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{marginBottom:"12px", transform: isDragging ? "scale(1.1) translateY(-4px)" : "none", transition: "all 0.2s"}}>
@@ -2722,7 +2836,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                       ) : (
                         <div style={{textAlign:"center"}}>
                           <div style={{fontSize:"13px", fontWeight:700, color:C.subtle, marginBottom:"4px"}}>학습 문서 드래그 & 드롭 또는 클릭</div>
-                          <div style={{fontSize:"11px", color:C.muted}}>지원 포맷: .txt, .json, .csv (최대 100,000자)</div>
+                          <div style={{fontSize:"11px", color:C.muted}}>지원 포맷: .txt, .json, .csv, .pdf, .pptx (최대 100,000자)</div>
                         </div>
                       )}
                     </div>
