@@ -2625,7 +2625,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
 
               let rawText = "";
               
-              // 1차 시도: v1 엔드포인트
+              // 1차 시도: v1 - gemini-1.5-flash-latest
               try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
                   method: "POST",
@@ -2641,9 +2641,9 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                 const resJson = await response.json();
                 rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
               } catch (firstErr) {
-                console.warn("v1 API failed, trying v1beta failover...", firstErr);
+                console.warn("v1 gemini-1.5-flash-latest failed, trying v1beta failover...", firstErr);
                 
-                // 2차 시도 (Failover): v1beta 엔드포인트로 자동 전환 우회
+                // 2차 시도: v1beta - gemini-1.5-flash-latest
                 try {
                   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
                     method: "POST",
@@ -2659,10 +2659,48 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                   const resJson = await response.json();
                   rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
                 } catch (secondErr) {
-                  console.error("Both v1 and v1beta APIs failed: ", secondErr);
-                  setErrorMsg(`[연동 실패] 구글 서버와 통신할 수 없습니다. 원인: ${secondErr.message} (1차 오류: ${firstErr.message}). 본인의 API Key가 유효한지, 혹은 무료 할당량이 초과되지 않았는지 확인해 주세요.`);
-                  setIsGenerating(false);
-                  return;
+                  console.warn("v1beta gemini-1.5-flash-latest failed, trying v1 gemini-pro...", secondErr);
+                  
+                  // 3차 시도: v1 - gemini-pro (안정형 1.0 Pro)
+                  try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+
+                    if (!response.ok) {
+                      const errJson = await response.json().catch(() => ({}));
+                      throw new Error(errJson?.error?.message || `Status: ${response.status}`);
+                    }
+
+                    const resJson = await response.json();
+                    rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+                  } catch (thirdErr) {
+                    console.warn("v1 gemini-pro failed, trying v1beta gemini-pro final fallback...", thirdErr);
+                    
+                    // 4차 시도 (최종): v1beta - gemini-pro
+                    try {
+                      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                      });
+
+                      if (!response.ok) {
+                        const errJson = await response.json().catch(() => ({}));
+                        throw new Error(errJson?.error?.message || `Status: ${response.status}`);
+                      }
+
+                      const resJson = await response.json();
+                      rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    } catch (finalErr) {
+                      console.error("All Gemini API failover models failed: ", finalErr);
+                      setErrorMsg(`[연동 실패] 구글 서버와 통신할 수 없습니다. 원인: ${finalErr.message} (1차: ${firstErr.message}, 2차: ${secondErr.message}, 3차: ${thirdErr.message}). 본인의 API Key가 유효한지, 혹은 무료 할당량이 초과되지 않았는지 확인해 주세요.`);
+                      setIsGenerating(false);
+                      return;
+                    }
+                  }
                 }
               }
 
