@@ -2396,6 +2396,7 @@ export default function ApplicantManager() {
             const [fileName, setFileName] = useState("");
             const [isDragging, setIsDragging] = useState(false);
             
+            const [modelName, setModelName] = useState("gemini-1.5-flash-latest");
             const [qType, setQType] = useState("choice"); // choice: 객관식, ox: O/X, short: 주관식
             const [qCount, setQCount] = useState(5);
             const [difficulty, setDifficulty] = useState("medium"); // easy, medium, hard
@@ -2624,7 +2625,7 @@ You must return the response as a valid JSON object matching this schema:
 Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw JSON.`;
 
               try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`, {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json"
@@ -2850,6 +2851,18 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                   <div style={{background:C.surface, borderRadius:"20px", border:`1px solid ${C.border}`, boxShadow:shadow, padding:"24px", display:"flex", flexDirection:"column", gap:"16px"}}>
                     <div style={{fontWeight:800, fontSize:"14px", color:C.text, display:"flex", alignItems:"center", gap:"6px"}}>
                       <span>⚙️</span> 출제 상세 옵션 튜닝
+                    </div>
+                    
+                    {/* AI 모델 선택 */}
+                    <div>
+                      <label style={{display:"block", fontSize:"11px", fontWeight:700, color:C.muted, marginBottom:"8px"}}>AI 엔진 모델 선택</label>
+                      <select value={modelName} onChange={e=>setModelName(e.target.value)} style={{...inp({width:"100%"}), padding:"6px 12px", height:"34px", fontSize:"12px", fontFamily:"inherit", border:`1px solid ${C.border}`, borderRadius:"8px", background:C.surface, color:C.text}}>
+                        <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (최신 Flash - 권장)</option>
+                        <option value="gemini-1.5-flash">gemini-1.5-flash (기본 Flash)</option>
+                        <option value="gemini-1.5-pro">gemini-1.5-pro (고품질 Pro)</option>
+                        <option value="gemini-pro">gemini-pro (안정형 1.0 Pro)</option>
+                      </select>
+                      <div style={{fontSize:"10px", color:C.muted, marginTop:"4px"}}>※ 사용하시는 API 키의 티어에 따라 지원 모델이 다를 수 있습니다. 오류 시 모델을 변경해 보세요.</div>
                     </div>
                     
                     {/* 문제 유형 */}
