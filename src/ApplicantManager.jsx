@@ -1817,66 +1817,370 @@ export default function ApplicantManager() {
         {isAdmin&&mainMenu==="home"&&(()=>{
           const LandingPage=()=>{
             const userName=loginUser?.name||loginUser?.username||"";
+            
+            // 대시보드 인터랙티브 필터 상태
+            const [dashYear, setDashYear] = useState("2026");
+            const [dashDiv, setDashDiv] = useState("all");
+            const [hoveredMonth, setHoveredMonth] = useState(null); // SVG 차트 풍선 툴팁
+
+            // 고유 본부 목록 추출 (드롭다운 필터용)
+            const allDivs = [...new Set(applicants.map(a => a.division).filter(Boolean))].sort();
+
+            // 1. KPI 지표 실시간 계산
+            const totalExaminees = applicants.length;
+            
+            // 이번 달 신규 응시자 계산 (YYYY-MM 형식 기준)
+            const currentYM = new Date().toISOString().substring(0, 7); // 예: "2026-05"
+            const newExamineesThisMonth = applicants.filter(a => 
+              (a.date1 && a.date1.substring(0, 7) === currentYM) ||
+              (a.date2 && a.date2.substring(0, 7) === currentYM) ||
+              (a.date3 && a.date3.substring(0, 7) === currentYM)
+            ).length;
+
+            // 평균 합격률 (합격인 인원 수 / 평가 완료된 인원 수)
+            const passExaminees = applicants.filter(a => a._att.pass === "합격").length;
+            const failExaminees = applicants.filter(a => a._att.pass === "불합격").length;
+            const gradedCount = passExaminees + failExaminees;
+            const avgPassRate = gradedCount > 0 ? Math.round((passExaminees / gradedCount) * 100) : 0;
+
+            // 이번 달 시험 건수
+            const currentMonthTests = applicants.filter(a => {
+              const matches1 = a.date1 && a.date1.substring(0, 7) === currentYM;
+              const matches2 = a.date2 && a.date2.substring(0, 7) === currentYM;
+              const matches3 = a.date3 && a.date3.substring(0, 7) === currentYM;
+              return matches1 || matches2 || matches3;
+            }).length;
+
+            // 미응시 및 면제자 현황
+            const unexaminedCount = applicants.filter(a => a._att.pass === "미응시").length;
+            const exemptCount = applicants.filter(a => a._att.pass === "면제").length;
+            const exceptionCount = unexaminedCount + exemptCount;
+
+            // 2. 월별 합격 추이 데이터 집계 (차트용)
+            const monthlyTrend = Array.from({length: 12}, (_, i) => {
+              const monthStr = String(i + 1).padStart(2, "0");
+              const targetYM = `${dashYear}-${monthStr}`;
+              
+              // 해당 월의 전체 시험 인원 및 합격자 필터링
+              const monthApps = applicants.filter(a => {
+                const matchesDiv = dashDiv === "all" ? true : a.division === dashDiv;
+                if (!matchesDiv) return false;
+                
+                const matches1 = a.date1 && a.date1.substring(0, 7) === targetYM;
+                const matches2 = a.date2 && a.date2.substring(0, 7) === targetYM;
+                const matches3 = a.date3 && a.date3.substring(0, 7) === targetYM;
+                return matches1 || matches2 || matches3;
+              });
+
+              const total = monthApps.length;
+              const passed = monthApps.filter(a => a._att.pass === "합격").length;
+              return { month: `${i + 1}월`, total, passed };
+            });
+
+            // SVG 차트 좌표 계산용 상수 및 함수
+            const chartHeight = 180;
+            const chartWidth = 560;
+            const maxVal = Math.max(...monthlyTrend.map(d => d.total), 5); // 최소 5명 기준 Y축 확보
+            
+            const getPoints = (type) => {
+              return monthlyTrend.map((d, index) => {
+                const val = type === "total" ? d.total : d.passed;
+                const x = 30 + index * (chartWidth / 11.5);
+                const y = chartHeight - 15 - (val / maxVal) * (chartHeight - 40);
+                return { x, y, ...d };
+              });
+            };
+
+            const totalPoints = getPoints("total");
+            const passPoints = getPoints("passed");
+
+            const totalPath = totalPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+            const passPath = passPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
+            // 3. 본부별 합격률 랭킹 집계
+            const allDivisions = [...new Set(applicants.map(a => a.division).filter(Boolean))];
+            const divRanking = allDivisions.map(divName => {
+              const divApps = applicants.filter(a => a.division === divName);
+              const total = divApps.filter(a => ["합격", "불합격"].includes(a._att.pass)).length;
+              const passed = divApps.filter(a => a._att.pass === "합격").length;
+              const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
+              return { division: divName, rate, passed, total };
+            }).sort((a, b) => b.rate - a.rate).slice(0, 5); // 상위 5위
+
+            // 4. 최근 5건 시험 결과 추출
+            const recentTestList = [...applicants]
+              .filter(a => a.date1 || a.date2 || a.date3)
+              .sort((a, b) => {
+                const dateA = a.date3 || a.date2 || a.date1 || "";
+                const dateB = b.date3 || b.date2 || b.date1 || "";
+                return dateB.localeCompare(dateA);
+              })
+              .slice(0, 5);
+
             return(
-              <div className="land-container" style={{minHeight:"calc(100vh - 80px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"48px 60px 48px",background:"transparent"}}>
+              <div className="dash-container" style={{width:"100%",padding:"0px 0 48px",display:"flex",flexDirection:"column",gap:"24px",animation:"fadeUp 0.5s ease"}}>
                 <style>{`
-                  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-                  @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.7}}
-                  .land-card:hover{transform:translateY(-6px)!important;box-shadow:0 20px 48px rgba(29,78,216,0.15)!important;}
-                  .land-card:hover .land-cta{background:linear-gradient(135deg,#1d4ed8,#3b82f6)!important;color:#fff!important;}
+                  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+                  .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -10px rgba(0,32,96,0.15)!important; }
+                  .dash-card { background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 20px; transition: all 0.2s; }
+                  .dash-card:hover { box-shadow: 0 10px 20px -8px rgba(0,0,0,0.08); }
+                  .quick-tile { display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: transparent; cursor: pointer; transition: all 0.2s; text-align: left; font-family: inherit; }
+                  .quick-tile:hover { border-color: #002060; background: rgba(0,32,96,0.02); transform: translateY(-2px); }
                 `}</style>
 
-                {/* 서비스명 + 슬로건 */}
-                <div className="land-heading" style={{textAlign:"center",marginTop:"32px",marginBottom:"8px",animation:"fadeUp 0.6s ease"}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:"12px",marginBottom:"0"}}>
-                    <span style={{fontSize:"34px",fontWeight:900,background:"linear-gradient(135deg,#1d1d1f,#424245)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",letterSpacing:"-0.5px",paddingBottom:"4px",lineHeight:1.3,display:"inline-block"}}>Tune, Test and Transform</span>
+                {/* 환영 헤더 */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px",marginTop:"12px"}}>
+                  <div>
+                    <h2 style={{fontSize:"22px",fontWeight:900,color:"#002060",margin:0,letterSpacing:"-0.5px"}}>AIDA 실시간 경영 대시보드</h2>
+                    <p style={{fontSize:"12px",color:C.muted,margin:"4px 0 0"}}>솔루션 테스트 아카데미의 실시간 성적 추이 및 합격 분석 현황판입니다.</p>
+                  </div>
+                  <div style={{fontSize:"13px",color:C.muted,fontWeight:500,background:`${C.border}33`,padding:"6px 12px",borderRadius:"20px",border:`1px solid ${C.border}`}}>
+                    기준일: <span style={{fontWeight:700,color:C.text}}>{new Date().toLocaleDateString("ko-KR")}</span>
                   </div>
                 </div>
 
-                {/* 인사말 */}
-                <div style={{fontSize:"22px",fontWeight:700,color:C.text,marginBottom:"40px",animation:"fadeUp 0.5s 0.1s ease both",textAlign:"center"}}>
-                  {userName&&<><span style={{color:"#0071e3"}}>{userName}</span>님, 안녕하세요.</>} 무엇을 도와드릴까요?
-                </div>
-
-                {/* 카드 3장 */}
-                <div className="land-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"24px",width:"100%",maxWidth:"1100px",animation:"fadeUp 0.7s 0.2s ease both"}}>
+                {/* Section A: KPI Summary Cards */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:"18px"}}>
                   {[
-                    {id:"list",  title:"관리 리스트", desc:"응시자 등록·수정·삭제, 점수 입력, 합격 여부 관리 및 필터링", cta:"리스트 열기",  accentColor:"#1d4ed8", label:"01"},
-                    {id:"report",title:"월별 보고서",  desc:"월별 응시 현황, 점수 분포도, 평균 추이 등 데이터 시각화",  cta:"보고서 열기",  accentColor:"#7c3aed", label:"02"},
-                    {id:"dept",  title:"부서/팀 관리", desc:"조직 구조 등록·수정, 본부·팀 계층 관리 및 직책자 배정",  cta:"조직 관리",    accentColor:"#0d9488", label:"03"},
-                  ].map((card,i)=>(
-                    <div key={card.id} className="land-card" onClick={()=>setMainMenu(card.id)}
-                      style={{
-                        position:"relative",
-                        borderRadius:"16px",
-                        border:`1px solid #d2d2d7`,
-                        padding:"32px 28px 28px",
-                        cursor:"pointer",
-                        background:"#ffffff",
-                        boxShadow:"0 2px 8px rgba(0,0,0,0.06)",
-                        display:"flex",flexDirection:"column",gap:"0",
-                        animation:`fadeUp 0.6s ${0.25+i*0.08}s ease both`,
-                        overflow:"hidden",
-                        minHeight:"240px",
-                      }}>
-                      {/* 배경 노이즈 텍스처 */}
-                      <div style={{position:"absolute",inset:0,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E")`,backgroundSize:"200px",pointerEvents:"none",zIndex:0,borderRadius:"16px"}}/>
-                      {/* 액센트 라인 (상단) */}
-                      <div style={{position:"absolute",top:0,left:0,right:0,height:"3px",background:card.accentColor,borderRadius:"16px 16px 0 0",zIndex:1}}/>
-                      {/* 제목 */}
-                      <div style={{position:"relative",zIndex:1,fontSize:"22px",fontWeight:700,color:"#1d1d1f",letterSpacing:"-0.3px",letterSpacing:"-0.5px",lineHeight:1.2,marginBottom:"12px"}}>{card.title}</div>
-                      {/* 구분선 */}
-                      <div style={{position:"relative",zIndex:1,height:"1px",background:"#d2d2d7",marginBottom:"12px"}}/>
-                      {/* 설명 */}
-                      <div style={{position:"relative",zIndex:1,fontSize:"12px",color:"#86868b",lineHeight:"1.8",lineHeight:"1.8",flex:1}}>{card.desc}</div>
-                      {/* CTA */}
-                      <div className="land-cta" style={{position:"relative",zIndex:1,marginTop:"20px",padding:"10px 0",borderRadius:"8px",border:`1.5px solid ${card.accentColor}33`,background:"transparent",color:card.accentColor,fontSize:"13px",fontWeight:700,textAlign:"center",transition:"all 0.2s",letterSpacing:"0.02em"}}>{card.cta} →</div>
+                    { title: "총 등록 응시자", val: `${totalExaminees}명`, sub: `이번 달 신규 +${newExamineesThisMonth}명`, color: "#002060", icon: "👥" },
+                    { title: "평균 합격률", val: `${avgPassRate}%`, sub: `평가 완료 ${gradedCount}명 기준`, color: C.green, icon: "🎯" },
+                    { title: "이번 달 진행 시험", val: `${currentMonthTests}건`, sub: "진행 완료 및 대기 포함", color: C.purple, icon: "📅" },
+                    { title: "미응시 / 면제자", val: `${exceptionCount}명`, sub: `미응시 ${unexaminedCount}명 · 면제 ${exemptCount}명`, color: "#f59e0b", icon: "🛡️" }
+                  ].map((kpi, idx) => (
+                    <div key={idx} className="kpi-card" style={{background:"#ffffff",borderRadius:"16px",border:"1px solid #e2e8f0",padding:"20px 24px",boxShadow:"0 2px 4px rgba(0,0,0,0.02)",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.25s",animation:`fadeUp 0.4s ${idx * 0.08}s ease both`}}>
+                      <div>
+                        <span style={{fontSize:"11px",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{kpi.title}</span>
+                        <div style={{fontSize:"28px",fontWeight:900,color:kpi.color,margin:"4px 0",lineHeight:1.1}}>{kpi.val}</div>
+                        <span style={{fontSize:"11px",color:C.muted,fontWeight:500}}>{kpi.sub}</span>
+                      </div>
+                      <span style={{fontSize:"28px",background:`${kpi.color}0a`,width:"48px",height:"48px",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${kpi.color}1c`}}>{kpi.icon}</span>
                     </div>
                   ))}
                 </div>
 
-                <img src={OKESTRO_LOGO_B64} alt="OKESTRO ACADEMY" style={{height:"29px",objectFit:"contain",marginTop:"40px",opacity:0.5,animation:"fadeUp 0.6s 0.4s ease both"}}/>
-                <p style={{marginTop:"8px",fontSize:"11px",color:"#5a6475",animation:"fadeUp 0.6s 0.45s ease both"}}>OKESTRO Academy · Solution Test Management System</p>
+                {/* Section B: Main Analytics Charts */}
+                <div style={{display:"grid",gridTemplateColumns:"60% 40%",gap:"20px"}}>
+                  {/* 월별 합격 추이 차트 */}
+                  <div className="dash-card" style={{position:"relative",minHeight:"340px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
+                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📊 월별 응시 및 합격자 추이</span>
+                      <div style={{display:"flex",gap:"8px"}}>
+                        <select value={dashYear} onChange={e=>setDashYear(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer"}}>
+                          <option value="2026">2026년</option>
+                          <option value="2025">2025년</option>
+                        </select>
+                        <select value={dashDiv} onChange={e=>setDashDiv(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer",maxWidth:"140px"}}>
+                          <option value="all">전체 소속본부</option>
+                          {allDivs.map(d=><option key={d} value={d}>{d}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{position:"relative",height:`${chartHeight}px`,marginTop:"16px"}}>
+                      {/* SVG Line Graph */}
+                      <svg width="100%" height={`${chartHeight}px`} style={{overflow:"visible"}}>
+                        <defs>
+                          <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
+                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                          </linearGradient>
+                          <linearGradient id="passGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                          </linearGradient>
+                        </defs>
+
+                        {/* 수평 보조선 */}
+                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                          const y = chartHeight - 15 - ratio * (chartHeight - 40);
+                          const gridVal = Math.round(ratio * maxVal);
+                          return (
+                            <g key={i}>
+                              <line x1="28" y1={y} x2={chartWidth + 30} y2={y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
+                              <text x="5" y={y + 4} fontSize="9" fill={C.muted} textAnchor="start">{gridVal}명</text>
+                            </g>
+                          );
+                        })}
+
+                        {/* 면적 그라데이션 필 패스 */}
+                        {totalPath && <path d={`${totalPath} L ${totalPoints[totalPoints.length - 1].x} ${chartHeight - 15} L ${totalPoints[0].x} ${chartHeight - 15} Z`} fill="url(#totalGrad)" />}
+                        {passPath && <path d={`${passPath} L ${passPoints[passPoints.length - 1].x} ${chartHeight - 15} L ${passPoints[0].x} ${chartHeight - 15} Z`} fill="url(#passGrad)" />}
+
+                        {/* 꺾은선 패스 */}
+                        {totalPath && <path d={totalPath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                        {passPath && <path d={passPath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+
+                        {/* 데이터 마커 포인트 루프 */}
+                        {totalPoints.map((pt, i) => {
+                          const isHovered = hoveredMonth === i;
+                          return (
+                            <g key={i} onMouseEnter={() => setHoveredMonth(i)} onMouseLeave={() => setHoveredMonth(null)} style={{cursor:"pointer"}}>
+                              {/* 응시수 마커 */}
+                              <circle cx={pt.x} cy={pt.y} r={isHovered ? 6 : 4} fill="#fff" stroke="#3b82f6" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
+                              {/* 합격수 마커 */}
+                              <circle cx={passPoints[i].x} cy={passPoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#10b981" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
+                              
+                              {/* X축 월 텍스트 */}
+                              <text x={pt.x} y={chartHeight + 10} fontSize="9" fill={C.muted} textAnchor="middle" fontWeight={600}>{pt.month}</text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+
+                      {/* 실시간 툴팁 풍선 */}
+                      {hoveredMonth !== null && (() => {
+                        const pt = totalPoints[hoveredMonth];
+                        const passPt = passPoints[hoveredMonth];
+                        return (
+                          <div style={{position:"absolute",left:`${pt.x}px`,top:`${Math.min(pt.y, passPt.y) - 62}px`,transform:"translateX(-50%)",background:"rgba(15,23,42,0.95)",color:"#fff",borderRadius:"8px",padding:"6px 10px",fontSize:"10px",whiteSpace:"nowrap",boxShadow:"0 6px 16px rgba(0,0,0,0.15)",pointerEvents:"none",zIndex:30}}>
+                            <div style={{fontWeight:800,marginBottom:"2px",color:"#94a3b8",borderBottom:"1px solid #334155",paddingBottom:"2px"}}>{pt.month} 성적 현황</div>
+                            <div style={{display:"flex",gap:"8px",marginTop:"3px"}}>
+                              <span>총 응시: <strong style={{color:"#3b82f6"}}>{pt.total}명</strong></span>
+                              <span>합격: <strong style={{color:"#10b981"}}>{pt.passed}명</strong></span>
+                            </div>
+                            <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",borderTop:"4px solid rgba(15,23,42,0.95)",borderLeft:"4px solid transparent",borderRight:"4px solid transparent"}}/>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* 차트 캡션 레전드 */}
+                    <div style={{display:"flex",justifyContent:"center",gap:"16px",marginTop:"24px",fontSize:"11px",fontWeight:700}}>
+                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#3b82f6"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#3b82f6",display:"inline-block"}}/> 총 응시인원</span>
+                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#10b981"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#10b981",display:"inline-block"}}/> 합격자 수</span>
+                    </div>
+                  </div>
+
+                  {/* 본부별 합격률 랭킹 */}
+                  <div className="dash-card" style={{minHeight:"340px"}}>
+                    <div style={{marginBottom:"20px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
+                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>🏆 본부별 합격률 상위 5</span>
+                    </div>
+                    {divRanking.length === 0 ? (
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"200px",fontSize:"12px",color:C.muted}}>등록된 부서 성적 데이터가 없습니다.</div>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",gap:"16px",marginTop:"8px"}}>
+                        {divRanking.map((rank, i) => {
+                          const barColors = ["#002060", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa"];
+                          return (
+                            <div key={i}>
+                              <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",fontWeight:700,color:C.text,marginBottom:"4px"}}>
+                                <span>{i+1}. {rank.division}</span>
+                                <span style={{color:barColors[i]}}>{rank.rate}% <span style={{fontWeight:400,color:C.muted,fontSize:"10px"}}>({rank.passed}/{rank.total}명)</span></span>
+                              </div>
+                              <div style={{width:"100%",height:"8px",background:"#f1f5f9",borderRadius:"4px",overflow:"hidden"}}>
+                                <div style={{width:`${rank.rate}%`,height:"100%",background:barColors[i],borderRadius:"4px",transition:"width 0.5s ease"}}/>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section C: Operational & Utilities */}
+                <div style={{display:"grid",gridTemplateColumns:"50% 50%",gap:"20px"}}>
+                  {/* 최근 5건 성적표 목록 */}
+                  <div className="dash-card" style={{minHeight:"320px",display:"flex",flexDirection:"column"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
+                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📋 최근 테스트 제출 목록</span>
+                      <button onClick={()=>setMainMenu("list")} style={{background:"transparent",border:"none",color:C.blue,fontSize:"11px",fontWeight:700,cursor:"pointer"}}>전체보기 →</button>
+                    </div>
+
+                    <div style={{flex:1,overflow:"auto"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}>
+                        <thead>
+                          <tr style={{borderBottom:`1.5px solid ${C.border}`,fontSize:"11px",color:C.muted,fontWeight:700}}>
+                            <th style={{padding:"8px 4px"}}>이름</th>
+                            <th style={{padding:"8px 4px"}}>소속본부</th>
+                            <th style={{padding:"8px 4px"}}>점수</th>
+                            <th style={{padding:"8px 4px",textAlign:"center"}}>최종 상태</th>
+                            <th style={{padding:"8px 4px",textAlign:"right"}}>테스트일자</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentTestList.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} style={{textAlign:"center",padding:"48px 0",fontSize:"12px",color:C.muted}}>최근 제출된 성적 기록이 없습니다.</td>
+                            </tr>
+                          ) : (
+                            recentTestList.map((app, i) => {
+                              const lastScore = app.score3 || app.score2 || app.score1 || "—";
+                              const lastDate = app.date3 || app.date2 || app.date1 || "—";
+                              const pass = app._att.pass === "합격";
+                              const fail = app._att.pass === "불합격";
+                              const isEx = app._att.pass === "면제";
+                              
+                              let badgeStyle = {background:"#f1f5f9", color:C.muted, border:"1px solid #cbd5e1"};
+                              if (pass) badgeStyle = {background:"#ecfdf5", color:C.green, border:"1px solid #a7f3d0"};
+                              if (fail) badgeStyle = {background:"#fef2f2", color:C.red, border:"1px solid #fecaca"};
+                              if (isEx) badgeStyle = {background:"#f8fafc", color:"#64748b", border:"1px solid #e2e8f0"};
+
+                              return (
+                                <tr key={i} style={{borderBottom:`1px solid ${C.border}66`,fontSize:"12px",color:C.text}}>
+                                  <td style={{padding:"10px 4px",fontWeight:800,color:"#002060"}}>{app.name}</td>
+                                  <td style={{padding:"10px 4px",color:C.subtle}}>{app.division || "—"}</td>
+                                  <td style={{padding:"10px 4px",fontWeight:700}}>{lastScore}점</td>
+                                  <td style={{padding:"10px 4px",textAlign:"center"}}>
+                                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",fontWeight:700,...badgeStyle}}>{app._att.pass}</span>
+                                  </td>
+                                  <td style={{padding:"10px 4px",textAlign:"right",color:C.muted,fontSize:"11px"}}>{lastDate.substring(5)}</td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* 퀵 메뉴 타일 링크 */}
+                  <div className="dash-card" style={{minHeight:"320px",display:"flex",flexDirection:"column"}}>
+                    <div style={{marginBottom:"16px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
+                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>⚡ 퀵 유틸리티 바로가기</span>
+                    </div>
+
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:"14px",flex:1}}>
+                      <button onClick={downloadApplicantTemplate} className="quick-tile">
+                        <span style={{fontSize:"24px"}}>📄</span>
+                        <div>
+                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>양식 다운로드</div>
+                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>일괄등록용 엑셀 표준 템플릿</div>
+                        </div>
+                      </button>
+
+                      <button onClick={()=>setApplicantModal({mode:"excel"})} className="quick-tile">
+                        <span style={{fontSize:"24px"}}>📥</span>
+                        <div>
+                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>응시자 일괄등록</div>
+                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>엑셀 업로드로 응시자 대량추가</div>
+                        </div>
+                      </button>
+
+                      <button onClick={backupApplicantData} className="quick-tile">
+                        <span style={{fontSize:"24px"}}>💾</span>
+                        <div>
+                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>데이터 수동백업</div>
+                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>현재 응시자 전체 백업 수행</div>
+                        </div>
+                      </button>
+
+                      <button onClick={()=>setMainMenu("dept")} className="quick-tile">
+                        <span style={{fontSize:"24px"}}>🏢</span>
+                        <div>
+                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>부서·팀 구조 관리</div>
+                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>본부·팀 계층 구조 및 직책자</div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{textAlign:"center",marginTop:"12px",borderTop:"1px solid #e2e8f0",paddingTop:"16px",animation:"fadeUp 0.6s 0.3s ease both"}}>
+                  <img src={OKESTRO_LOGO_B64} alt="OKESTRO" style={{height:"24px",opacity:0.4,objectFit:"contain"}} />
+                  <p style={{fontSize:"10px",color:C.muted,margin:"4px 0 0"}}>© OKESTRO ACADEMY. All Rights Reserved. Solution Test Management System.</p>
+                </div>
               </div>
             );
           };
