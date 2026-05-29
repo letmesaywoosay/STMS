@@ -1286,17 +1286,17 @@ export default function ApplicantManager() {
                   </div>
                   <div style={{padding:"24px 20px 16px"}}>
                     <div style={{display:"flex",alignItems:"flex-end",gap:"6px",height:`${barH+40}px`,position:"relative"}}>
-                      <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",height:`${barH}px`,marginRight:"8px",textAlign:"right",minWidth:"28px",marginBottom:"28px"}}>
+                      <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",height:`${barH}px`,marginRight:"8px",textAlign:"right",minWidth:"28px",marginBottom:"0px"}}>
                         {[100,80,60,40,20,0].map(v=>(
                           <span key={v} style={{fontSize:"9px",color:v===60?C.green:C.muted,fontWeight:v===60?800:400,lineHeight:"1"}}>{v}</span>
                         ))}
                       </div>
                       <div style={{flex:1,display:"flex",alignItems:"flex-end",gap:"4px",borderLeft:`1.5px solid ${C.border}`,borderBottom:`1.5px solid ${C.border}`,paddingLeft:"4px",position:"relative",height:`${barH+28}px`}}>
-                        <div style={{position:"absolute",left:0,right:0,bottom:`${(60/100)*barH+28}px`,borderTop:`1.5px dashed ${C.green}66`,pointerEvents:"none",zIndex:1}}>
+                        <div style={{position:"absolute",left:0,right:0,bottom:`${(60/100)*barH}px`,borderTop:`1.5px dashed ${C.green}66`,pointerEvents:"none",zIndex:1}}>
                           <span style={{position:"absolute",right:"4px",top:"-14px",fontSize:"9px",color:C.green,fontWeight:700}}>60점</span>
                         </div>
                         {[20,40,80].map(v=>(
-                          <div key={v} style={{position:"absolute",left:0,right:0,bottom:`${(v/100)*barH+28}px`,borderTop:`1px solid ${C.border}33`,pointerEvents:"none"}}/>
+                          <div key={v} style={{position:"absolute",left:0,right:0,bottom:`${(v/100)*barH}px`,borderTop:`1px solid ${C.border}33`,pointerEvents:"none"}}/>
                         ))}
                         {monthAvgsPub.map((m,i)=>{
                           const isSelected=m.ym===selYM;
@@ -4296,7 +4296,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                     <div style={{padding:"24px 20px 16px"}}>
                       <div style={{display:"flex",alignItems:"flex-end",gap:"6px",height:`${barH+40}px`,position:"relative"}}>
                         {/* Y축 */}
-                        <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",height:`${barH}px`,marginRight:"8px",textAlign:"right",minWidth:"28px",marginBottom:"28px"}}>
+                        <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",height:`${barH}px`,marginRight:"8px",textAlign:"right",minWidth:"28px",marginBottom:"0px"}}>
                           {[100,80,60,40,20,0].map(v=>(
                             <span key={v} style={{fontSize:"9px",color:v===60?C.green:C.muted,fontWeight:v===60?800:400,lineHeight:"1"}}>{v}</span>
                           ))}
@@ -4304,12 +4304,12 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                         {/* 막대들 */}
                         <div style={{flex:1,display:"flex",alignItems:"flex-end",gap:"4px",borderLeft:`1.5px solid ${C.border}`,borderBottom:`1.5px solid ${C.border}`,paddingLeft:"4px",position:"relative",height:`${barH+28}px`}}>
                           {/* 60점 합격선 */}
-                          <div style={{position:"absolute",left:0,right:0,bottom:`${(60/100)*barH+28}px`,borderTop:`1.5px dashed ${C.green}66`,pointerEvents:"none",zIndex:1}}>
+                          <div style={{position:"absolute",left:0,right:0,bottom:`${(60/100)*barH}px`,borderTop:`1.5px dashed ${C.green}66`,pointerEvents:"none",zIndex:1}}>
                             <span style={{position:"absolute",right:"4px",top:"-14px",fontSize:"9px",color:C.green,fontWeight:700}}>60점</span>
                           </div>
                           {/* 배경 그리드 */}
                           {[20,40,80].map(v=>(
-                            <div key={v} style={{position:"absolute",left:0,right:0,bottom:`${(v/100)*barH+28}px`,borderTop:`1px solid ${C.border}33`,pointerEvents:"none"}}/>
+                            <div key={v} style={{position:"absolute",left:0,right:0,bottom:`${(v/100)*barH}px`,borderTop:`1px solid ${C.border}33`,pointerEvents:"none"}}/>
                           ))}
                           {monthAvgs.map((m,i)=>{
                             const isSelected=m.ym===selYM;
