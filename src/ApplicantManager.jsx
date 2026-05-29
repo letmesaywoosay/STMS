@@ -838,7 +838,7 @@ export default function ApplicantManager() {
     ...(can(userRole,"report_menu") ?[{id:"report",icon:"",label:"월별 보고서"}]:[]),
     ...(can(userRole,"dept_menu")   ?[{id:"dept",  icon:"",label:"부서/팀 관리"}]:[]),
     ...(can(userRole,"ai_menu")     ?[{id:"ai",    icon:"",label:"AI 자동분류"}]:[]),
-    ...(can(userRole,"ai_menu")     ?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
+    // ...(can(userRole,"ai_menu")     ?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
   ] : [];
 
   const fmtYML=ym=>{if(!ym)return"";const[y,m]=ym.split("-");return`${y}년 ${parseInt(m)}월`;};
@@ -1541,7 +1541,7 @@ export default function ApplicantManager() {
                   :[
                     {id:"list",icon:"≡",label:"관리 리스트"},
                     ...(can(userRole,"ai_menu")?[{id:"ai",icon:"",label:"AI 자동분류"}]:[]),
-                    ...(can(userRole,"ai_menu")?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
+                    // ...(can(userRole,"ai_menu")?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
                     ...(can(userRole,"report_menu")?[{id:"report",icon:"",label:"월별 보고서"}]:[]),
                     ...(isSuperAdmin?[{id:"admin",icon:"",label:"관리자 설정"}]:[]),
                     ...(can(userRole,"dept_menu")?[{id:"dept",icon:"",label:"부서/팀 관리",indent:true}]:[]),
@@ -1626,7 +1626,7 @@ export default function ApplicantManager() {
             {({
               list:   "관리 리스트",
               ai:     "AI 자동분류",
-              ai_exam:"AI 시험출제",
+              // ai_exam:"AI 시험출제",
               report: "월별 보고서",
               dept:   "부서/팀 관리",
               admin:  "관리",
