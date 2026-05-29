@@ -166,7 +166,14 @@ export default function ApplicantManager() {
   const [jobTypes,        setJobTypes]         = useState(["영업","기술","기획","마케팅","지원"]);
   const [jobTypesLoaded,  setJobTypesLoaded]   = useState(false);
   const [listPage,        setListPage]         = useState(1);
+  const [activeModalTab,  setActiveModalTab]   = useState("basic");
   const LIST_PAGE_SIZE = 10;
+
+  useEffect(() => {
+    if (applicantModal) {
+      setActiveModalTab("basic");
+    }
+  }, [applicantModal?.mode, applicantModal?.data?.id]);
   const [subjectTypes,    setSubjectTypes]     = useState({
     A:{ label:"A타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100}] },
     B:{ label:"B타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100},{name:"DevOps 실무",max:100}] },
@@ -5242,8 +5249,8 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
 
         return(
           <div {...makeBackdropHandlers(()=>setApplicantModal(null))} style={backdropStyle}>
-            <div style={{background:C.surface,borderRadius:"20px",width:"100%",maxWidth:"600px",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 24px 64px rgba(0,0,0,0.18)",border:`1px solid ${C.border}`,animation:"modalIn 0.2s ease"}}>
-              <div style={{padding:"20px 24px 16px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:C.surface,zIndex:1}}>
+            <div style={{background:C.surface,borderRadius:"20px",width:"100%",maxWidth:"880px",height:"680px",maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 24px 64px rgba(0,0,0,0.18)",border:`1px solid ${C.border}`,animation:"modalIn 0.2s ease"}}>
+              <div style={{padding:"18px 24px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:C.surface,zIndex:1}}>
                 <div style={{fontWeight:900,fontSize:"16px",color:C.text}}>{applicantModal.mode==="add"?"👥 응시자 추가":"✏️ 응시자 수정"}</div>
                 {applicantModal.mode==="edit"&&(
                   <span style={{fontSize:"11px",color:autoSaveStatus==="saved"?C.green:C.muted,display:"flex",alignItems:"center",gap:"4px",transition:"color 0.3s"}}>
@@ -5254,325 +5261,402 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                 )}
                 <button onClick={()=>setApplicantModal(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.muted,fontSize:"18px",padding:"2px 6px",borderRadius:"6px"}}>✕</button>
               </div>
-              <div style={{padding:"20px 24px",display:"flex",flexDirection:"column",gap:"14px"}}>
-                <div style={{fontSize:"11px",fontWeight:800,color:C.blue,letterSpacing:"0.05em",paddingBottom:"4px",borderBottom:`1px solid ${C.border}`}}>기본 정보</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
-                  <div>
-                    <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>입사년월일</label>
-                    <input type="date" value={applicantModal.data.joinYearMonth} onChange={e=>setAM({joinYearMonth:e.target.value})} style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                    {applicantModal.data.joinYearMonth&&!/^\d{4}-\d{2}-\d{2}$/.test(applicantModal.data.joinYearMonth)&&(
-                      <div style={{fontSize:"10px",color:C.amber,marginTop:"3px"}}>⚠️ 기존 형식: {applicantModal.data.joinYearMonth}</div>
-                    )}
-                  </div>
-                  <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>이름 *</label><input value={applicantModal.data.name} onChange={e=>setAM({name:e.target.value})} placeholder="홍길동" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                  {/* 직군 */}
-                  {(()=>{
-                    const JobTypeEditor=()=>{
-                      const [newJob,setNewJob]=useState("");
-                      const [editMode,setEditMode]=useState(false);
-                      return(
+
+              <div style={{display:"flex",flex:1,overflow:"hidden"}}>
+                {/* 왼쪽 사이드바 탭 메뉴 */}
+                <div style={{width:"200px",background:"#f8fafc",borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:"6px",padding:"16px",boxSizing:"border-box",overflowY:"auto"}}>
+                  {[
+                    { id: "basic", label: "기본 정보", icon: "👤" },
+                    { id: "leaders", label: "직책자 정보", icon: "👔" },
+                    { id: "results", label: "테스트 결과", icon: "📝" },
+                    { id: "status", label: "최종 상태", icon: "🎯" },
+                    { id: "memo", label: "공유 메모", icon: "💾" }
+                  ].map(tab => {
+                    const isSel = activeModalTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveModalTab(tab.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          width: "100%",
+                          padding: "12px 14px",
+                          borderRadius: "10px",
+                          border: "none",
+                          background: isSel ? "linear-gradient(135deg,#002060,#1e3a8a)" : "transparent",
+                          color: isSel ? "#ffffff" : C.subtle,
+                          fontSize: "12px",
+                          fontWeight: isSel ? 800 : 600,
+                          textAlign: "left",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.2s",
+                          boxShadow: isSel ? "0 4px 12px rgba(0,32,96,0.15)" : "none"
+                        }}
+                        onMouseEnter={e => { if(!isSel) e.currentTarget.style.background = "rgba(0,32,96,0.04)"; }}
+                        onMouseLeave={e => { if(!isSel) e.currentTarget.style.background = "transparent"; }}
+                      >
+                        <span style={{fontSize:"14px"}}>{tab.icon}</span>
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 오른쪽 상세 패널 */}
+                <div style={{flex:1,overflowY:"auto",padding:"24px 28px",display:"flex",flexDirection:"column",gap:"20px",boxSizing:"border-box",background:"#ffffff"}}>
+                  
+                  {/* 1. 기본 정보 탭 */}
+                  {activeModalTab === "basic" && (
+                    <div style={{display:"flex",flexDirection:"column",gap:"16px",animation:"fadeUp 0.3s ease"}}>
+                      <div style={{fontSize:"12px",fontWeight:800,color:"#002060",letterSpacing:"0.05em",paddingBottom:"6px",borderBottom:`1.5px solid ${C.blue}`}}>👤 기본 정보</div>
+                      
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
                         <div>
-                          <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>직군</label>
-                          <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
-                            <select value={applicantModal.data.jobType||""} onChange={e=>setAM({jobType:e.target.value})}
-                              style={{...inp(),flex:1,minWidth:"120px",cursor:"pointer"}}>
-                              <option value="">선택 안함</option>
-                              {jobTypes.map(jt=><option key={jt} value={jt}>{jt}</option>)}
-                            </select>
-                            <div style={{position:"relative"}}>
-                              <button onClick={()=>setEditMode(o=>!o)}
-                                style={{padding:"8px 10px",borderRadius:"9px",border:`1px solid ${C.border}`,background:C.bg,color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                                목록 편집 {editMode?"▲":"▼"}
-                              </button>
-                              {editMode&&(
-                                <div style={{position:"absolute",top:"100%",left:0,zIndex:300,background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:"12px",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:"200px",padding:"10px",marginTop:"4px"}}>
-                                  <div style={{fontSize:"11px",fontWeight:700,color:C.muted,marginBottom:"8px"}}>직군 목록</div>
-                                  <div style={{display:"flex",flexDirection:"column",gap:"6px",maxHeight:"160px",overflowY:"auto"}}>
-                                    {jobTypes.map((jt,i)=>(
-                                      <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"6px"}}>
-                                        <span style={{fontSize:"12px",color:C.text}}>{jt}</span>
-                                        <button onClick={()=>setJobTypes(p=>p.filter((_,idx)=>idx!==i))}
-                                          style={{padding:"2px 7px",borderRadius:"5px",border:"1px solid #fecaca",background:"#fef2f2",color:C.red,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+                          <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>입사년월일</label>
+                          <input type="date" value={applicantModal.data.joinYearMonth} onChange={e=>setAM({joinYearMonth:e.target.value})} style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                          {applicantModal.data.joinYearMonth&&!/^\d{4}-\d{2}-\d{2}$/.test(applicantModal.data.joinYearMonth)&&(
+                            <div style={{fontSize:"10px",color:C.amber,marginTop:"3px"}}>⚠️ 기존 형식: {applicantModal.data.joinYearMonth}</div>
+                          )}
+                        </div>
+                        <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>이름 *</label><input value={applicantModal.data.name} onChange={e=>setAM({name:e.target.value})} placeholder="홍길동" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                      </div>
+
+                      {/* 직군 */}
+                      {(()=> {
+                        const JobTypeEditor=()=>{
+                          const [newJob,setNewJob]=useState("");
+                          const [editMode,setEditMode]=useState(false);
+                          return(
+                            <div>
+                              <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>직군</label>
+                              <div style={{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}}>
+                                <select value={applicantModal.data.jobType||""} onChange={e=>setAM({jobType:e.target.value})}
+                                  style={{...inp(),flex:1,minWidth:"120px",cursor:"pointer"}}>
+                                  <option value="">선택 안함</option>
+                                  {jobTypes.map(jt=><option key={jt} value={jt}>{jt}</option>)}
+                                </select>
+                                <div style={{position:"relative"}}>
+                                  <button onClick={()=>setEditMode(o=>!o)}
+                                    style={{padding:"8px 12px",borderRadius:"9px",border:`1px solid ${C.border}`,background:C.bg,color:C.muted,fontSize:"11px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                    목록 편집 {editMode?"▲":"▼"}
+                                  </button>
+                                  {editMode&&(
+                                    <div style={{position:"absolute",top:"100%",left:0,zIndex:300,background:C.surface,border:`1.5px solid ${C.border}`,borderRadius:"12px",boxShadow:"0 8px 24px rgba(0,0,0,0.12)",minWidth:"200px",padding:"10px",marginTop:"4px"}}>
+                                      <div style={{fontSize:"11px",fontWeight:700,color:C.muted,marginBottom:"8px"}}>직군 목록</div>
+                                      <div style={{display:"flex",flexDirection:"column",gap:"6px",maxHeight:"160px",overflowY:"auto"}}>
+                                        {jobTypes.map((jt,i)=>(
+                                          <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:"6px"}}>
+                                            <span style={{fontSize:"12px",color:C.text}}>{jt}</span>
+                                            <button onClick={()=>setJobTypes(p=>p.filter((_,idx)=>idx!==i))}
+                                              style={{padding:"2px 7px",borderRadius:"5px",border:"1px solid #fecaca",background:"#fef2f2",color:C.red,fontSize:"11px",cursor:"pointer",fontFamily:"inherit"}}>✕</button>
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
+                                      <div style={{display:"flex",gap:"6px",marginTop:"10px",borderTop:`1px solid ${C.border}`,paddingTop:"8px"}}>
+                                        <input value={newJob} onChange={e=>setNewJob(e.target.value)}
+                                          onKeyDown={e=>{if(e.key==="Enter"&&newJob.trim()){setJobTypes(p=>[...p,newJob.trim()]);setNewJob("");}}}
+                                          placeholder="새 직군 추가..." style={{...inp({padding:"5px 9px",fontSize:"11px"}),flex:1}}/>
+                                        <button onClick={()=>{if(newJob.trim()){setJobTypes(p=>[...p,newJob.trim()]);setNewJob("");}}}
+                                          style={{padding:"5px 10px",borderRadius:"8px",border:"none",background:C.blue,color:"#fff",fontSize:"11px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>추가</button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        };
+                        return <JobTypeEditor key="jte"/>;
+                      })()}
+
+                      <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>이메일</label><input value={applicantModal.data.email} onChange={e=>setAM({email:e.target.value})} placeholder="hong@okestro.com" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                      
+                      <div>
+                        <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>구분 (회사)</label>
+                        <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
+                          {COMPANY_OPTIONS.map(c=>{const sel=applicantModal.data.company===c;return (
+                            <button key={c} onClick={()=>setAM({company:c})} style={{padding:"6px 14px",borderRadius:"20px",border:`1.5px solid ${sel?C.blue:C.border}`,background:sel?`${C.blue}10`:"transparent",color:sel?C.blue:C.muted,fontSize:"12px",fontWeight:sel?700:400,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
+                          );})}
+                          <input value={!COMPANY_OPTIONS.includes(applicantModal.data.company)?applicantModal.data.company:""} onChange={e=>setAM({company:e.target.value})} placeholder="직접 입력..." style={{...inp(),flex:1,minWidth:"120px",padding:"6px 12px"}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                        </div>
+                      </div>
+
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
+                        <div>
+                          <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>
+                            소속본부 {divOptions.length>0&&<span style={{fontSize:"10px",color:C.teal,fontWeight:500}}>({divOptions.length}개 등록됨)</span>}
+                          </label>
+                          {divOptions.length>0?(
+                            <>
+                              <select value={divOptions.includes(applicantModal.data.division)?applicantModal.data.division:"__custom__"}
+                                onChange={e=>{if(e.target.value==="__custom__")return;const dObj=deptData.flatMap(c=>c.divisions).find(d=>d.name===e.target.value);setAM({division:e.target.value,team:"",divisionHeadName:dObj?.headName||applicantModal.data.divisionHeadName,divisionHeadEmail:dObj?.headEmail||applicantModal.data.divisionHeadEmail});}}
+                                style={{...inp(),appearance:"auto",marginBottom:"5px"}}>
+                                <option value="">— 선택하세요 —</option>
+                                {divOptions.map(d=><option key={d} value={d}>{d}</option>)}
+                                <option value="__custom__">✏️ 직접 입력</option>
+                              </select>
+                              <input value={applicantModal.data.division} onChange={e=>setAM({division:e.target.value,team:""})} placeholder="또는 직접 입력" style={{...inp(),fontSize:"11px",padding:"6px 10px",color:C.muted}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                            </>
+                          ):(
+                            <input value={applicantModal.data.division} onChange={e=>setAM({division:e.target.value})} placeholder="예: 솔루션개발본부" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                          )}
+                        </div>
+                        <div>
+                          <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>
+                            소속팀 {teamOptions.length>0&&<span style={{fontSize:"10px",color:C.teal,fontWeight:500}}>({teamOptions.length}개)</span>}
+                          </label>
+                          {teamOptions.length>0?(
+                            <>
+                              <select value={teamOptions.includes(applicantModal.data.team)?applicantModal.data.team:""} onChange={e=>{if(!e.target.value)return;const tObj=selDivObj?.teams.find(t=>t.name===e.target.value);setAM({team:e.target.value,teamLeaderName:tObj?.leaderName||applicantModal.data.teamLeaderName,teamLeaderEmail:tObj?.leaderEmail||applicantModal.data.teamLeaderEmail});}} style={{...inp(),appearance:"auto",marginBottom:"5px"}}>
+                                <option value="">— 선택하세요 —</option>
+                                {teamOptions.map(t=><option key={t} value={t}>{t}</option>)}
+                              </select>
+                              <input value={applicantModal.data.team} onChange={e=>setAM({team:e.target.value})} placeholder="또는 직접 입력" style={{...inp(),fontSize:"11px",padding:"6px 10px",color:C.muted}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                            </>
+                          ):(
+                            <input value={applicantModal.data.team} onChange={e=>setAM({team:e.target.value})} placeholder="예: IaaS개발실" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 2. 직책자 정보 탭 */}
+                  {activeModalTab === "leaders" && (
+                    <div style={{display:"flex",flexDirection:"column",gap:"16px",animation:"fadeUp 0.3s ease"}}>
+                      <div style={{fontSize:"12px",fontWeight:800,color:"#002060",letterSpacing:"0.05em",paddingBottom:"6px",borderBottom:`1.5px solid ${C.blue}`}}>👔 직책자 정보</div>
+                      
+                      <div style={{background:`${C.purple}06`,borderRadius:"12px",border:`1px solid ${C.purple}22`,padding:"16px 18px"}}>
+                        <div style={{fontSize:"12px",fontWeight:800,color:C.purple,marginBottom:"12px",display:"flex",alignItems:"center",gap:"6px"}}>🏛️ 본부장 정보</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+                          <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>본부장 이름</label><input value={applicantModal.data.divisionHeadName||""} onChange={e=>setAM({divisionHeadName:e.target.value})} placeholder="홍본부장" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                          <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>본부장 이메일</label><input value={applicantModal.data.divisionHeadEmail||""} onChange={e=>setAM({divisionHeadEmail:e.target.value})} placeholder="head@okestro.com" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                        </div>
+                      </div>
+
+                      <div style={{background:`${C.blue}06`,borderRadius:"12px",border:`1px solid ${C.blue}22`,padding:"16px 18px"}}>
+                        <div style={{fontSize:"12px",fontWeight:800,color:C.blue,marginBottom:"12px",display:"flex",alignItems:"center",gap:"6px"}}>👥 팀장 정보</div>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
+                          <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>팀장 이름</label><input value={applicantModal.data.teamLeaderName||""} onChange={e=>setAM({teamLeaderName:e.target.value})} placeholder="김팀장" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                          <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>팀장 이메일</label><input value={applicantModal.data.teamLeaderEmail||""} onChange={e=>setAM({teamLeaderEmail:e.target.value})} placeholder="leader@okestro.com" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. 테스트 결과 탭 */}
+                  {activeModalTab === "results" && (
+                    <div style={{display:"flex",flexDirection:"column",gap:"16px",animation:"fadeUp 0.3s ease"}}>
+                      <div style={{fontSize:"12px",fontWeight:800,color:"#002060",letterSpacing:"0.05em",paddingBottom:"6px",borderBottom:`1.5px solid ${C.blue}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <span>📝 테스트 결과 <span style={{fontSize:"10px",fontWeight:500,color:C.muted}}>(최대 3회 · 60점 이상 합격)</span></span>
+                        
+                        {/* 타입 선택 */}
+                        <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                          <span style={{fontSize:"10px",color:C.muted,fontWeight:600}}>과목 타입:</span>
+                          {["","A","B"].map(t=>(
+                            <button key={t} onClick={()=>{
+                              setApplicantModal(p=>({...p,data:{...p.data,testType:t,subScores1:{},subScores2:{},subScores3:{}}}));
+                            }}
+                              style={{padding:"3px 8px",borderRadius:"20px",border:`1.5px solid ${applicantModal.data.testType===t?(t==="A"?C.blue:t==="B"?C.purple:C.muted):C.border}`,background:applicantModal.data.testType===t?(t==="A"?`${C.blue}10`:t==="B"?`${C.purple}10`:C.bg):"transparent",color:applicantModal.data.testType===t?(t==="A"?C.blue:t==="B"?C.purple:C.subtle):C.muted,fontSize:"10px",fontWeight:applicantModal.data.testType===t?700:400,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
+                              {t===""?"직접입력":(subjectTypes[t]?.label||t+"타입")}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 차시별 동적 과목 점수 입력 루프 */}
+                      {(()=>{
+                        const subjects = applicantModal.data.testType && subjectTypes[applicantModal.data.testType]
+                          ? (subjectTypes[applicantModal.data.testType].subjects||subjectTypes[applicantModal.data.testType]).map(s=>s.name)
+                          : DEPARTMENT_SUBJECTS[applicantModal.data.division] || DEFAULT_SUBJECTS;
+
+                        const resolvedSubScores=(n)=>{
+                          const snap=applicantModal.data[`subScoresSnapshot${n}`];
+                          if(snap&&snap.length>0){
+                            const obj={};
+                            snap.forEach(({subjectName,score})=>{obj[subjectName]=String(score);});
+                            return obj;
+                          }
+                          return applicantModal.data[`subScores${n}`]||{};
+                        };
+
+                        const hasSubScores = n => {
+                          const ss = applicantModal.data[`subScores${n}`]||{};
+                          return Object.keys(ss).length > 0 && Object.values(ss).some(v=>v!=="");
+                        };
+
+                        return [
+                          {nth:"1차",scoreKey:"score1",passKey:"pass1",dateKey:"date1",subKey:"subScores1",prev:null},
+                          {nth:"2차",scoreKey:"score2",passKey:"pass2",dateKey:"date2",subKey:"subScores2",prev:"pass1"},
+                          {nth:"3차",scoreKey:"score3",passKey:"pass3",dateKey:"date3",subKey:"subScores3",prev:"pass2"},
+                        ].map(({nth,scoreKey,passKey,dateKey,subKey,prev})=>{
+                          const isLocked=prev&&(!applicantModal.data[prev]||applicantModal.data[prev]==="합격");
+                          const lockReason=prev&&applicantModal.data[prev]==="합격"?"이전 차시 합격 — 추가 응시 불필요":"이전 회차 결과 입력 후 활성화";
+                          const sc=PASS_STATUS_COLORS[applicantModal.data[passKey]]||PASS_STATUS_COLORS[""];
+                          const sNum=parseFloat(applicantModal.data[scoreKey]);
+                          const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
+                          const nNum=nth.replace("차","");
+                          const subScores = resolvedSubScores(nNum);
+                          const useDetail = Object.keys(subScores).length > 0 || !applicantModal.data[scoreKey];
+
+                          return(
+                            <div key={nth} style={{borderRadius:"10px",border:`1.5px solid ${isLocked?C.border:applicantModal.data[passKey]?sc.border:C.border}`,padding:"12px 14px",background:isLocked?C.bg:applicantModal.data[passKey]?sc.bg+"44":"#fafbfd",opacity:isLocked?0.4:1,transition:"all 0.2s"}}>
+                              <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
+                                <span style={{fontSize:"11px",fontWeight:800,color:isLocked?C.muted:C.subtle,background:isLocked?C.bg:`${C.blue}10`,padding:"2px 9px",borderRadius:"20px"}}>{nth}</span>
+                                {isLocked&&<span style={{fontSize:"10px",color:C.muted,fontStyle:"italic"}}>{lockReason}</span>}
+                                {!isLocked&&applicantModal.data[passKey]==="합격"&&<span style={{fontSize:"10px",color:C.green,fontWeight:700}}>합격</span>}
+                                {!isLocked&&applicantModal.data[passKey]==="불합격"&&<span style={{fontSize:"10px",color:C.red,fontWeight:700}}>❌ 불합격</span>}
+                                
+                                {!isLocked&&(
+                                  <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:"6px"}}>
+                                    {applicantModal.data[`subScoresSnapshot${nNum}`]?.length>0&&(
+                                      <button
+                                        onClick={()=>{
+                                          const snap=applicantModal.data[`subScoresSnapshot${nNum}`];
+                                          const restored={};
+                                          snap.forEach(({subjectName,score})=>{restored[subjectName]=String(score);});
+                                          setAM({[subKey]:restored,[`subScoresSnapshot${nNum}`]:null});
+                                        }}
+                                        style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",background:`${C.amber}10`,color:C.amber,border:`1px solid ${C.amber}44`,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}
+                                        title="스냅샷을 해제하고 점수를 수정합니다"
+                                      >
+                                        🔓 수정하기
+                                      </button>
+                                    )}
+                                    <button onClick={()=>{
+                                      if(Object.keys(subScores).length>0){
+                                        setAM({[subKey]:{},[`subScoresSnapshot${nNum}`]:null});
+                                      } else {
+                                        const init={};
+                                        subjects.forEach(s=>{init[s]="";});
+                                        setAM({[subKey]:init,[scoreKey]:""});
+                                      }
+                                    }} style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",border:`1px solid ${C.border}`,background:Object.keys(subScores).length>0?`${C.purple}10`:"transparent",color:Object.keys(subScores).length>0?C.purple:C.muted,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                                      {Object.keys(subScores).length>0?"과목별 입력 중":"과목별 입력"}
+                                    </button>
                                   </div>
-                                  <div style={{display:"flex",gap:"6px",marginTop:"10px",borderTop:`1px solid ${C.border}`,paddingTop:"8px"}}>
-                                    <input value={newJob} onChange={e=>setNewJob(e.target.value)}
-                                      onKeyDown={e=>{if(e.key==="Enter"&&newJob.trim()){setJobTypes(p=>[...p,newJob.trim()]);setNewJob("");}}}
-                                      placeholder="새 직군 추가..." style={{...inp({padding:"5px 9px",fontSize:"11px"}),flex:1}}/>
-                                    <button onClick={()=>{if(newJob.trim()){setJobTypes(p=>[...p,newJob.trim()]);setNewJob("");}}}
-                                      style={{padding:"5px 10px",borderRadius:"8px",border:"none",background:C.blue,color:"#fff",fontSize:"11px",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>추가</button>
+                                )}
+                              </div>
+
+                              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px"}}>
+                                <div>
+                                  <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>응시일</label>
+                                  <input type="date" disabled={!!isLocked} value={applicantModal.data[dateKey]||""} onChange={e=>setAM({[dateKey]:e.target.value})} style={{...inp({padding:"7px 10px",fontSize:"12px"})}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                                </div>
+                                <div>
+                                  <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>점수 <span style={{color:C.muted,fontWeight:400}}>(60↑합격)</span></label>
+                                  {Object.keys(subScores).length>0?(
+                                    <div style={{padding:"7px 10px",borderRadius:"8px",background:`${C.purple}08`,border:`1px solid ${C.purple}22`,fontSize:"15px",fontWeight:900,color:Object.values(subScores).reduce((s,v)=>s+(parseFloat(v)||0),0)>=60?C.green:C.red,minHeight:"36px",display:"flex",alignItems:"center"}}>
+                                      {(()=>{const t=Object.values(subScores).reduce((s,v)=>s+(parseFloat(v)||0),0); return t>0?t+"점":"자동 계산";})()}
+                                    </div>
+                                  ):(
+                                    <input type="number" min="0" max="9999" disabled={!!isLocked} value={applicantModal.data[scoreKey]} onChange={e=>{const v=e.target.value;const n=parseFloat(v);const autoPass=isNaN(n)||v===""?"":n>=60?"합격":"불합격";setAM({[scoreKey]:v,[passKey]:autoPass});}} placeholder="점수" style={{...inp({padding:"7px 10px",fontSize:"15px",fontWeight:sColor?"900":"400",color:sColor||C.text})}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
+                                  )}
+                                </div>
+                                <div>
+                                  <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>결과 <span style={{color:C.teal,fontWeight:400,fontSize:"9px"}}>자동</span></label>
+                                  <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
+                                    {PASS_STATUS_OPTIONS.map(s=>{const psc=PASS_STATUS_COLORS[s]||PASS_STATUS_COLORS[""];const sel=applicantModal.data[passKey]===s;return(
+                                      <button key={s} disabled={!!isLocked} onClick={()=>setAM({[passKey]:sel?"":s})} style={{padding:"4px 9px",borderRadius:"20px",border:`1.5px solid ${sel?psc.text:C.border}`,background:sel?psc.bg:"transparent",color:sel?psc.text:C.muted,fontSize:"10px",fontWeight:sel?700:400,cursor:isLocked?"not-allowed":"pointer",fontFamily:"inherit"}}>{s}</button>
+                                    );})}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 과목별 상세입력 점수 패널 */}
+                              {!isLocked&&Object.keys(subScores).length>0&&(
+                                <div style={{marginTop:"10px",padding:"10px 12px",borderRadius:"8px",background:`${C.purple}05`,border:`1px solid ${C.purple}22`}}>
+                                  <div style={{fontSize:"10px",fontWeight:700,color:C.purple,marginBottom:"8px"}}>과목별 점수 입력 ({applicantModal.data.division||"본부 선택 시 자동 적용"})</div>
+                                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"8px"}}>
+                                    {subjects.map(subject=>{
+                                      const val=subScores[subject]??"";
+                                      const typeSubj=((applicantModal.data.testType&&subjectTypes[applicantModal.data.testType]?.subjects)||[]).find(s=>s.name===subject);
+                                      const maxScore=typeSubj?.max||100;
+                                      return(
+                                        <div key={subject}>
+                                          <label style={{display:"block",fontSize:"10px",fontWeight:600,color:C.subtle,marginBottom:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{subject} <span style={{color:C.muted,fontWeight:400}}>/ {maxScore}</span></label>
+                                          <input type="number" min="0" max={maxScore} value={val}
+                                            onChange={e=>{
+                                              const raw=e.target.value;
+                                              const num=parseFloat(raw);
+                                              if(raw!==""&&!isNaN(num)&&num>maxScore){
+                                                setScoreAlert({subject,max:maxScore});
+                                                return;
+                                              }
+                                              const newSS={...subScores,[subject]:raw};
+                                              const total=Object.values(newSS).reduce((s,v)=>s+(parseFloat(v)||0),0);
+                                              const autoPass=total>0?(total>=60?"합격":"불합격"):"";
+                                              setAM({[subKey]:newSS,[scoreKey]:total>0?String(total):"",[passKey]:autoPass});
+                                            }}
+                                            placeholder={`0~${maxScore}`}
+                                            style={{...inp({padding:"6px 10px",fontSize:"13px",color:C.text})}}
+                                            onFocus={e=>e.target.style.borderColor=C.purple}
+                                            onBlur={e=>e.target.style.borderColor=C.border}/>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  <div style={{marginTop:"8px",display:"flex",justifyContent:"flex-end",alignItems:"center",gap:"8px"}}>
+                                    <span style={{fontSize:"11px",color:C.muted}}>합계</span>
+                                    {(()=>{
+                                      const total=Object.values(subScores).reduce((s,v)=>s+(parseFloat(v)||0),0);
+                                      const isPass=total>=60;
+                                      return <span style={{fontSize:"16px",fontWeight:900,color:total>0?(isPass?C.green:C.red):C.muted}}>{total>0?total+"점":"—"}</span>;
+                                    })()}
+                                    <span style={{fontSize:"11px",color:C.muted,background:C.bg,padding:"2px 8px",borderRadius:"20px",border:`1px solid ${C.border}`}}>/ {subjects.length}과목</span>
                                   </div>
                                 </div>
                               )}
                             </div>
-                          </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  )}
+
+                  {/* 4. 최종 상태 탭 */}
+                  {activeModalTab === "status" && (
+                    <div style={{display:"flex",flexDirection:"column",gap:"16px",animation:"fadeUp 0.3s ease"}}>
+                      <div style={{fontSize:"12px",fontWeight:800,color:"#002060",letterSpacing:"0.05em",paddingBottom:"6px",borderBottom:`1.5px solid ${C.blue}`}}>🎯 최종 상태</div>
+                      
+                      <div style={{background:`${C.purple}06`,borderRadius:"12px",border:`1px solid ${C.purple}22`,padding:"16px 18px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}}>
+                          <label style={{fontSize:"12px",fontWeight:800,color:C.purple}}>최종 합격 상태 설정</label>
+                          <span style={{fontSize:"10px",color:C.muted,background:C.bg,padding:"2px 8px",borderRadius:"20px",border:`1px solid ${C.border}`}}>자동 반영</span>
                         </div>
-                      );
-                    };
-                    return <JobTypeEditor key="jte"/>;
-                  })()}
-                </div>
-                {/* 이메일 - 이름/입사년월 바로 아래 */}
-                <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>이메일</label><input value={applicantModal.data.email} onChange={e=>setAM({email:e.target.value})} placeholder="hong@okestro.com" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                <div>
-                  <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>구분 (회사)</label>
-                  <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
-                    {COMPANY_OPTIONS.map(c=>{const sel=applicantModal.data.company===c;return(
-                      <button key={c} onClick={()=>setAM({company:c})} style={{padding:"6px 14px",borderRadius:"20px",border:`1.5px solid ${sel?C.blue:C.border}`,background:sel?`${C.blue}10`:"transparent",color:sel?C.blue:C.muted,fontSize:"12px",fontWeight:sel?700:400,cursor:"pointer",fontFamily:"inherit"}}>{c}</button>
-                    );})}
-                    <input value={!COMPANY_OPTIONS.includes(applicantModal.data.company)?applicantModal.data.company:""} onChange={e=>setAM({company:e.target.value})} placeholder="직접 입력..." style={{...inp(),flex:1,minWidth:"120px",padding:"6px 12px"}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                  </div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
-                  <div>
-                    <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>
-                      소속본부 {divOptions.length>0&&<span style={{fontSize:"10px",color:C.teal,fontWeight:500}}>({divOptions.length}개 등록됨)</span>}
-                    </label>
-                    {divOptions.length>0?(
-                      <>
-                        <select value={divOptions.includes(applicantModal.data.division)?applicantModal.data.division:"__custom__"}
-                          onChange={e=>{if(e.target.value==="__custom__")return;const dObj=deptData.flatMap(c=>c.divisions).find(d=>d.name===e.target.value);setAM({division:e.target.value,team:"",divisionHeadName:dObj?.headName||applicantModal.data.divisionHeadName,divisionHeadEmail:dObj?.headEmail||applicantModal.data.divisionHeadEmail});}}
-                          style={{...inp(),appearance:"auto",marginBottom:"5px"}}>
-                          <option value="">— 선택하세요 —</option>
-                          {divOptions.map(d=><option key={d} value={d}>{d}</option>)}
-                          <option value="__custom__">✏️ 직접 입력</option>
-                        </select>
-                        <input value={applicantModal.data.division} onChange={e=>setAM({division:e.target.value,team:""})} placeholder="또는 직접 입력" style={{...inp(),fontSize:"11px",padding:"6px 10px",color:C.muted}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                      </>
-                    ):(
-                      <input value={applicantModal.data.division} onChange={e=>setAM({division:e.target.value})} placeholder="예: 솔루션개발본부" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                    )}
-                  </div>
-                  <div>
-                    <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>
-                      소속팀 {teamOptions.length>0&&<span style={{fontSize:"10px",color:C.teal,fontWeight:500}}>({teamOptions.length}개)</span>}
-                    </label>
-                    {teamOptions.length>0?(
-                      <>
-                        <select value={teamOptions.includes(applicantModal.data.team)?applicantModal.data.team:""} onChange={e=>{if(!e.target.value)return;const tObj=selDivObj?.teams.find(t=>t.name===e.target.value);setAM({team:e.target.value,teamLeaderName:tObj?.leaderName||applicantModal.data.teamLeaderName,teamLeaderEmail:tObj?.leaderEmail||applicantModal.data.teamLeaderEmail});}} style={{...inp(),appearance:"auto",marginBottom:"5px"}}>
-                          <option value="">— 선택하세요 —</option>
-                          {teamOptions.map(t=><option key={t} value={t}>{t}</option>)}
-                        </select>
-                        <input value={applicantModal.data.team} onChange={e=>setAM({team:e.target.value})} placeholder="또는 직접 입력" style={{...inp(),fontSize:"11px",padding:"6px 10px",color:C.muted}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                      </>
-                    ):(
-                      <input value={applicantModal.data.team} onChange={e=>setAM({team:e.target.value})} placeholder="예: IaaS개발실" style={inp()} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                    )}
-                  </div>
-                </div>
-                <div style={{background:`${C.purple}06`,borderRadius:"10px",border:`1px solid ${C.purple}22`,padding:"12px 14px"}}>
-                  <div style={{fontSize:"11px",fontWeight:800,color:C.purple,marginBottom:"10px"}}>본부장 정보</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
-                    <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>본부장 이름</label><input value={applicantModal.data.divisionHeadName||""} onChange={e=>setAM({divisionHeadName:e.target.value})} placeholder="홍본부장" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                    <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>본부장 이메일</label><input value={applicantModal.data.divisionHeadEmail||""} onChange={e=>setAM({divisionHeadEmail:e.target.value})} placeholder="head@okestro.com" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.purple} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                  </div>
-                </div>
-                <div style={{background:`${C.blue}06`,borderRadius:"10px",border:`1px solid ${C.blue}22`,padding:"12px 14px"}}>
-                  <div style={{fontSize:"11px",fontWeight:800,color:C.blue,marginBottom:"10px"}}>👥 팀장 정보</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"10px"}}>
-                    <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>팀장 이름</label><input value={applicantModal.data.teamLeaderName||""} onChange={e=>setAM({teamLeaderName:e.target.value})} placeholder="김팀장" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                    <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>팀장 이메일</label><input value={applicantModal.data.teamLeaderEmail||""} onChange={e=>setAM({teamLeaderEmail:e.target.value})} placeholder="leader@okestro.com" style={{...inp(),padding:"8px 12px"}} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                  </div>
-                </div>
-                {/* 테스트 결과 헤더 */}
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",paddingBottom:"4px",borderBottom:`1px solid ${C.border}`,marginTop:"4px"}}>
-                  <span style={{fontSize:"11px",fontWeight:800,color:C.green,letterSpacing:"0.05em"}}>
-                    테스트 결과 <span style={{fontSize:"10px",fontWeight:500,color:C.muted}}>(최대 3회 · 60점 이상 합격)</span>
-                  </span>
-                  {/* 타입 선택 */}
-                  <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
-                    <span style={{fontSize:"10px",color:C.muted,fontWeight:600}}>과목 타입:</span>
-                    {["","A","B"].map(t=>(
-                      <button key={t} onClick={()=>{
-                        // subScores만 초기화, pass/score는 유지
-                        setApplicantModal(p=>({...p,data:{...p.data,testType:t,subScores1:{},subScores2:{},subScores3:{}}}));
-                      }}
-                        style={{padding:"3px 10px",borderRadius:"20px",border:`1.5px solid ${applicantModal.data.testType===t?(t==="A"?C.blue:t==="B"?C.purple:C.muted):C.border}`,background:applicantModal.data.testType===t?(t==="A"?`${C.blue}10`:t==="B"?`${C.purple}10`:C.bg):"transparent",color:applicantModal.data.testType===t?(t==="A"?C.blue:t==="B"?C.purple:C.subtle):C.muted,fontSize:"11px",fontWeight:applicantModal.data.testType===t?700:400,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
-                        {t===""?"직접입력":(subjectTypes[t]?.label||t+"타입")}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 차시별 동적 과목 점수 입력 */}
-                {(()=>{
-                  const subjects = applicantModal.data.testType && subjectTypes[applicantModal.data.testType]
-                    ? (subjectTypes[applicantModal.data.testType].subjects||subjectTypes[applicantModal.data.testType]).map(s=>s.name)
-                    : DEPARTMENT_SUBJECTS[applicantModal.data.division] || DEFAULT_SUBJECTS;
-
-                  // 스냅샷에서 읽어 subScores에 반영 (열람 시 기존 저장 데이터 복원)
-                  const resolvedSubScores=(n)=>{
-                    const snap=applicantModal.data[`subScoresSnapshot${n}`];
-                    if(snap&&snap.length>0){
-                      const obj={};
-                      snap.forEach(({subjectName,score})=>{obj[subjectName]=String(score);});
-                      return obj;
-                    }
-                    return applicantModal.data[`subScores${n}`]||{};
-                  };
-                  const hasSubScores = n => {
-                    const ss = applicantModal.data[`subScores${n}`]||{};
-                    return Object.keys(ss).length > 0 && Object.values(ss).some(v=>v!=="");
-                  };
-                  return [
-                    {nth:"1차",scoreKey:"score1",passKey:"pass1",dateKey:"date1",subKey:"subScores1",prev:null},
-                    {nth:"2차",scoreKey:"score2",passKey:"pass2",dateKey:"date2",subKey:"subScores2",prev:"pass1"},
-                    {nth:"3차",scoreKey:"score3",passKey:"pass3",dateKey:"date3",subKey:"subScores3",prev:"pass2"},
-                  ].map(({nth,scoreKey,passKey,dateKey,subKey,prev})=>{
-                    const isLocked=prev&&(!applicantModal.data[prev]||applicantModal.data[prev]==="합격");
-                    const lockReason=prev&&applicantModal.data[prev]==="합격"?"이전 차시 합격 — 추가 응시 불필요":"이전 회차 결과 입력 후 활성화";
-                    const sc=PASS_STATUS_COLORS[applicantModal.data[passKey]]||PASS_STATUS_COLORS[""];
-                    const sNum=parseFloat(applicantModal.data[scoreKey]);
-                    const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
-                    const nNum=nth.replace("차","");
-                    const subScores = resolvedSubScores(nNum);
-                    // 과목별 점수가 있으면 상세 모드, 없으면 레거시/단순 모드
-                    const isDetailMode = hasSubScores(nth.replace("차","")) || 
-                      !applicantModal.data[scoreKey]; // 점수 없으면 상세 모드로 시작
-                    const [detailMode, setDetailMode] = [isDetailMode, (v)=>{}]; // controlled by data
-                    // 실제 토글은 subScores 존재 여부로 판단
-                    const useDetail = Object.keys(subScores).length > 0 || !applicantModal.data[scoreKey];
-
-                    return(
-                      <div key={nth} style={{borderRadius:"10px",border:`1.5px solid ${isLocked?C.border:applicantModal.data[passKey]?sc.border:C.border}`,padding:"12px 14px",background:isLocked?C.bg:applicantModal.data[passKey]?sc.bg+"44":"#fafbfd",opacity:isLocked?0.4:1,transition:"all 0.2s"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px"}}>
-                          <span style={{fontSize:"11px",fontWeight:800,color:isLocked?C.muted:C.subtle,background:isLocked?C.bg:`${C.blue}10`,padding:"2px 9px",borderRadius:"20px"}}>{nth}</span>
-                          {isLocked&&<span style={{fontSize:"10px",color:C.muted,fontStyle:"italic"}}>{lockReason}</span>}
-                          {!isLocked&&applicantModal.data[passKey]==="합격"&&<span style={{fontSize:"10px",color:C.green,fontWeight:700}}>합격</span>}
-                          {!isLocked&&applicantModal.data[passKey]==="불합격"&&<span style={{fontSize:"10px",color:C.red,fontWeight:700}}>❌ 불합격</span>}
-                          {/* 상세/단순 토글 */}
-                          {!isLocked&&(
-                            <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:"6px"}}>
-                              {applicantModal.data[`subScoresSnapshot${nNum}`]?.length>0&&(
-                                <button
-                                  onClick={()=>{
-                                    // 스냅샷 해제 → subScores에 현재 스냅샷 값 복원 후 잠금 해제
-                                    const snap=applicantModal.data[`subScoresSnapshot${nNum}`];
-                                    const restored={};
-                                    snap.forEach(({subjectName,score})=>{restored[subjectName]=String(score);});
-                                    setAM({[subKey]:restored,[`subScoresSnapshot${nNum}`]:null});
-                                  }}
-                                  style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",background:`${C.amber}10`,color:C.amber,border:`1px solid ${C.amber}44`,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}
-                                  title="스냅샷을 해제하고 점수를 수정합니다"
-                                >
-                                  🔓 수정하기
-                                </button>
-                              )}
-                              <button onClick={()=>{
-                                if(Object.keys(subScores).length>0){
-                                  setAM({[subKey]:{},[`subScoresSnapshot${nNum}`]:null});
-                                } else {
-                                  const init={};
-                                  subjects.forEach(s=>{init[s]="";});
-                                  setAM({[subKey]:init,[scoreKey]:""});
-                                }
-                              }} style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",border:`1px solid ${C.border}`,background:Object.keys(subScores).length>0?`${C.purple}10`:"transparent",color:Object.keys(subScores).length>0?C.purple:C.muted,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
-                                {Object.keys(subScores).length>0?"과목별 입력 중":"과목별 입력"}
-                              </button>
-                            </div>
-                          )}
+                        <div style={{display:"flex",gap:"8px",flexWrap:"wrap"}}>
+                          {FINAL_STATUS_OPTIONS.map(s=>{const fc=FINAL_STATUS_COLORS[s];const sel=applicantModal.data.finalStatus===s;return(
+                            <button key={s} onClick={()=>setAM({finalStatus:s})} style={{padding:"8px 18px",borderRadius:"20px",border:`1.5px solid ${sel?fc.text:C.border}`,background:sel?fc.bg:"transparent",color:sel?fc.text:C.muted,fontSize:"12px",fontWeight:sel?700:400,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",boxShadow:sel?`0 0 0 2px ${fc.text}22`:"none"}}>{s}</button>
+                          );})}
                         </div>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"10px"}}>
-                          <div>
-                            <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>응시일</label>
-                            <input type="date" disabled={!!isLocked} value={applicantModal.data[dateKey]||""} onChange={e=>setAM({[dateKey]:e.target.value})} style={{...inp({padding:"7px 10px",fontSize:"12px"})}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                          </div>
-                          <div>
-                            <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>점수 <span style={{color:C.muted,fontWeight:400}}>(60↑합격)</span></label>
-                            {Object.keys(subScores).length>0?(
-                              // 과목별 입력 모드: 총점 자동 계산
-                              <div style={{padding:"7px 10px",borderRadius:"8px",background:`${C.purple}08`,border:`1px solid ${C.purple}22`,fontSize:"15px",fontWeight:900,color:Object.values(subScores).reduce((s,v)=>s+(parseFloat(v)||0),0)>=60?C.green:C.red,minHeight:"36px",display:"flex",alignItems:"center"}}>
-                                {(()=>{const t=Object.values(subScores).reduce((s,v)=>s+(parseFloat(v)||0),0); return t>0?t+"점":"자동 계산";})()}
-                              </div>
-                            ):(
-                              <input type="number" min="0" max="9999" disabled={!!isLocked} value={applicantModal.data[scoreKey]} onChange={e=>{const v=e.target.value;const n=parseFloat(v);const autoPass=isNaN(n)||v===""?"":n>=60?"합격":"불합격";setAM({[scoreKey]:v,[passKey]:autoPass});}} placeholder="점수" style={{...inp({padding:"7px 10px",fontSize:"15px",fontWeight:sColor?"900":"400",color:sColor||C.text})}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/>
-                            )}
-                          </div>
-                          <div>
-                            <label style={{display:"block",fontSize:"10px",fontWeight:700,color:C.subtle,marginBottom:"4px"}}>결과 <span style={{color:C.teal,fontWeight:400,fontSize:"9px"}}>자동</span></label>
-                            <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
-                              {PASS_STATUS_OPTIONS.map(s=>{const psc=PASS_STATUS_COLORS[s]||PASS_STATUS_COLORS[""];const sel=applicantModal.data[passKey]===s;return(
-                                <button key={s} disabled={!!isLocked} onClick={()=>setAM({[passKey]:sel?"":s})} style={{padding:"4px 9px",borderRadius:"20px",border:`1.5px solid ${sel?psc.text:C.border}`,background:sel?psc.bg:"transparent",color:sel?psc.text:C.muted,fontSize:"10px",fontWeight:sel?700:400,cursor:isLocked?"not-allowed":"pointer",fontFamily:"inherit"}}>{s}</button>
-                              );})}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 과목별 점수 입력 패널 */}
-                        {!isLocked&&Object.keys(subScores).length>0&&(
-                          <div style={{marginTop:"10px",padding:"10px 12px",borderRadius:"8px",background:`${C.purple}05`,border:`1px solid ${C.purple}22`}}>
-                            <div style={{fontSize:"10px",fontWeight:700,color:C.purple,marginBottom:"8px"}}>과목별 점수 입력 ({applicantModal.data.division||"본부 선택 시 자동 적용"})</div>
-                            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:"8px"}}>
-                              {subjects.map(subject=>{
-                                const val=subScores[subject]??"";
-                                const typeSubj=((applicantModal.data.testType&&subjectTypes[applicantModal.data.testType]?.subjects)||[]).find(s=>s.name===subject);
-                                const maxScore=typeSubj?.max||100;
-                                return(
-                                  <div key={subject}>
-                                    <label style={{display:"block",fontSize:"10px",fontWeight:600,color:C.subtle,marginBottom:"3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{subject} <span style={{color:C.muted,fontWeight:400}}>/{maxScore}</span></label>
-                                    <input type="number" min="0" max={maxScore} value={val}
-                                      onChange={e=>{
-                                        const raw=e.target.value;
-                                        const num=parseFloat(raw);
-                                        // 최대점 초과 시 차단 + 팝업
-                                        if(raw!==""&&!isNaN(num)&&num>maxScore){
-                                          setScoreAlert({subject,max:maxScore});
-                                          return; // 입력 차단
-                                        }
-                                        const newSS={...subScores,[subject]:raw};
-                                        const total=Object.values(newSS).reduce((s,v)=>s+(parseFloat(v)||0),0);
-                                        const autoPass=total>0?(total>=60?"합격":"불합격"):"";
-                                        setAM({[subKey]:newSS,[scoreKey]:total>0?String(total):"",[ passKey]:autoPass});
-                                      }}
-                                      placeholder={`0~${maxScore}`}
-                                      style={{...inp({padding:"6px 10px",fontSize:"13px",color:C.text})}}
-                                      onFocus={e=>e.target.style.borderColor=C.purple}
-                                      onBlur={e=>e.target.style.borderColor=C.border}/>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {/* 실시간 합계 */}
-                            <div style={{marginTop:"8px",display:"flex",justifyContent:"flex-end",alignItems:"center",gap:"8px"}}>
-                              <span style={{fontSize:"11px",color:C.muted}}>합계</span>
-                              {(()=>{
-                                const total=Object.values(subScores).reduce((s,v)=>s+(parseFloat(v)||0),0);
-                                const isPass=total>=60;
-                                return <span style={{fontSize:"16px",fontWeight:900,color:total>0?(isPass?C.green:C.red):C.muted}}>{total>0?total+"점":"—"}</span>;
-                              })()}
-                              <span style={{fontSize:"11px",color:C.muted,background:C.bg,padding:"2px 8px",borderRadius:"20px",border:`1px solid ${C.border}`}}>/ {subjects.length}과목</span>
-                            </div>
-                          </div>
+                        {["퇴사","면제"].includes(applicantModal.data.finalStatus)&&(
+                          <div style={{fontSize:"11px",color:C.amber,marginTop:"8px"}}>⚠️ 수동으로 설정된 상태입니다.</div>
                         )}
                       </div>
-                    );
-                  });
-                })()}
-
-                <div style={{background:`${C.purple}06`,borderRadius:"10px",border:`1px solid ${C.purple}22`,padding:"12px 14px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"8px"}}>
-                    <label style={{fontSize:"11px",fontWeight:800,color:C.purple}}>최종 상태</label>
-                    <span style={{fontSize:"10px",color:C.muted,background:C.bg,padding:"2px 8px",borderRadius:"20px",border:`1px solid ${C.border}`}}>자동 반영</span>
-                  </div>
-                  <div style={{display:"flex",gap:"6px",flexWrap:"wrap"}}>
-                    {FINAL_STATUS_OPTIONS.map(s=>{const fc=FINAL_STATUS_COLORS[s];const sel=applicantModal.data.finalStatus===s;return(
-                      <button key={s} onClick={()=>setAM({finalStatus:s})} style={{padding:"7px 16px",borderRadius:"20px",border:`1.5px solid ${sel?fc.text:C.border}`,background:sel?fc.bg:"transparent",color:sel?fc.text:C.muted,fontSize:"12px",fontWeight:sel?700:400,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s",boxShadow:sel?`0 0 0 2px ${fc.text}22`:"none"}}>{s}</button>
-                    );})}
-                  </div>
-                  {["퇴사","면제"].includes(applicantModal.data.finalStatus)&&(
-                    <div style={{fontSize:"10px",color:C.amber,marginTop:"6px"}}>⚠️ 수동으로 설정된 상태입니다.</div>
+                    </div>
                   )}
-                </div>
 
-                <div style={{fontSize:"11px",fontWeight:800,color:C.purple,letterSpacing:"0.05em",paddingBottom:"4px",borderBottom:`1px solid ${C.border}`,marginTop:"4px"}}>공유 메모</div>
-                <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>사유/비고</label><textarea value={applicantModal.data.reason} onChange={e=>setAM({reason:e.target.value})} placeholder="예: 경영전략본부로 재응시 의무 없음, 퇴사..." rows={2} style={{...inp(),resize:"vertical",lineHeight:1.7}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
-                  <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>아카데미 공유사항</label><textarea value={applicantModal.data.academyNote} onChange={e=>setAM({academyNote:e.target.value})} placeholder="아카데미 내부 공유 내용" rows={2} style={{...inp(),resize:"vertical",lineHeight:1.7}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-                  <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>인사팀 공유사항</label><textarea value={applicantModal.data.hrNote} onChange={e=>setAM({hrNote:e.target.value})} placeholder="인사팀 전달 내용" rows={2} style={{...inp(),resize:"vertical",lineHeight:1.7}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                  {/* 5. 공유 메모 탭 */}
+                  {activeModalTab === "memo" && (
+                    <div style={{display:"flex",flexDirection:"column",gap:"16px",animation:"fadeUp 0.3s ease"}}>
+                      <div style={{fontSize:"12px",fontWeight:800,color:"#002060",letterSpacing:"0.05em",paddingBottom:"6px",borderBottom:`1.5px solid ${C.blue}`}}>💾 공유 메모</div>
+                      
+                      <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>사유/비고 (공통)</label><textarea value={applicantModal.data.reason} onChange={e=>setAM({reason:e.target.value})} placeholder="예: 경영전략본부로 재응시 의무 없음, 퇴사..." rows={3} style={{...inp(),resize:"vertical",lineHeight:1.7}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                      
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px"}}>
+                        <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>🎓 아카데미 내부 공유사항</label><textarea value={applicantModal.data.academyNote} onChange={e=>setAM({academyNote:e.target.value})} placeholder="아카데미 내부 관리 정보" rows={3} style={{...inp(),resize:"vertical",lineHeight:1.7}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                        <div><label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"5px"}}>🏢 인사팀 공유사항</label><textarea value={applicantModal.data.hrNote} onChange={e=>setAM({hrNote:e.target.value})} placeholder="인사팀 전달 내용" rows={3} style={{...inp(),resize:"vertical",lineHeight:1.7}} onFocus={e=>e.target.style.borderColor=C.blueLight} onBlur={e=>e.target.style.borderColor=C.border}/></div>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               </div>
-              <div style={{padding:"14px 24px 20px",display:"flex",gap:"8px"}}>
+
+              <div style={{padding:"14px 24px 18px",borderTop:`1px solid ${C.border}`,display:"flex",gap:"8px",background:C.surface,zIndex:1}}>
                 <button onClick={()=>saveApplicant(applicantModal.data)} disabled={!applicantModal.data.name.trim()} style={{flex:1,padding:"11px",borderRadius:"10px",border:"none",cursor:applicantModal.data.name.trim()?"pointer":"not-allowed",background:applicantModal.data.name.trim()?`linear-gradient(135deg,${C.purple}dd,${C.purple})`:C.border,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>{applicantModal.mode==="add"?"추가하기":"저장하기"}</button>
                 {applicantModal.mode==="edit"&&<button onClick={()=>deleteApplicant(applicantModal.data.id)} style={{padding:"11px 16px",borderRadius:"10px",border:"none",cursor:"pointer",background:"#fee2e2",color:C.red,fontSize:"13px",fontWeight:700,fontFamily:"inherit"}}>삭제</button>}
                 <button onClick={()=>setApplicantModal(null)} style={{padding:"11px 20px",borderRadius:"10px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"13px",fontFamily:"inherit"}}>취소</button>
@@ -5580,10 +5664,10 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
             </div>
           </div>
         );
-      })()}
+      })()
 
-      {/* 부서/팀 편집 모달 */}
-      {deptModal&&(()=>{
+
+            {deptModal&&(()=>{
         const m=deptModal;
         const setD=patch=>setDeptModal(p=>({...p,data:{...p.data,...patch}}));
         const titles={company:{add:"🏛 회사 추가",edit:"🏛 회사 수정"},division:{add:"본부 추가",edit:"본부 수정"},team:{add:"👥 팀 추가",edit:"👥 팀 수정"}};
