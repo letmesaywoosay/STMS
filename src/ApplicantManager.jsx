@@ -167,14 +167,7 @@ export default function ApplicantManager() {
   const [jobTypesLoaded,  setJobTypesLoaded]   = useState(false);
   const [listPage,        setListPage]         = useState(1);
   const [activeModalTab,  setActiveModalTab]   = useState("basic");
-  const [activeModalTab,  setActiveModalTab]   = useState("basic");
   const LIST_PAGE_SIZE = 10;
-
-  useEffect(() => {
-    if (applicantModal) {
-      setActiveModalTab("basic");
-    }
-  }, [applicantModal?.mode, applicantModal?.data?.id]);
 
   useEffect(() => {
     if (applicantModal) {
@@ -5673,7 +5666,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
           </div>
         );
       })()
-
+}
 
             {deptModal&&(()=>{
         const m=deptModal;
