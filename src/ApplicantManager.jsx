@@ -2317,15 +2317,27 @@ export default function ApplicantManager() {
                         {timeline[endIdx]?.replace('-', '.')}
                       </span>
 
-                      {isFilterActive && (
-                        <button 
-                          onClick={()=>{setStartIdx(0); setEndIdx(timeline.length - 1);}} 
-                          style={{border:"none",background:"none",color:C.red,cursor:"pointer",fontSize:"12px",fontWeight:900,padding:"0 0 0 6px",display:"flex",alignItems:"center",borderLeft:`1px solid ${C.border}`,marginLeft:"2px"}}
-                          title="필터 초기화"
-                        >
-                          ✕
-                        </button>
-                      )}
+                      <button 
+                        onClick={()=>{ if(isFilterActive) { setStartIdx(0); setEndIdx(timeline.length - 1); } }} 
+                        disabled={!isFilterActive}
+                        style={{
+                          border:"none",
+                          background:"none",
+                          color: isFilterActive ? C.red : "#e2e8f0",
+                          cursor: isFilterActive ? "pointer" : "default",
+                          fontSize:"12px",
+                          fontWeight:900,
+                          padding:"0 0 0 6px",
+                          display:"flex",
+                          alignItems:"center",
+                          borderLeft:`1px solid ${C.border}`,
+                          marginLeft:"2px",
+                          transition: "all 0.2s ease"
+                        }}
+                        title={isFilterActive ? "필터 초기화" : ""}
+                      >
+                        ✕
+                      </button>
                     </div>
 
                     {/* 기준일 알약 */}
