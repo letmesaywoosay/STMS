@@ -886,6 +886,203 @@ export default function ApplicantManager() {
       mApps.forEach(a=>{ if(nthGroups[a._att.nth]) nthGroups[a._att.nth].push(parseFloat(a._att.score)||0); });
       const nthAvg=nth=>{const arr=nthGroups[nth];return arr.length?Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*10)/10:null;};
 
+      // 3-1. 점수 분포도 (세부) - 과목별 분산형 닷 플롯
+      const detailApps=mApps.flatMap(a=>{
+        const nNum=a._att.nth.replace("차","");
+        // 1. 해당 차시의 정적 스냅샷 우선 조회
+        let snap=a[`subScoresSnapshot${nNum}`];
+        
+        // 2. Fallback: 해당 차시의 원본 과목별 점수(subScores)로부터 실시간 스냅샷 재구성
+        if(!snap||snap.length===0){
+          const ss=a[`subScores${nNum}`]||{};
+          if(Object.keys(ss).length>0){
+            const typeSubjects = a.testType && subjectTypes[a.testType]
+              ? (subjectTypes[a.testType].subjects||subjectTypes[a.testType])
+              : null;
+            if(typeSubjects){
+              snap=typeSubjects.map(({name,max})=>({
+                subjectName:name,
+                score: parseFloat(ss[name])||0,
+                max: max||100,
+              }));
+            }else{
+              const subjects=DEPARTMENT_SUBJECTS[a.division]||DEFAULT_SUBJECTS;
+              snap=subjects.map(name=>({
+                subjectName:name,
+                score: parseFloat(ss[name])||0,
+                max: 100,
+              }));
+            }
+          }
+        }
+        
+        if(!snap||snap.length===0) return [];
+        return [{...a,snap}];
+      });
+      const allSubjects=[...new Set(detailApps.flatMap(a=>a.snap.map(s=>s.subjectName)))];
+
+      // 본부별 색상 매핑
+      const allDivisions=[...new Set(detailApps.map(a=>a.division||"기타"))];
+      const divColors=["#3b82f6","#7c3aed","#0d9488","#d97706","#e11d48","#059669","#f97316","#0891b2","#6366f1","#ec4899"];
+      const divColorMap={};
+      allDivisions.forEach((d,i)=>{divColorMap[d]=divColors[i%divColors.length];});
+
+      const DotPlotPub=()=>{
+        const [hovered,setHovered]=useState(null);
+        const chartH=180;
+        const getSubjectMax = (subjectName) => {
+          for (const a of detailApps) {
+            const s = a.snap.find(x => x.subjectName === subjectName);
+            if (s && s.max) return s.max;
+          }
+          return 100;
+        };
+
+        // Y축 최대값
+        const allScores=detailApps.flatMap(a=>a.snap.map(s=>parseFloat(s.score)||0));
+        const rawMax=Math.max(...allScores,10);
+        const yMax=Math.ceil(rawMax/10)*10;
+        const yStep=yMax<=50?10:yMax<=100?20:50;
+        const yLabels=[];
+        for(let v=0;v<=yMax;v+=yStep) yLabels.push(v);
+        yLabels.reverse();
+        const colWidth=Math.max(100, Math.floor(600/allSubjects.length));
+
+        return(
+          <div>
+            {/* 본부별 범례 */}
+            <div style={{display:"flex",gap:"12px",flexWrap:"wrap",marginBottom:"20px"}}>
+              {allDivisions.map(div=>(
+                <span key={div} style={{display:"flex",alignItems:"center",gap:"6px",fontSize:"11px",color:C.subtle}}>
+                  <span style={{width:"9px",height:"9px",borderRadius:"50%",background:divColorMap[div],display:"inline-block",flexShrink:0}}/>
+                  {div}
+                </span>
+              ))}
+            </div>
+
+            {/* 그래프 */}
+            <div style={{display:"flex",overflowX:"auto",overflowY:"hidden",paddingBottom:"12px"}}>
+              {/* Y축 */}
+              <div style={{position:"relative",width:"28px",height:`${chartH}px`,marginRight:"8px",flexShrink:0,marginTop:"20px"}}>
+                {yLabels.map(v=>(
+                  <span key={v} style={{position:"absolute",right:0,top:`${chartH-(v/yMax*chartH)-6}px`,fontSize:"9px",color:C.muted,lineHeight:1}}>{v}</span>
+                ))}
+              </div>
+
+              {/* 과목별 컬럼 */}
+              <div style={{display:"flex",flex:1,borderBottom:`1.5px solid ${C.border}`,alignItems:"flex-end",position:"relative",paddingTop:"20px"}}>
+                {/* 그리드 수평선 */}
+                {yLabels.filter(v=>v>0).map(v=>(
+                  <div key={v} style={{position:"absolute",left:0,right:0,bottom:`${v/yMax*chartH}px`,borderTop:`1px solid ${C.border}44`,pointerEvents:"none",zIndex:0}}/>
+                ))}
+
+                {allSubjects.map((subjectName,si)=>{
+                  const dots=detailApps.map(a=>{
+                    const s=a.snap.find(x=>x.subjectName===subjectName);
+                    if(!s) return null;
+                    return{...a,score:parseFloat(s.score)||0,max:s.max||100};
+                  }).filter(Boolean);
+
+                  return(
+                    <div key={subjectName} style={{flex:1,minWidth:`${colWidth}px`,position:"relative",height:`${chartH}px`,borderRight:si<allSubjects.length-1?`1px solid ${C.border}33`:"none"}}>
+                      {dots.map((a,di)=>{
+                        const yPx=chartH-(a.score/yMax*chartH);
+                        const col=divColorMap[a.division||"기타"];
+                        const hkey=`${subjectName}_${a.id}`;
+                        const isHov=hovered===hkey;
+                        const xPct=`${(di+0.5)/dots.length*100}%`;
+                        const showTooltipBelow = yPx < chartH / 2;
+                        return(
+                          <div key={hkey}
+                            style={{position:"absolute",left:xPct,top:`${yPx}px`,transform:"translate(-50%,-50%)",zIndex:isHov?20:2}}
+                            onMouseEnter={()=>setHovered(hkey)}
+                            onMouseLeave={()=>setHovered(null)}>
+                            {/* 툴팁 */}
+                            {isHov&&(
+                              <div style={{
+                                position:"absolute",
+                                ...(showTooltipBelow ? {top:"110%"} : {bottom:"110%"}),
+                                left:"50%",
+                                transform:"translateX(-50%)",
+                                background:"rgba(15,23,42,0.94)",
+                                color:"#fff",
+                                borderRadius:"9px",
+                                padding:"8px 12px",
+                                fontSize:"11px",
+                                whiteSpace:"nowrap",
+                                boxShadow:"0 4px 20px rgba(0,0,0,0.3)",
+                                pointerEvents:"none",
+                                zIndex:30
+                              }}>
+                                <div style={{fontWeight:800,marginBottom:"3px"}}>{a.name}</div>
+                                {a.division&&<div style={{color:"#94a3b8",fontSize:"10px",marginBottom:"3px"}}>{a.division}{a.team?` · ${a.team}`:""}</div>}
+                                <div style={{fontWeight:700,color:col}}>{subjectName}: {a.score}/{a.max}점</div>
+                                <div style={{
+                                  position:"absolute",
+                                  ...(showTooltipBelow ? {
+                                    bottom:"100%",
+                                    borderBottom:"5px solid rgba(15,23,42,0.94)",
+                                    borderTop:"none"
+                                  } : {
+                                    top:"100%",
+                                    borderTop:"5px solid rgba(15,23,42,0.94)",
+                                    borderBottom:"none"
+                                  }),
+                                  left:"50%",
+                                  transform:"translateX(-50%)",
+                                  borderLeft:"5px solid transparent",
+                                  borderRight:"5px solid transparent"
+                                }}/>
+                              </div>
+                            )}
+                            {/* 점 */}
+                            <div style={{width:isHov?"13px":"9px",height:isHov?"13px":"9px",borderRadius:"50%",background:col,boxShadow:isHov?`0 0 0 3px ${col}44,0 2px 8px ${col}55`:"0 1px 3px rgba(0,0,0,0.2)",transition:"all 0.15s",cursor:"pointer"}}/>
+                            {/* 이름 */}
+                            <div style={{position:"absolute",top:"10px",left:"50%",transform:"translateX(-50%)",fontSize:"8px",color:C.subtle,whiteSpace:"nowrap",pointerEvents:"none",fontWeight:500}}>{a.name}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* X축 과목명 */}
+            <div style={{display:"flex",paddingLeft:"36px",marginTop:"8px"}}>
+              {allSubjects.map((sub,i)=>(
+                <div key={i} style={{flex:1,minWidth:`${colWidth}px`,textAlign:"center",padding:"0 4px"}}>
+                  <div style={{display:"flex",justifyContent:"center",marginBottom:"6px"}}>
+                    <span style={{
+                      fontSize:"9px",
+                      fontWeight:800,
+                      color:"#fff",
+                      background: [
+                        `linear-gradient(135deg, ${C.blue}, ${C.blueLight})`,
+                        `linear-gradient(135deg, ${C.purple}, #a855f7)`,
+                        `linear-gradient(135deg, ${C.teal}, #2dd4bf)`
+                      ][i % 3],
+                      padding:"3px 9px",
+                      borderRadius:"12px",
+                      boxShadow: [
+                        `0 2px 6px ${C.blue}44`,
+                        `0 2px 6px ${C.purple}44`,
+                        `0 2px 6px ${C.teal}44`
+                      ][i % 3]
+                    }}>
+                      과목 {i+1}
+                    </span>
+                  </div>
+                  <div style={{fontSize:"11px",color:C.subtle,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {sub} <span style={{fontSize:"10px",color:C.muted,fontWeight:500}}>({getSubjectMax(sub)}점)</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
       // Scatter
       const ScatterPub=({apps})=>{
         const [hov,setHov]=useState(null);
@@ -1038,6 +1235,19 @@ export default function ApplicantManager() {
               </div>
               <div style={{padding:"20px"}}><ScatterPub apps={mApps}/></div>
             </div>
+
+            {/* 점수 분포도(세부) */}
+            {allSubjects.length > 0 && (
+              <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow,marginBottom:"20px"}}>
+                <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.purple}08,${C.purple}04)`,borderBottom:`1px solid ${C.border}`}}>
+                  <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>점수 분포도(세부)</div>
+                  <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>X축: 과목 · Y축: 점수(0~100) · 색상: 소속본부 · 점 위에 마우스를 올리면 상세 정보가 표시됩니다</div>
+                </div>
+                <div style={{padding:"20px"}}>
+                  <DotPlotPub key="pub-dot-plot"/>
+                </div>
+              </div>
+            )}
 
             {/* 최근 1년 월별 평균 점수 추이 */}
             {(()=>{
