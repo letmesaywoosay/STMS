@@ -2040,19 +2040,39 @@ export default function ApplicantManager() {
             const [dashDiv, setDashDiv] = useState("all");
             const [hoveredMonth, setHoveredMonth] = useState(null); // SVG 차트 풍선 툴팁
 
-            // 동적 타임라인 생성 (응시자 데이터 내 시험 일자 및 입사년월일 기준 연월 추적)
+            // 동적 타임라인 생성 (응시자 데이터 내 시험 일자 및 입사년월일 기준 연월 추적, 2025년 10월부터 시작하도록 보정)
             const timeline = useMemo(() => {
               const allDates = applicants.flatMap(a => [a.date1, a.date2, a.date3, a.joinYearMonth].filter(Boolean));
-              const years = allDates.map(d => {
-                const match = d.match(/^(\d{4})/);
-                return match ? parseInt(match[1]) : null;
-              }).filter(Boolean);
-              const minYear = years.length > 0 ? Math.min(...years, 2025) : 2025;
-              const maxYear = years.length > 0 ? Math.max(...years, 2026) : 2026;
+              const yearMonths = allDates.map(d => {
+                const match = d.match(/^(\d{4}-\d{2})/);
+                return match ? match[1] : null;
+              }).filter(Boolean).sort();
+              
+              // 최소 연월 찾기 (기본값 "2025-10")
+              let minYM = "2025-10";
+              if (yearMonths.length > 0 && yearMonths[0] < "2025-10") {
+                minYM = yearMonths[0]; // 2025년 10월보다 과거의 데이터가 존재할 경우 안전장치
+              }
+              
+              // 최대 연월 찾기 (기본값 "2026-12")
+              let maxYM = "2026-12";
+              if (yearMonths.length > 0 && yearMonths[yearMonths.length - 1] > "2026-12") {
+                maxYM = yearMonths[yearMonths.length - 1];
+              }
+
               const list = [];
-              for (let y = minYear; y <= maxYear; y++) {
-                for (let m = 1; m <= 12; m++) {
-                  list.push(`${y}-${String(m).padStart(2, "0")}`);
+              const [minYear, minMonth] = minYM.split("-").map(Number);
+              const [maxYear, maxMonth] = maxYM.split("-").map(Number);
+
+              let currY = minYear;
+              let currM = minMonth;
+
+              while (currY < maxYear || (currY === maxYear && currM <= maxMonth)) {
+                list.push(`${currY}-${String(currM).padStart(2, "0")}`);
+                currM++;
+                if (currM > 12) {
+                  currM = 1;
+                  currY++;
                 }
               }
               return list;
