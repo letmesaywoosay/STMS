@@ -2184,15 +2184,6 @@ export default function ApplicantManager() {
                     </div>
                   ))}
                 </div>
-                      <div>
-                        <span style={{fontSize:"11px",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{kpi.title}</span>
-                        <div style={{fontSize:"28px",fontWeight:900,color:kpi.color,margin:"4px 0",lineHeight:1.1}}>{kpi.val}</div>
-                        <span style={{fontSize:"11px",color:C.muted,fontWeight:500}}>{kpi.sub}</span>
-                      </div>
-                      <span style={{fontSize:"28px",background:`${kpi.color}0a`,width:"48px",height:"48px",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${kpi.color}1c`}}>{kpi.icon}</span>
-                    </div>
-                  ))}
-                </div>
 
                 {/* Section B: Main Analytics Charts */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(440px, 1fr))",gap:"20px"}}>
