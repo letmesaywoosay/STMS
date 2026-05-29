@@ -3834,10 +3834,36 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
               {/* 3-1. 점수 분포도 (세부) - 과목별 분산형 닷 플롯 */}
               {(()=>{
                 const detailApps=mApps.flatMap(a=>{
-                  const snaps=[a.subScoresSnapshot1,a.subScoresSnapshot2,a.subScoresSnapshot3].filter(s=>s&&s.length>0);
-                  if(snaps.length===0) return [];
-                  // 가장 최신 snap만 사용
-                  return [{...a,snap:snaps[snaps.length-1]}];
+                  const nNum=a._att.nth.replace("차","");
+                  // 1. 해당 차시의 정적 스냅샷 우선 조회
+                  let snap=a[`subScoresSnapshot${nNum}`];
+                  
+                  // 2. Fallback: 해당 차시의 원본 과목별 점수(subScores)로부터 실시간 스냅샷 재구성
+                  if(!snap||snap.length===0){
+                    const ss=a[`subScores${nNum}`]||{};
+                    if(Object.keys(ss).length>0){
+                      const typeSubjects = a.testType && subjectTypes[a.testType]
+                        ? (subjectTypes[a.testType].subjects||subjectTypes[a.testType])
+                        : null;
+                      if(typeSubjects){
+                        snap=typeSubjects.map(({name,max})=>({
+                          subjectName:name,
+                          score: parseFloat(ss[name])||0,
+                          max: max||100,
+                        }));
+                      }else{
+                        const subjects=DEPARTMENT_SUBJECTS[a.division]||DEFAULT_SUBJECTS;
+                        snap=subjects.map(name=>({
+                          subjectName:name,
+                          score: parseFloat(ss[name])||0,
+                          max: 100,
+                        }));
+                      }
+                    }
+                  }
+                  
+                  if(!snap||snap.length===0) return [];
+                  return [{...a,snap}];
                 });
                 const allSubjects=[...new Set(detailApps.flatMap(a=>a.snap.map(s=>s.subjectName)))];
                 if(allSubjects.length===0) return null;
