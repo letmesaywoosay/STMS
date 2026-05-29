@@ -1,4 +1,4 @@
-// ApplicantManager.jsx
+﻿// ApplicantManager.jsx
 import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 
@@ -167,7 +167,14 @@ export default function ApplicantManager() {
   const [jobTypesLoaded,  setJobTypesLoaded]   = useState(false);
   const [listPage,        setListPage]         = useState(1);
   const [activeModalTab,  setActiveModalTab]   = useState("basic");
+  const [activeModalTab,  setActiveModalTab]   = useState("basic");
   const LIST_PAGE_SIZE = 10;
+
+  useEffect(() => {
+    if (applicantModal) {
+      setActiveModalTab("basic");
+    }
+  }, [applicantModal?.mode, applicantModal?.data?.id]);
 
   useEffect(() => {
     if (applicantModal) {
@@ -5242,6 +5249,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
           return{...p,data:d};
         });
 
+        // 드롭다운용 본부/팀 목록
         // 드롭다운용 본부/팀 목록
         const divOptions=[...new Set(deptData.flatMap(c=>c.divisions.map(d=>d.name)))];
         const selDivObj=deptData.flatMap(c=>c.divisions).find(d=>d.name===applicantModal.data.division);
