@@ -1824,36 +1824,35 @@ export default function ApplicantManager() {
             const [hoveredMonth, setHoveredMonth] = useState(null); // SVG 차트 풍선 툴팁
 
             // 고유 본부 목록 추출 (드롭다운 필터용)
-            const allDivs = [...new Set(applicants.map(a => a.division).filter(Boolean))].sort();
+            const allDivs = [...new Set(applicants.map(a => a && a.division).filter(Boolean))].sort();
 
             // 1. KPI 지표 실시간 계산
             const totalExaminees = applicants.length;
             
             // 이번 달 신규 응시자 계산 (YYYY-MM 형식 기준)
             const currentYM = new Date().toISOString().substring(0, 7); // 예: "2026-05"
-            const newExamineesThisMonth = applicants.filter(a => 
+            const newExamineesThisMonth = applicants.filter(a => a && (
               (a.date1 && a.date1.substring(0, 7) === currentYM) ||
               (a.date2 && a.date2.substring(0, 7) === currentYM) ||
               (a.date3 && a.date3.substring(0, 7) === currentYM)
-            ).length;
+            )).length;
 
             // 평균 합격률 (합격인 인원 수 / 평가 완료된 인원 수)
-            const passExaminees = applicants.filter(a => a._att.pass === "합격").length;
-            const failExaminees = applicants.filter(a => a._att.pass === "불합격").length;
+            const passExaminees = applicants.filter(a => a && a._att?.pass === "합격").length;
+            const failExaminees = applicants.filter(a => a && a._att?.pass === "불합격").length;
             const gradedCount = passExaminees + failExaminees;
             const avgPassRate = gradedCount > 0 ? Math.round((passExaminees / gradedCount) * 100) : 0;
 
             // 이번 달 시험 건수
-            const currentMonthTests = applicants.filter(a => {
-              const matches1 = a.date1 && a.date1.substring(0, 7) === currentYM;
-              const matches2 = a.date2 && a.date2.substring(0, 7) === currentYM;
-              const matches3 = a.date3 && a.date3.substring(0, 7) === currentYM;
-              return matches1 || matches2 || matches3;
-            }).length;
+            const currentMonthTests = applicants.filter(a => a && (
+              (a.date1 && a.date1.substring(0, 7) === currentYM) ||
+              (a.date2 && a.date2.substring(0, 7) === currentYM) ||
+              (a.date3 && a.date3.substring(0, 7) === currentYM)
+            )).length;
 
             // 미응시 및 면제자 현황
-            const unexaminedCount = applicants.filter(a => a._att.pass === "미응시").length;
-            const exemptCount = applicants.filter(a => a._att.pass === "면제").length;
+            const unexaminedCount = applicants.filter(a => a && a._att?.pass === "미응시").length;
+            const exemptCount = applicants.filter(a => a && a._att?.pass === "면제").length;
             const exceptionCount = unexaminedCount + exemptCount;
 
             // 2. 월별 합격 추이 데이터 집계 (차트용)
@@ -1863,6 +1862,7 @@ export default function ApplicantManager() {
               
               // 해당 월의 전체 시험 인원 및 합격자 필터링
               const monthApps = applicants.filter(a => {
+                if (!a) return false;
                 const matchesDiv = dashDiv === "all" ? true : a.division === dashDiv;
                 if (!matchesDiv) return false;
                 
@@ -1873,7 +1873,7 @@ export default function ApplicantManager() {
               });
 
               const total = monthApps.length;
-              const passed = monthApps.filter(a => a._att.pass === "합격").length;
+              const passed = monthApps.filter(a => a && a._att?.pass === "합격").length;
               return { month: `${i + 1}월`, total, passed };
             });
 
@@ -1898,18 +1898,18 @@ export default function ApplicantManager() {
             const passPath = passPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
             // 3. 본부별 합격률 랭킹 집계
-            const allDivisions = [...new Set(applicants.map(a => a.division).filter(Boolean))];
+            const allDivisions = [...new Set(applicants.map(a => a && a.division).filter(Boolean))];
             const divRanking = allDivisions.map(divName => {
-              const divApps = applicants.filter(a => a.division === divName);
-              const total = divApps.filter(a => ["합격", "불합격"].includes(a._att.pass)).length;
-              const passed = divApps.filter(a => a._att.pass === "합격").length;
+              const divApps = applicants.filter(a => a && a.division === divName);
+              const total = divApps.filter(a => a && a._att && ["합격", "불합격"].includes(a._att?.pass)).length;
+              const passed = divApps.filter(a => a && a._att?.pass === "합격").length;
               const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
               return { division: divName, rate, passed, total };
             }).sort((a, b) => b.rate - a.rate).slice(0, 5); // 상위 5위
 
             // 4. 최근 5건 시험 결과 추출
             const recentTestList = [...applicants]
-              .filter(a => a.date1 || a.date2 || a.date3)
+              .filter(a => a && (a.date1 || a.date2 || a.date3))
               .sort((a, b) => {
                 const dateA = a.date3 || a.date2 || a.date1 || "";
                 const dateB = b.date3 || b.date2 || b.date1 || "";
@@ -2108,9 +2108,9 @@ export default function ApplicantManager() {
                             recentTestList.map((app, i) => {
                               const lastScore = app.score3 || app.score2 || app.score1 || "—";
                               const lastDate = app.date3 || app.date2 || app.date1 || "—";
-                              const pass = app._att.pass === "합격";
-                              const fail = app._att.pass === "불합격";
-                              const isEx = app._att.pass === "면제";
+                              const pass = app._att?.pass === "합격";
+                              const fail = app._att?.pass === "불합격";
+                              const isEx = app._att?.pass === "면제";
                               
                               let badgeStyle = {background:"#f1f5f9", color:C.muted, border:"1px solid #cbd5e1"};
                               if (pass) badgeStyle = {background:"#ecfdf5", color:C.green, border:"1px solid #a7f3d0"};
@@ -2123,7 +2123,7 @@ export default function ApplicantManager() {
                                   <td style={{padding:"10px 4px",color:C.subtle}}>{app.division || "—"}</td>
                                   <td style={{padding:"10px 4px",fontWeight:700}}>{lastScore}점</td>
                                   <td style={{padding:"10px 4px",textAlign:"center"}}>
-                                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",fontWeight:700,...badgeStyle}}>{app._att.pass}</span>
+                                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",fontWeight:700,...badgeStyle}}>{app._att?.pass}</span>
                                   </td>
                                   <td style={{padding:"10px 4px",textAlign:"right",color:C.muted,fontSize:"11px"}}>{lastDate.substring(5)}</td>
                                 </tr>
