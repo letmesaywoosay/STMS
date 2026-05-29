@@ -1,4 +1,4 @@
-﻿// ApplicantManager.jsx
+// ApplicantManager.jsx
 import { useState, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 
@@ -2040,36 +2040,73 @@ export default function ApplicantManager() {
             const [dashDiv, setDashDiv] = useState("all");
             const [hoveredMonth, setHoveredMonth] = useState(null); // SVG 차트 풍선 툴팁
 
+            // 대시보드 기간 필터 상태 (시작일, 종료일)
+            const [dashStartDate, setDashStartDate] = useState("");
+            const [dashEndDate, setDashEndDate] = useState("");
+
+            // 날짜 필터링 헬퍼 함수
+            const isWithinRange = (dateStr) => {
+              if (!dateStr) return false;
+              if (dashStartDate && dateStr < dashStartDate) return false;
+              if (dashEndDate && dateStr > dashEndDate) return false;
+              return true;
+            };
+
+            // 응시자 활동 최신일 판별 헬퍼 (활동일 = 최신 테스트일 or 입사년월일)
+            const getAppDate = (a) => {
+              const dates = [a.date1, a.date2, a.date3].filter(Boolean).sort().reverse();
+              return dates[0] || a.joinYearMonth || "";
+            };
+
+            // 기간 필터 적용된 응시자 목록
+            const filteredApplicants = applicants.filter(a => {
+              if (!a) return false;
+              if (!dashStartDate && !dashEndDate) return true;
+              const appDate = getAppDate(a);
+              return isWithinRange(appDate);
+            });
+
             // 고유 본부 목록 추출 (드롭다운 필터용)
             const allDivs = [...new Set(applicants.map(a => a && a.division).filter(Boolean))].sort();
 
-            // 1. KPI 지표 실시간 계산
-            const totalExaminees = applicants.length;
+            // 1. KPI 지표 실시간 계산 (기간 필터 적용)
+            const totalExaminees = filteredApplicants.length;
             
             // 이번 달 신규 응시자 계산 (YYYY-MM 형식 기준)
             const currentYM = new Date().toISOString().substring(0, 7); // 예: "2026-05"
-            const newExamineesThisMonth = applicants.filter(a => a && (
-              (a.date1 && a.date1.substring(0, 7) === currentYM) ||
-              (a.date2 && a.date2.substring(0, 7) === currentYM) ||
-              (a.date3 && a.date3.substring(0, 7) === currentYM)
-            )).length;
+            const newExamineesThisMonth = (dashStartDate || dashEndDate)
+              ? applicants.filter(a => a && a.joinYearMonth && isWithinRange(a.joinYearMonth)).length
+              : applicants.filter(a => a && (
+                  (a.date1 && a.date1.substring(0, 7) === currentYM) ||
+                  (a.date2 && a.date2.substring(0, 7) === currentYM) ||
+                  (a.date3 && a.date3.substring(0, 7) === currentYM)
+                )).length;
 
             // 평균 합격률 (합격인 인원 수 / 평가 완료된 인원 수) - a.finalStatus 실제 데이터 반영
-            const passExaminees = applicants.filter(a => a && a.finalStatus === "합격").length;
-            const failExaminees = applicants.filter(a => a && a.finalStatus === "불합격").length;
+            const passExaminees = filteredApplicants.filter(a => a && a.finalStatus === "합격").length;
+            const failExaminees = filteredApplicants.filter(a => a && a.finalStatus === "불합격").length;
             const gradedCount = passExaminees + failExaminees;
             const avgPassRate = gradedCount > 0 ? Math.round((passExaminees / gradedCount) * 100) : 0;
 
-            // 이번 달 시험 건수
-            const currentMonthTests = applicants.filter(a => a && (
-              (a.date1 && a.date1.substring(0, 7) === currentYM) ||
-              (a.date2 && a.date2.substring(0, 7) === currentYM) ||
-              (a.date3 && a.date3.substring(0, 7) === currentYM)
-            )).length;
+            // 이번 달 시험 건수 또는 선택 기간 내 총 시험 건수
+            const currentMonthTests = (dashStartDate || dashEndDate)
+              ? applicants.reduce((acc, a) => {
+                  if (!a) return acc;
+                  let count = 0;
+                  if (a.date1 && isWithinRange(a.date1)) count++;
+                  if (a.date2 && isWithinRange(a.date2)) count++;
+                  if (a.date3 && isWithinRange(a.date3)) count++;
+                  return acc + count;
+                }, 0)
+              : applicants.filter(a => a && (
+                  (a.date1 && a.date1.substring(0, 7) === currentYM) ||
+                  (a.date2 && a.date2.substring(0, 7) === currentYM) ||
+                  (a.date3 && a.date3.substring(0, 7) === currentYM)
+                )).length;
 
             // 미응시 및 면제자 현황 - getLatest 실제 데이터 반영
-            const unexaminedCount = applicants.filter(a => a && getLatest(a).pass === "미응시").length;
-            const exemptCount = applicants.filter(a => a && (getLatest(a).pass === "면제" || a.finalStatus === "면제")).length;
+            const unexaminedCount = filteredApplicants.filter(a => a && getLatest(a).pass === "미응시").length;
+            const exemptCount = filteredApplicants.filter(a => a && (getLatest(a).pass === "면제" || a.finalStatus === "면제")).length;
             const exceptionCount = unexaminedCount + exemptCount;
 
             // 2. 월별 합격 추이 데이터 집계 (차트용) - 실제 데이터 및 합격률 반영
@@ -2083,24 +2120,24 @@ export default function ApplicantManager() {
                 const matchesDiv = dashDiv === "all" ? true : a.division === dashDiv;
                 if (!matchesDiv) return false;
                 
-                const matches1 = a.date1 && a.date1.substring(0, 7) === targetYM;
-                const matches2 = a.date2 && a.date2.substring(0, 7) === targetYM;
-                const matches3 = a.date3 && a.date3.substring(0, 7) === targetYM;
+                const matches1 = a.date1 && a.date1.substring(0, 7) === targetYM && isWithinRange(a.date1);
+                const matches2 = a.date2 && a.date2.substring(0, 7) === targetYM && isWithinRange(a.date2);
+                const matches3 = a.date3 && a.date3.substring(0, 7) === targetYM && isWithinRange(a.date3);
                 return matches1 || matches2 || matches3;
               });
 
               let total = 0;
               let passed = 0;
               monthApps.forEach(a => {
-                if (a.date1 && a.date1.substring(0, 7) === targetYM) {
+                if (a.date1 && a.date1.substring(0, 7) === targetYM && isWithinRange(a.date1)) {
                   total++;
                   if (a.pass1 === "합격") passed++;
                 }
-                if (a.date2 && a.date2.substring(0, 7) === targetYM) {
+                if (a.date2 && a.date2.substring(0, 7) === targetYM && isWithinRange(a.date2)) {
                   total++;
                   if (a.pass2 === "합격") passed++;
                 }
-                if (a.date3 && a.date3.substring(0, 7) === targetYM) {
+                if (a.date3 && a.date3.substring(0, 7) === targetYM && isWithinRange(a.date3)) {
                   total++;
                   if (a.pass3 === "합격") passed++;
                 }
@@ -2134,19 +2171,31 @@ export default function ApplicantManager() {
             // 3. 본부별 합격률 랭킹 집계 - 실제 데이터 반영
             const allDivisions = [...new Set(applicants.map(a => a && a.division).filter(Boolean))];
             const divRanking = allDivisions.map(divName => {
-              const divApps = applicants.filter(a => a && a.division === divName);
+              const divApps = filteredApplicants.filter(a => a && a.division === divName);
               const total = divApps.filter(a => a && ["합격", "불합격"].includes(a.finalStatus)).length;
               const passed = divApps.filter(a => a && a.finalStatus === "합격").length;
               const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
               return { division: divName, rate, passed, total };
             }).sort((a, b) => b.rate - a.rate).slice(0, 5); // 상위 5위
 
-            // 4. 최근 5건 시험 결과 추출
+            // Helper to get latest valid test info within date range
+            const getLatestValidTest = (app) => {
+              const tests = [];
+              if (app.date1 && isWithinRange(app.date1)) tests.push({ date: app.date1, score: app.score1, pass: app.pass1 });
+              if (app.date2 && isWithinRange(app.date2)) tests.push({ date: app.date2, score: app.score2, pass: app.pass2 });
+              if (app.date3 && isWithinRange(app.date3)) tests.push({ date: app.date3, score: app.score3, pass: app.pass3 });
+              
+              if (tests.length === 0) return null;
+              tests.sort((a, b) => b.date.localeCompare(a.date));
+              return tests[0];
+            };
+
+            // 4. 최근 5건 시험 결과 추출 (기간 필터 반영)
             const recentTestList = [...applicants]
-              .filter(a => a && (a.date1 || a.date2 || a.date3))
+              .filter(a => a && getLatestValidTest(a) !== null)
               .sort((a, b) => {
-                const dateA = a.date3 || a.date2 || a.date1 || "";
-                const dateB = b.date3 || b.date2 || b.date1 || "";
+                const dateA = getLatestValidTest(a)?.date || "";
+                const dateB = getLatestValidTest(b)?.date || "";
                 return dateB.localeCompare(dateA);
               })
               .slice(0, 5);
@@ -2164,21 +2213,51 @@ export default function ApplicantManager() {
 
                 {/* 환영 헤더 */}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px",marginTop:"12px"}}>
-                  <div>
-                    <h2 style={{fontSize:"22px",fontWeight:900,color:"#002060",margin:0,letterSpacing:"-0.5px"}}>AIDA 실시간 경영 대시보드</h2>
-                    <p style={{fontSize:"12px",color:C.muted,margin:"4px 0 0"}}>솔루션 테스트 아카데미의 실시간 성적 추이 및 합격 분석 현황판입니다.</p>
+                  <div style={{textAlign:"left"}}>
+                    <h2 style={{fontSize:"22px",fontWeight:900,color:"#002060",margin:0,letterSpacing:"-0.5px",textAlign:"left"}}>실시간 경영 대시보드</h2>
+                    <p style={{fontSize:"12px",color:C.muted,margin:"4px 0 0",textAlign:"left"}}>솔루션 테스트 아카데미의 실시간 성적 추이 및 합격 분석 현황판입니다.</p>
                   </div>
-                  <div style={{fontSize:"13px",color:C.muted,fontWeight:500,background:`${C.border}33`,padding:"6px 12px",borderRadius:"20px",border:`1px solid ${C.border}`}}>
-                    기준일: <span style={{fontWeight:700,color:C.text}}>{new Date().toLocaleDateString("ko-KR")}</span>
+                  <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                    {/* 기간 설정 필터 */}
+                    <div style={{display:"flex",alignItems:"center",gap:"8px",background:"#ffffff",border:`1px solid ${C.border}`,borderRadius:"20px",padding:"5px 14px",fontSize:"12px",boxShadow:"0 1px 2px rgba(0,0,0,0.05)"}}>
+                      <span style={{color:C.muted,fontWeight:700}}>📅 기간 설정:</span>
+                      <input 
+                        type="date" 
+                        value={dashStartDate} 
+                        onChange={e=>setDashStartDate(e.target.value)} 
+                        style={{border:"none",background:"transparent",color:C.text,fontFamily:"inherit",fontSize:"12px",outline:"none",cursor:"pointer",padding:0}}
+                      />
+                      <span style={{color:C.muted}}>~</span>
+                      <input 
+                        type="date" 
+                        value={dashEndDate} 
+                        onChange={e=>setDashEndDate(e.target.value)} 
+                        style={{border:"none",background:"transparent",color:C.text,fontFamily:"inherit",fontSize:"12px",outline:"none",cursor:"pointer",padding:0}}
+                      />
+                      {(dashStartDate || dashEndDate) && (
+                        <button 
+                          onClick={()=>{setDashStartDate("");setDashEndDate("");}} 
+                          style={{border:"none",background:"none",color:C.red,cursor:"pointer",fontSize:"12px",fontWeight:900,padding:"0 0 0 6px",display:"flex",alignItems:"center",borderLeft:`1px solid ${C.border}`}}
+                          title="필터 초기화"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* 기준일 알약 */}
+                    <div style={{fontSize:"13px",color:C.muted,fontWeight:500,background:`${C.border}33`,padding:"6px 14px",borderRadius:"20px",border:`1px solid ${C.border}`}}>
+                      기준일: <span style={{fontWeight:700,color:C.text}}>{new Date().toLocaleDateString("ko-KR")}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Section A: KPI Summary Cards - 반응형 그리드 & 문구 수정 */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:"18px"}}>
                   {[
-                    { title: "총 등록 응시자", val: `${totalExaminees}명`, sub: `이번 달 신규 +${newExamineesThisMonth}명`, color: "#002060", icon: "👥" },
+                    { title: "총 등록 응시자", val: `${totalExaminees}명`, sub: (dashStartDate || dashEndDate) ? "선택 기간 내 활동 응시자" : `이번 달 신규 +${newExamineesThisMonth}명`, color: "#002060", icon: "👥" },
                     { title: "평균 합격률", val: `${avgPassRate}%`, sub: `평가 완료 ${gradedCount}명 기준`, color: C.green, icon: "🎯" },
-                    { title: "이번 달 응시자", val: `${currentMonthTests}명`, sub: "이번 달 시험 응시자 수", color: C.purple, icon: "📅" },
+                    { title: (dashStartDate || dashEndDate) ? "선택 기간 응시자" : "이번 달 응시자", val: `${currentMonthTests}명`, sub: (dashStartDate || dashEndDate) ? "선택 기간 내 총 시험 건수" : "이번 달 시험 응시자 수", color: C.purple, icon: "📅" },
                     { title: "미응시 / 면제자", val: `${exceptionCount}명`, sub: `미응시 ${unexaminedCount}명 · 면제 ${exemptCount}명`, color: "#f59e0b", icon: "🛡️" }
                   ].map((kpi, idx) => (
                     <div key={idx} className="kpi-card" style={{background:"#ffffff",borderRadius:"16px",border:"1px solid #e2e8f0",padding:"20px 24px",boxShadow:"0 2px 4px rgba(0,0,0,0.02)",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.25s",animation:`fadeUp 0.4s ${idx * 0.08}s ease both`,boxSizing:"border-box"}}>
@@ -2341,14 +2420,15 @@ export default function ApplicantManager() {
                             </tr>
                           ) : (
                             recentTestList.map((app, i) => {
-                              const lastScore = app.score3 || app.score2 || app.score1 || "—";
-                              const lastDate = app.date3 || app.date2 || app.date1 || "—";
+                              const validTest = getLatestValidTest(app) || { score: "—", date: "—", pass: "진행중" };
+                              const lastScore = validTest.score || "—";
+                              const lastDate = validTest.date || "—";
+                              const passVal = validTest.pass || "진행중";
                               
-                              const latest = getLatest(app);
-                              const pass = latest.pass === "합격";
-                              const fail = latest.pass === "불합격";
-                              const isEx = latest.pass === "면제";
-                              const isAb = latest.pass === "미응시";
+                              const pass = passVal === "합격";
+                              const fail = passVal === "불합격";
+                              const isEx = passVal === "면제";
+                              const isAb = passVal === "미응시";
                               
                               let badgeStyle = {background:"#f1f5f9", color:C.muted, border:"1px solid #cbd5e1"};
                               if (pass) badgeStyle = {background:"#ecfdf5", color:C.green, border:"1px solid #a7f3d0"};
@@ -2360,11 +2440,11 @@ export default function ApplicantManager() {
                                 <tr key={i} style={{borderBottom:`1px solid ${C.border}66`,fontSize:"12px",color:C.text}}>
                                   <td style={{padding:"10px 4px",fontWeight:800,color:"#002060"}}>{app.name}</td>
                                   <td style={{padding:"10px 4px",color:C.subtle}}>{app.division || "—"}</td>
-                                  <td style={{padding:"10px 4px",fontWeight:700}}>{lastScore}점</td>
+                                  <td style={{padding:"10px 4px",fontWeight:700}}>{lastScore !== "—" ? lastScore + "점" : "—"}</td>
                                   <td style={{padding:"10px 4px",textAlign:"center"}}>
-                                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",fontWeight:700,...badgeStyle}}>{latest.pass || "진행중"}</span>
+                                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",fontWeight:700,...badgeStyle}}>{passVal}</span>
                                   </td>
-                                  <td style={{padding:"10px 4px",textAlign:"right",color:C.muted,fontSize:"11px"}}>{lastDate.substring(5)}</td>
+                                  <td style={{padding:"10px 4px",textAlign:"right",color:C.muted,fontSize:"11px"}}>{lastDate !== "—" ? lastDate.substring(5) : "—"}</td>
                                 </tr>
                               );
                             })
