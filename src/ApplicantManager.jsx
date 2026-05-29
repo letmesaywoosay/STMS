@@ -2047,9 +2047,9 @@ export default function ApplicantManager() {
               (a.date3 && a.date3.substring(0, 7) === currentYM)
             )).length;
 
-            // 평균 합격률 (합격인 인원 수 / 평가 완료된 인원 수)
-            const passExaminees = applicants.filter(a => a && a._att?.pass === "합격").length;
-            const failExaminees = applicants.filter(a => a && a._att?.pass === "불합격").length;
+            // 평균 합격률 (합격인 인원 수 / 평가 완료된 인원 수) - a.finalStatus 실제 데이터 반영
+            const passExaminees = applicants.filter(a => a && a.finalStatus === "합격").length;
+            const failExaminees = applicants.filter(a => a && a.finalStatus === "불합격").length;
             const gradedCount = passExaminees + failExaminees;
             const avgPassRate = gradedCount > 0 ? Math.round((passExaminees / gradedCount) * 100) : 0;
 
@@ -2060,17 +2060,17 @@ export default function ApplicantManager() {
               (a.date3 && a.date3.substring(0, 7) === currentYM)
             )).length;
 
-            // 미응시 및 면제자 현황
-            const unexaminedCount = applicants.filter(a => a && a._att?.pass === "미응시").length;
-            const exemptCount = applicants.filter(a => a && a._att?.pass === "면제").length;
+            // 미응시 및 면제자 현황 - getLatest 실제 데이터 반영
+            const unexaminedCount = applicants.filter(a => a && getLatest(a).pass === "미응시").length;
+            const exemptCount = applicants.filter(a => a && (getLatest(a).pass === "면제" || a.finalStatus === "면제")).length;
             const exceptionCount = unexaminedCount + exemptCount;
 
-            // 2. 월별 합격 추이 데이터 집계 (차트용)
+            // 2. 월별 합격 추이 데이터 집계 (차트용) - 실제 데이터 및 합격률 반영
             const monthlyTrend = Array.from({length: 12}, (_, i) => {
               const monthStr = String(i + 1).padStart(2, "0");
               const targetYM = `${dashYear}-${monthStr}`;
               
-              // 해당 월의 전체 시험 인원 및 합격자 필터링
+              // 해당 월의 전체 시험 인원 필터링
               const monthApps = applicants.filter(a => {
                 if (!a) return false;
                 const matchesDiv = dashDiv === "all" ? true : a.division === dashDiv;
@@ -2082,9 +2082,25 @@ export default function ApplicantManager() {
                 return matches1 || matches2 || matches3;
               });
 
-              const total = monthApps.length;
-              const passed = monthApps.filter(a => a && a._att?.pass === "합격").length;
-              return { month: `${i + 1}월`, total, passed };
+              let total = 0;
+              let passed = 0;
+              monthApps.forEach(a => {
+                if (a.date1 && a.date1.substring(0, 7) === targetYM) {
+                  total++;
+                  if (a.pass1 === "합격") passed++;
+                }
+                if (a.date2 && a.date2.substring(0, 7) === targetYM) {
+                  total++;
+                  if (a.pass2 === "합격") passed++;
+                }
+                if (a.date3 && a.date3.substring(0, 7) === targetYM) {
+                  total++;
+                  if (a.pass3 === "합격") passed++;
+                }
+              });
+
+              const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
+              return { month: `${i + 1}월`, total, passed, rate };
             });
 
             // SVG 차트 좌표 계산용 상수 및 함수
@@ -2094,25 +2110,26 @@ export default function ApplicantManager() {
             
             const getPoints = (type) => {
               return monthlyTrend.map((d, index) => {
-                const val = type === "total" ? d.total : d.passed;
+                const val = type === "total" ? d.total : d.rate;
+                const limit = type === "total" ? maxVal : 100;
                 const x = 30 + index * (chartWidth / 11.5);
-                const y = chartHeight - 15 - (val / maxVal) * (chartHeight - 40);
+                const y = chartHeight - 15 - (val / limit) * (chartHeight - 40);
                 return { x, y, ...d };
               });
             };
 
             const totalPoints = getPoints("total");
-            const passPoints = getPoints("passed");
+            const passPoints = getPoints("passed"); // 여기서 passed는 실질적으로 합격률 점들입니다.
 
             const totalPath = totalPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
             const passPath = passPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
-            // 3. 본부별 합격률 랭킹 집계
+            // 3. 본부별 합격률 랭킹 집계 - 실제 데이터 반영
             const allDivisions = [...new Set(applicants.map(a => a && a.division).filter(Boolean))];
             const divRanking = allDivisions.map(divName => {
               const divApps = applicants.filter(a => a && a.division === divName);
-              const total = divApps.filter(a => a && a._att && ["합격", "불합격"].includes(a._att?.pass)).length;
-              const passed = divApps.filter(a => a && a._att?.pass === "합격").length;
+              const total = divApps.filter(a => a && ["합격", "불합격"].includes(a.finalStatus)).length;
+              const passed = divApps.filter(a => a && a.finalStatus === "합격").length;
               const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
               return { division: divName, rate, passed, total };
             }).sort((a, b) => b.rate - a.rate).slice(0, 5); // 상위 5위
@@ -2128,13 +2145,13 @@ export default function ApplicantManager() {
               .slice(0, 5);
 
             return(
-              <div className="dash-container" style={{width:"100%",padding:"0px 0 48px",display:"flex",flexDirection:"column",gap:"24px",animation:"fadeUp 0.5s ease"}}>
+              <div className="dash-container" style={{width:"100%",boxSizing:"border-box",padding:"16px 40px 48px",display:"flex",flexDirection:"column",gap:"24px",animation:"fadeUp 0.5s ease"}}>
                 <style>{`
                   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
                   .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -10px rgba(0,32,96,0.15)!important; }
-                  .dash-card { background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 20px; transition: all 0.2s; }
+                  .dash-card { background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 20px; transition: all 0.2s; box-sizing: border-box; }
                   .dash-card:hover { box-shadow: 0 10px 20px -8px rgba(0,0,0,0.08); }
-                  .quick-tile { display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: transparent; cursor: pointer; transition: all 0.2s; text-align: left; font-family: inherit; }
+                  .quick-tile { display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: transparent; cursor: pointer; transition: all 0.2s; text-align: left; font-family: inherit; box-sizing: border-box; }
                   .quick-tile:hover { border-color: #002060; background: rgba(0,32,96,0.02); transform: translateY(-2px); }
                 `}</style>
 
@@ -2149,15 +2166,24 @@ export default function ApplicantManager() {
                   </div>
                 </div>
 
-                {/* Section A: KPI Summary Cards */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(4, 1fr)",gap:"18px"}}>
+                {/* Section A: KPI Summary Cards - 반응형 그리드 & 문구 수정 */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:"18px"}}>
                   {[
                     { title: "총 등록 응시자", val: `${totalExaminees}명`, sub: `이번 달 신규 +${newExamineesThisMonth}명`, color: "#002060", icon: "👥" },
                     { title: "평균 합격률", val: `${avgPassRate}%`, sub: `평가 완료 ${gradedCount}명 기준`, color: C.green, icon: "🎯" },
-                    { title: "이번 달 진행 시험", val: `${currentMonthTests}건`, sub: "진행 완료 및 대기 포함", color: C.purple, icon: "📅" },
+                    { title: "이번 달 응시자", val: `${currentMonthTests}명`, sub: "이번 달 시험 응시자 수", color: C.purple, icon: "📅" },
                     { title: "미응시 / 면제자", val: `${exceptionCount}명`, sub: `미응시 ${unexaminedCount}명 · 면제 ${exemptCount}명`, color: "#f59e0b", icon: "🛡️" }
                   ].map((kpi, idx) => (
-                    <div key={idx} className="kpi-card" style={{background:"#ffffff",borderRadius:"16px",border:"1px solid #e2e8f0",padding:"20px 24px",boxShadow:"0 2px 4px rgba(0,0,0,0.02)",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.25s",animation:`fadeUp 0.4s ${idx * 0.08}s ease both`}}>
+                    <div key={idx} className="kpi-card" style={{background:"#ffffff",borderRadius:"16px",border:"1px solid #e2e8f0",padding:"20px 24px",boxShadow:"0 2px 4px rgba(0,0,0,0.02)",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.25s",animation:`fadeUp 0.4s ${idx * 0.08}s ease both`,boxSizing:"border-box"}}>
+                      <div>
+                        <span style={{fontSize:"11px",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{kpi.title}</span>
+                        <div style={{fontSize:"28px",fontWeight:900,color:kpi.color,margin:"4px 0",lineHeight:1.1}}>{kpi.val}</div>
+                        <span style={{fontSize:"11px",color:C.muted,fontWeight:500}}>{kpi.sub}</span>
+                      </div>
+                      <span style={{fontSize:"28px",background:`${kpi.color}0a`,width:"48px",height:"48px",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${kpi.color}1c`}}>{kpi.icon}</span>
+                    </div>
+                  ))}
+                </div>
                       <div>
                         <span style={{fontSize:"11px",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{kpi.title}</span>
                         <div style={{fontSize:"28px",fontWeight:900,color:kpi.color,margin:"4px 0",lineHeight:1.1}}>{kpi.val}</div>
@@ -2169,11 +2195,11 @@ export default function ApplicantManager() {
                 </div>
 
                 {/* Section B: Main Analytics Charts */}
-                <div style={{display:"grid",gridTemplateColumns:"60% 40%",gap:"20px"}}>
-                  {/* 월별 합격 추이 차트 */}
-                  <div className="dash-card" style={{position:"relative",minHeight:"340px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(440px, 1fr))",gap:"20px"}}>
+                  {/* 월별 합격 추이 차트 - 반응형 & 합격률 반영 */}
+                  <div className="dash-card" style={{position:"relative",minHeight:"340px",boxSizing:"border-box"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
-                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📊 월별 응시 및 합격자 추이</span>
+                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📊 월별 응시 및 합격률 추이</span>
                       <div style={{display:"flex",gap:"8px"}}>
                         <select value={dashYear} onChange={e=>setDashYear(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer"}}>
                           <option value="2026">2026년</option>
@@ -2186,9 +2212,9 @@ export default function ApplicantManager() {
                       </div>
                     </div>
 
-                    <div style={{position:"relative",height:`${chartHeight}px`,marginTop:"16px"}}>
-                      {/* SVG Line Graph */}
-                      <svg width="100%" height={`${chartHeight}px`} style={{overflow:"visible"}}>
+                    <div style={{position:"relative",height:`${chartHeight}px`,marginTop:"16px",width:"100%"}}>
+                      {/* SVG Line Graph - Responsive viewBox */}
+                      <svg viewBox={`0 0 ${chartWidth + 60} ${chartHeight}`} width="100%" height="100%" style={{overflow:"visible"}}>
                         <defs>
                           <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
@@ -2200,7 +2226,7 @@ export default function ApplicantManager() {
                           </linearGradient>
                         </defs>
 
-                        {/* 수평 보조선 */}
+                        {/* 수평 보조선 및 이중 Y축(좌: 인원, 우: 합격률) */}
                         {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
                           const y = chartHeight - 15 - ratio * (chartHeight - 40);
                           const gridVal = Math.round(ratio * maxVal);
@@ -2208,6 +2234,7 @@ export default function ApplicantManager() {
                             <g key={i}>
                               <line x1="28" y1={y} x2={chartWidth + 30} y2={y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
                               <text x="5" y={y + 4} fontSize="9" fill={C.muted} textAnchor="start">{gridVal}명</text>
+                              <text x={chartWidth + 34} y={y + 4} fontSize="9" fill={C.green} textAnchor="start" fontWeight={700}>{Math.round(ratio * 100)}%</text>
                             </g>
                           );
                         })}
@@ -2227,7 +2254,7 @@ export default function ApplicantManager() {
                             <g key={i} onMouseEnter={() => setHoveredMonth(i)} onMouseLeave={() => setHoveredMonth(null)} style={{cursor:"pointer"}}>
                               {/* 응시수 마커 */}
                               <circle cx={pt.x} cy={pt.y} r={isHovered ? 6 : 4} fill="#fff" stroke="#3b82f6" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
-                              {/* 합격수 마커 */}
+                              {/* 합격률 마커 */}
                               <circle cx={passPoints[i].x} cy={passPoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#10b981" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
                               
                               {/* X축 월 텍스트 */}
@@ -2246,7 +2273,7 @@ export default function ApplicantManager() {
                             <div style={{fontWeight:800,marginBottom:"2px",color:"#94a3b8",borderBottom:"1px solid #334155",paddingBottom:"2px"}}>{pt.month} 성적 현황</div>
                             <div style={{display:"flex",gap:"8px",marginTop:"3px"}}>
                               <span>총 응시: <strong style={{color:"#3b82f6"}}>{pt.total}명</strong></span>
-                              <span>합격: <strong style={{color:"#10b981"}}>{pt.passed}명</strong></span>
+                              <span>합격률: <strong style={{color:"#10b981"}}>{pt.rate}%</strong></span>
                             </div>
                             <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",borderTop:"4px solid rgba(15,23,42,0.95)",borderLeft:"4px solid transparent",borderRight:"4px solid transparent"}}/>
                           </div>
@@ -2257,7 +2284,7 @@ export default function ApplicantManager() {
                     {/* 차트 캡션 레전드 */}
                     <div style={{display:"flex",justifyContent:"center",gap:"16px",marginTop:"24px",fontSize:"11px",fontWeight:700}}>
                       <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#3b82f6"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#3b82f6",display:"inline-block"}}/> 총 응시인원</span>
-                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#10b981"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#10b981",display:"inline-block"}}/> 합격자 수</span>
+                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#10b981"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#10b981",display:"inline-block"}}/> 합격률 (%)</span>
                     </div>
                   </div>
 
@@ -2290,9 +2317,9 @@ export default function ApplicantManager() {
                 </div>
 
                 {/* Section C: Operational & Utilities */}
-                <div style={{display:"grid",gridTemplateColumns:"50% 50%",gap:"20px"}}>
-                  {/* 최근 5건 성적표 목록 */}
-                  <div className="dash-card" style={{minHeight:"320px",display:"flex",flexDirection:"column"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(400px, 1fr))",gap:"20px"}}>
+                  {/* 최근 5건 성적표 목록 - 실제 데이터 반영 */}
+                  <div className="dash-card" style={{minHeight:"320px",display:"flex",flexDirection:"column",boxSizing:"border-box"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
                       <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📋 최근 테스트 제출 목록</span>
                       <button onClick={()=>setMainMenu("list")} style={{background:"transparent",border:"none",color:C.blue,fontSize:"11px",fontWeight:700,cursor:"pointer"}}>전체보기 →</button>
@@ -2318,14 +2345,18 @@ export default function ApplicantManager() {
                             recentTestList.map((app, i) => {
                               const lastScore = app.score3 || app.score2 || app.score1 || "—";
                               const lastDate = app.date3 || app.date2 || app.date1 || "—";
-                              const pass = app._att?.pass === "합격";
-                              const fail = app._att?.pass === "불합격";
-                              const isEx = app._att?.pass === "면제";
+                              
+                              const latest = getLatest(app);
+                              const pass = latest.pass === "합격";
+                              const fail = latest.pass === "불합격";
+                              const isEx = latest.pass === "면제";
+                              const isAb = latest.pass === "미응시";
                               
                               let badgeStyle = {background:"#f1f5f9", color:C.muted, border:"1px solid #cbd5e1"};
                               if (pass) badgeStyle = {background:"#ecfdf5", color:C.green, border:"1px solid #a7f3d0"};
                               if (fail) badgeStyle = {background:"#fef2f2", color:C.red, border:"1px solid #fecaca"};
                               if (isEx) badgeStyle = {background:"#f8fafc", color:"#64748b", border:"1px solid #e2e8f0"};
+                              if (isAb) badgeStyle = {background:"#fffbeb", color:C.amber, border:"1px solid #fde68a"};
 
                               return (
                                 <tr key={i} style={{borderBottom:`1px solid ${C.border}66`,fontSize:"12px",color:C.text}}>
@@ -2333,7 +2364,7 @@ export default function ApplicantManager() {
                                   <td style={{padding:"10px 4px",color:C.subtle}}>{app.division || "—"}</td>
                                   <td style={{padding:"10px 4px",fontWeight:700}}>{lastScore}점</td>
                                   <td style={{padding:"10px 4px",textAlign:"center"}}>
-                                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",fontWeight:700,...badgeStyle}}>{app._att?.pass}</span>
+                                    <span style={{fontSize:"10px",padding:"2px 8px",borderRadius:"12px",fontWeight:700,...badgeStyle}}>{latest.pass || "진행중"}</span>
                                   </td>
                                   <td style={{padding:"10px 4px",textAlign:"right",color:C.muted,fontSize:"11px"}}>{lastDate.substring(5)}</td>
                                 </tr>
