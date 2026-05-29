@@ -2251,63 +2251,61 @@ export default function ApplicantManager() {
                     <p style={{fontSize:"12px",color:C.muted,margin:"4px 0 0",textAlign:"left"}}>솔루션 테스트 아카데미의 실시간 성적 추이 및 합격 분석 현황판입니다.</p>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-                    {/* 기간 설정 필터 - 슬라이더 기반 년/월 제어 */}
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:"8px",background:"#ffffff",border:`1px solid ${C.border}`,borderRadius:"20px",padding:"5px 14px",fontSize:"12px",boxShadow:"0 1px 2px rgba(0,0,0,0.05)"}}>
-                        <span style={{color:"#002060",fontWeight:800}}>📅 조회 기간:</span>
-                        <span style={{fontWeight:700,color:C.text,fontSize:"12px"}}>
-                          {timeline[startIdx]?.replace('-', '.')} ~ {timeline[endIdx]?.replace('-', '.')}
-                        </span>
-                        {isFilterActive && (
-                          <button 
-                            onClick={()=>{setStartIdx(0); setEndIdx(timeline.length - 1);}} 
-                            style={{border:"none",background:"none",color:C.red,cursor:"pointer",fontSize:"12px",fontWeight:900,padding:"0 0 0 6px",display:"flex",alignItems:"center",borderLeft:`1px solid ${C.border}`}}
-                            title="필터 초기화"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
+                    {/* 기간 설정 필터 - 통합형 슬라이더 */}
+                    <div style={{display:"flex",alignItems:"center",gap:"10px",background:"#ffffff",border:`1px solid ${C.border}`,borderRadius:"20px",padding:"5px 14px",fontSize:"12px",boxShadow:"0 1px 3px rgba(0,0,0,0.05)"}}>
+                      <span style={{color:"#002060",fontWeight:800,whiteSpace:"nowrap"}}>📅 조회 기간:</span>
                       
-                      {/* 슬라이더 조절 레일 */}
-                      <div style={{display:"flex",alignItems:"center",gap:"12px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:"12px",padding:"6px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.02)",marginTop:"2px"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
-                          <span style={{fontSize:"10px",color:C.muted,fontWeight:600}}>시작</span>
-                          <input 
-                            type="range" 
-                            min={0} 
-                            max={timeline.length - 1} 
-                            value={startIdx} 
-                            onChange={e => {
-                              const val = parseInt(e.target.value);
-                              if (val > endIdx) {
-                                setStartIdx(endIdx);
-                              } else {
-                                setStartIdx(val);
-                              }
-                            }} 
-                            style={{width:"100px",accentColor:"#002060",cursor:"pointer",height:"4px",borderRadius:"2px"}}
-                          />
-                        </div>
-                        <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
-                          <span style={{fontSize:"10px",color:C.muted,fontWeight:600}}>종료</span>
-                          <input 
-                            type="range" 
-                            min={0} 
-                            max={timeline.length - 1} 
-                            value={endIdx} 
-                            onChange={e => {
-                              const val = parseInt(e.target.value);
-                              if (val < startIdx) {
-                                setEndIdx(startIdx);
-                              } else {
-                                setEndIdx(val);
-                              }
-                            }} 
-                            style={{width:"100px",accentColor:C.purple,cursor:"pointer",height:"4px",borderRadius:"2px"}}
-                          />
-                        </div>
-                      </div>
+                      <span style={{fontWeight:700,color:"#002060",minWidth:"45px",textAlign:"right"}}>
+                        {timeline[startIdx]?.replace('-', '.')}
+                      </span>
+                      
+                      <input 
+                        type="range" 
+                        min={0} 
+                        max={timeline.length - 1} 
+                        value={startIdx} 
+                        onChange={e => {
+                          const val = parseInt(e.target.value);
+                          if (val > endIdx) {
+                            setStartIdx(endIdx);
+                          } else {
+                            setStartIdx(val);
+                          }
+                        }} 
+                        style={{width:"75px",accentColor:"#002060",cursor:"pointer",height:"4px",borderRadius:"2px",margin:"0 2px"}}
+                      />
+                      
+                      <span style={{color:C.muted,fontWeight:700}}>~</span>
+                      
+                      <input 
+                        type="range" 
+                        min={0} 
+                        max={timeline.length - 1} 
+                        value={endIdx} 
+                        onChange={e => {
+                          const val = parseInt(e.target.value);
+                          if (val < startIdx) {
+                            setEndIdx(startIdx);
+                          } else {
+                            setEndIdx(val);
+                          }
+                        }} 
+                        style={{width:"75px",accentColor:C.purple,cursor:"pointer",height:"4px",borderRadius:"2px",margin:"0 2px"}}
+                      />
+                      
+                      <span style={{fontWeight:700,color:C.purple,minWidth:"45px",textAlign:"left"}}>
+                        {timeline[endIdx]?.replace('-', '.')}
+                      </span>
+
+                      {isFilterActive && (
+                        <button 
+                          onClick={()=>{setStartIdx(0); setEndIdx(timeline.length - 1);}} 
+                          style={{border:"none",background:"none",color:C.red,cursor:"pointer",fontSize:"12px",fontWeight:900,padding:"0 0 0 6px",display:"flex",alignItems:"center",borderLeft:`1px solid ${C.border}`,marginLeft:"2px"}}
+                          title="필터 초기화"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
 
                     {/* 기준일 알약 */}
