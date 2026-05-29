@@ -1,5 +1,5 @@
 // ApplicantManager.jsx
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 
 // ── Firebase 설정 (직접 입력) ──────────────────────────────────
@@ -2040,15 +2040,48 @@ export default function ApplicantManager() {
             const [dashDiv, setDashDiv] = useState("all");
             const [hoveredMonth, setHoveredMonth] = useState(null); // SVG 차트 풍선 툴팁
 
-            // 대시보드 기간 필터 상태 (시작일, 종료일)
-            const [dashStartDate, setDashStartDate] = useState("");
-            const [dashEndDate, setDashEndDate] = useState("");
+            // 동적 타임라인 생성 (응시자 데이터 내 시험 일자 및 입사년월일 기준 연월 추적)
+            const timeline = useMemo(() => {
+              const allDates = applicants.flatMap(a => [a.date1, a.date2, a.date3, a.joinYearMonth].filter(Boolean));
+              const years = allDates.map(d => {
+                const match = d.match(/^(\d{4})/);
+                return match ? parseInt(match[1]) : null;
+              }).filter(Boolean);
+              const minYear = years.length > 0 ? Math.min(...years, 2025) : 2025;
+              const maxYear = years.length > 0 ? Math.max(...years, 2026) : 2026;
+              const list = [];
+              for (let y = minYear; y <= maxYear; y++) {
+                for (let m = 1; m <= 12; m++) {
+                  list.push(`${y}-${String(m).padStart(2, "0")}`);
+                }
+              }
+              return list;
+            }, [applicants]);
+
+            // 대시보드 기간 필터 인덱스 상태
+            const [startIdx, setStartIdx] = useState(0);
+            const [endIdx, setEndIdx] = useState(timeline.length - 1 || 23);
+
+            useEffect(() => {
+              if (timeline.length > 0) {
+                setEndIdx(timeline.length - 1);
+              }
+            }, [timeline]);
+
+            const isFilterActive = startIdx !== 0 || endIdx !== timeline.length - 1;
+
+            const dashStartDate = timeline[startIdx] ? timeline[startIdx] + "-01" : "";
+            const dashEndDate = timeline[endIdx] ? timeline[endIdx] + "-31" : "";
 
             // 날짜 필터링 헬퍼 함수
             const isWithinRange = (dateStr) => {
               if (!dateStr) return false;
-              if (dashStartDate && dateStr < dashStartDate) return false;
-              if (dashEndDate && dateStr > dashEndDate) return false;
+              if (!isFilterActive) return true;
+              const targetYM = dateStr.substring(0, 7); // "YYYY-MM"
+              const startYM = timeline[startIdx];
+              const endYM = timeline[endIdx];
+              if (startYM && targetYM < startYM) return false;
+              if (endYM && targetYM > endYM) return false;
               return true;
             };
 
@@ -2061,7 +2094,7 @@ export default function ApplicantManager() {
             // 기간 필터 적용된 응시자 목록
             const filteredApplicants = applicants.filter(a => {
               if (!a) return false;
-              if (!dashStartDate && !dashEndDate) return true;
+              if (!isFilterActive) return true;
               const appDate = getAppDate(a);
               return isWithinRange(appDate);
             });
@@ -2074,7 +2107,7 @@ export default function ApplicantManager() {
             
             // 이번 달 신규 응시자 계산 (YYYY-MM 형식 기준)
             const currentYM = new Date().toISOString().substring(0, 7); // 예: "2026-05"
-            const newExamineesThisMonth = (dashStartDate || dashEndDate)
+            const newExamineesThisMonth = isFilterActive
               ? applicants.filter(a => a && a.joinYearMonth && isWithinRange(a.joinYearMonth)).length
               : applicants.filter(a => a && (
                   (a.date1 && a.date1.substring(0, 7) === currentYM) ||
@@ -2089,7 +2122,7 @@ export default function ApplicantManager() {
             const avgPassRate = gradedCount > 0 ? Math.round((passExaminees / gradedCount) * 100) : 0;
 
             // 이번 달 시험 건수 또는 선택 기간 내 총 시험 건수
-            const currentMonthTests = (dashStartDate || dashEndDate)
+            const currentMonthTests = isFilterActive
               ? applicants.reduce((acc, a) => {
                   if (!a) return acc;
                   let count = 0;
@@ -2218,31 +2251,63 @@ export default function ApplicantManager() {
                     <p style={{fontSize:"12px",color:C.muted,margin:"4px 0 0",textAlign:"left"}}>솔루션 테스트 아카데미의 실시간 성적 추이 및 합격 분석 현황판입니다.</p>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-                    {/* 기간 설정 필터 */}
-                    <div style={{display:"flex",alignItems:"center",gap:"8px",background:"#ffffff",border:`1px solid ${C.border}`,borderRadius:"20px",padding:"5px 14px",fontSize:"12px",boxShadow:"0 1px 2px rgba(0,0,0,0.05)"}}>
-                      <span style={{color:C.muted,fontWeight:700}}>📅 기간 설정:</span>
-                      <input 
-                        type="date" 
-                        value={dashStartDate} 
-                        onChange={e=>setDashStartDate(e.target.value)} 
-                        style={{border:"none",background:"transparent",color:C.text,fontFamily:"inherit",fontSize:"12px",outline:"none",cursor:"pointer",padding:0}}
-                      />
-                      <span style={{color:C.muted}}>~</span>
-                      <input 
-                        type="date" 
-                        value={dashEndDate} 
-                        onChange={e=>setDashEndDate(e.target.value)} 
-                        style={{border:"none",background:"transparent",color:C.text,fontFamily:"inherit",fontSize:"12px",outline:"none",cursor:"pointer",padding:0}}
-                      />
-                      {(dashStartDate || dashEndDate) && (
-                        <button 
-                          onClick={()=>{setDashStartDate("");setDashEndDate("");}} 
-                          style={{border:"none",background:"none",color:C.red,cursor:"pointer",fontSize:"12px",fontWeight:900,padding:"0 0 0 6px",display:"flex",alignItems:"center",borderLeft:`1px solid ${C.border}`}}
-                          title="필터 초기화"
-                        >
-                          ✕
-                        </button>
-                      )}
+                    {/* 기간 설정 필터 - 슬라이더 기반 년/월 제어 */}
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"8px",background:"#ffffff",border:`1px solid ${C.border}`,borderRadius:"20px",padding:"5px 14px",fontSize:"12px",boxShadow:"0 1px 2px rgba(0,0,0,0.05)"}}>
+                        <span style={{color:"#002060",fontWeight:800}}>📅 조회 기간:</span>
+                        <span style={{fontWeight:700,color:C.text,fontSize:"12px"}}>
+                          {timeline[startIdx]?.replace('-', '.')} ~ {timeline[endIdx]?.replace('-', '.')}
+                        </span>
+                        {isFilterActive && (
+                          <button 
+                            onClick={()=>{setStartIdx(0); setEndIdx(timeline.length - 1);}} 
+                            style={{border:"none",background:"none",color:C.red,cursor:"pointer",fontSize:"12px",fontWeight:900,padding:"0 0 0 6px",display:"flex",alignItems:"center",borderLeft:`1px solid ${C.border}`}}
+                            title="필터 초기화"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* 슬라이더 조절 레일 */}
+                      <div style={{display:"flex",alignItems:"center",gap:"12px",background:"#f8fafc",border:`1px solid ${C.border}`,borderRadius:"12px",padding:"6px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.02)",marginTop:"2px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                          <span style={{fontSize:"10px",color:C.muted,fontWeight:600}}>시작</span>
+                          <input 
+                            type="range" 
+                            min={0} 
+                            max={timeline.length - 1} 
+                            value={startIdx} 
+                            onChange={e => {
+                              const val = parseInt(e.target.value);
+                              if (val > endIdx) {
+                                setStartIdx(endIdx);
+                              } else {
+                                setStartIdx(val);
+                              }
+                            }} 
+                            style={{width:"100px",accentColor:"#002060",cursor:"pointer",height:"4px",borderRadius:"2px"}}
+                          />
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                          <span style={{fontSize:"10px",color:C.muted,fontWeight:600}}>종료</span>
+                          <input 
+                            type="range" 
+                            min={0} 
+                            max={timeline.length - 1} 
+                            value={endIdx} 
+                            onChange={e => {
+                              const val = parseInt(e.target.value);
+                              if (val < startIdx) {
+                                setEndIdx(startIdx);
+                              } else {
+                                setEndIdx(val);
+                              }
+                            }} 
+                            style={{width:"100px",accentColor:C.purple,cursor:"pointer",height:"4px",borderRadius:"2px"}}
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     {/* 기준일 알약 */}
@@ -2255,9 +2320,9 @@ export default function ApplicantManager() {
                 {/* Section A: KPI Summary Cards - 반응형 그리드 & 문구 수정 */}
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:"18px"}}>
                   {[
-                    { title: "총 등록 응시자", val: `${totalExaminees}명`, sub: (dashStartDate || dashEndDate) ? "선택 기간 내 활동 응시자" : `이번 달 신규 +${newExamineesThisMonth}명`, color: "#002060", icon: "👥" },
+                    { title: "총 등록 응시자", val: `${totalExaminees}명`, sub: isFilterActive ? "선택 기간 내 활동 응시자" : `이번 달 신규 +${newExamineesThisMonth}명`, color: "#002060", icon: "👥" },
                     { title: "평균 합격률", val: `${avgPassRate}%`, sub: `평가 완료 ${gradedCount}명 기준`, color: C.green, icon: "🎯" },
-                    { title: (dashStartDate || dashEndDate) ? "선택 기간 응시자" : "이번 달 응시자", val: `${currentMonthTests}명`, sub: (dashStartDate || dashEndDate) ? "선택 기간 내 총 시험 건수" : "이번 달 시험 응시자 수", color: C.purple, icon: "📅" },
+                    { title: isFilterActive ? "선택 기간 응시자" : "이번 달 응시자", val: `${currentMonthTests}명`, sub: isFilterActive ? "선택 기간 내 총 시험 건수" : "이번 달 시험 응시자 수", color: C.purple, icon: "📅" },
                     { title: "미응시 / 면제자", val: `${exceptionCount}명`, sub: `미응시 ${unexaminedCount}명 · 면제 ${exemptCount}명`, color: "#f59e0b", icon: "🛡️" }
                   ].map((kpi, idx) => (
                     <div key={idx} className="kpi-card" style={{background:"#ffffff",borderRadius:"16px",border:"1px solid #e2e8f0",padding:"20px 24px",boxShadow:"0 2px 4px rgba(0,0,0,0.02)",display:"flex",justifyContent:"space-between",alignItems:"center",transition:"all 0.25s",animation:`fadeUp 0.4s ${idx * 0.08}s ease both`,boxSizing:"border-box"}}>
