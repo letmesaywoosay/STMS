@@ -2140,30 +2140,50 @@ export default function ApplicantManager() {
                     </div>
                     <div style={{padding:"20px",display:"flex",flexDirection:"column",gap:"10px"}}>
                       {monthStats.map(s=>(
-                        <div key={s.ym} onClick={()=>setDetailYM(s.ym===detailYM?"":s.ym)} style={{cursor:"pointer",borderRadius:"10px",padding:"10px 14px",background:detailYM===s.ym?`${C.blue}06`:"transparent",border:`1px solid ${detailYM===s.ym?C.blue+"44":C.border+"44"}`,transition:"all 0.15s"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"8px"}}>
-                            <span style={{fontSize:"12px",fontWeight:800,color:C.text,minWidth:"40px"}}>{s.m}월</span>
-                            <span style={{fontSize:"11px",color:C.muted}}>총 {s.total}명</span>
-                            <span style={{color:C.green,fontSize:"11px",fontWeight:700}}>{s.pass}</span>
-                            <span style={{color:C.red,fontSize:"11px",fontWeight:700}}>❌ {s.fail}</span>
-                            {s.rate!==null&&<span style={{fontSize:"11px",fontWeight:800,color:s.rate>=60?C.green:C.red,background:s.rate>=60?"#f0fdf4":"#fef2f2",padding:"2px 8px",borderRadius:"20px",border:`1px solid ${s.rate>=60?"#bbf7d0":"#fecaca"}`}}>합격률 {s.rate}%</span>}
-                            {s.avg!==null&&<span style={{fontSize:"11px",color:C.purple,fontWeight:600,marginLeft:"auto"}}>평균 {s.avg}점</span>}
+                        <div key={s.ym} onClick={()=>setDetailYM(s.ym===detailYM?"":s.ym)}
+                          style={{
+                            cursor:"pointer",
+                            borderRadius:"12px",
+                            padding:"14px 20px",
+                            background:detailYM===s.ym?`${C.blue}06`:C.surface,
+                            border:`1.5px solid ${detailYM===s.ym?C.blue+"44":C.border+"aa"}`,
+                            boxShadow:detailYM===s.ym?`0 4px 12px ${C.blue}0a`:"none",
+                            transition:"all 0.15s",
+                            display:"flex",
+                            alignItems:"center",
+                            justifyContent:"space-between",
+                            flexWrap:"wrap",
+                            gap:"12px"
+                          }}
+                          onMouseEnter={e=>{if(s.ym!==detailYM)e.currentTarget.style.borderColor=C.blue}}
+                          onMouseLeave={e=>{if(s.ym!==detailYM)e.currentTarget.style.borderColor=C.border+"aa"}}
+                        >
+                          {/* 왼쪽: 월 표시 + 응시 인원 */}
+                          <div style={{display:"flex",alignItems:"center",gap:"14px"}}>
+                            <span style={{fontSize:"15px",fontWeight:900,color:C.text,minWidth:"32px"}}>{s.m}월</span>
+                            <span style={{fontSize:"11px",padding:"3px 10px",borderRadius:"20px",background:`${C.blue}08`,color:C.blue,border:`1px solid ${C.blue}15`,fontWeight:800}}>
+                              응시인원 {s.total}명
+                            </span>
                           </div>
-                          <div style={{display:"flex",gap:"4px",flexDirection:"column"}}>
-                            <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                              <span style={{fontSize:"10px",color:C.green,minWidth:"28px",textAlign:"right",fontWeight:600}}>합격</span>
-                              <div style={{flex:1,height:"12px",borderRadius:"6px",background:"#f0fdf4",overflow:"hidden"}}>
-                                <div style={{height:"100%",width:`${Math.round(s.pass/maxBar*100)}%`,background:`linear-gradient(90deg,${C.green}88,${C.green})`,borderRadius:"6px",minWidth:s.pass>0?"4px":"0"}}/>
-                              </div>
-                              <span style={{fontSize:"10px",fontWeight:800,color:C.green,minWidth:"20px"}}>{s.pass}</span>
-                            </div>
-                            <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                              <span style={{fontSize:"10px",color:C.red,minWidth:"28px",textAlign:"right",fontWeight:600}}>불합격</span>
-                              <div style={{flex:1,height:"12px",borderRadius:"6px",background:"#fef2f2",overflow:"hidden"}}>
-                                <div style={{height:"100%",width:`${Math.round(s.fail/maxBar*100)}%`,background:`linear-gradient(90deg,${C.red}88,${C.red})`,borderRadius:"6px",minWidth:s.fail>0?"4px":"0"}}/>
-                              </div>
-                              <span style={{fontSize:"10px",fontWeight:800,color:C.red,minWidth:"20px"}}>{s.fail}</span>
-                            </div>
+
+                          {/* 중앙: 합격 / 불합격 현황 */}
+                          <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+                            <span style={{fontSize:"11px",padding:"3px 10px",borderRadius:"20px",background:"#f0fdf4",color:C.green,border:`1px solid ${C.green}22`,fontWeight:700}}>
+                              합격 {s.pass}명
+                            </span>
+                            <span style={{fontSize:"11px",padding:"3px 10px",borderRadius:"20px",background:"#fef2f2",color:C.red,border:`1px solid ${C.red}22`,fontWeight:700}}>
+                              불합격 {s.fail}명
+                            </span>
+                          </div>
+
+                          {/* 오른쪽: 평균 점수 */}
+                          <div style={{display:"flex",alignItems:"center",gap:"12px",marginLeft:"auto"}}>
+                            {s.avg!==null&&(
+                              <span style={{fontSize:"12px",fontWeight:800,color:C.purple,background:`${C.purple}08`,padding:"3px 10px",borderRadius:"20px",border:`1px solid ${C.purple}15`}}>
+                                평균 {s.avg}점
+                              </span>
+                            )}
+                            <span style={{fontSize:"12px",color:C.muted}}>{detailYM===s.ym?"▼":"▶"}</span>
                           </div>
                         </div>
                       ))}
