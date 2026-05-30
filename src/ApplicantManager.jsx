@@ -1161,7 +1161,7 @@ export default function ApplicantManager() {
                         justifyContent:"flex-end",
                         paddingRight:"6px"
                       }}>
-                        <span style={{fontSize:"8px",color:C.purple,fontWeight:800,background:`${C.surface}dd`,padding:"1px 4px",borderRadius:"4px",transform:"translateY(-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.05)",userSelect:"none"}}>
+                        <span style={{fontSize:"8px",color:C.purple,fontWeight:800,background:`${C.surface}dd`,padding:"1px 4px",borderRadius:"4px",transform:"translateY(-100%)",boxShadow:"0 1px 3px rgba(0,0,0,0.05)",userSelect:"none"}}>
                           만점 {maxVal}점
                         </span>
                       </div>
@@ -4700,7 +4700,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                                   justifyContent:"flex-end",
                                   paddingRight:"6px"
                                 }}>
-                                  <span style={{fontSize:"8px",color:C.purple,fontWeight:800,background:`${C.surface}dd`,padding:"1px 4px",borderRadius:"4px",transform:"translateY(-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.05)",userSelect:"none"}}>
+                                  <span style={{fontSize:"8px",color:C.purple,fontWeight:800,background:`${C.surface}dd`,padding:"1px 4px",borderRadius:"4px",transform:"translateY(-100%)",boxShadow:"0 1px 3px rgba(0,0,0,0.05)",userSelect:"none"}}>
                                     만점 {maxVal}점
                                   </span>
                                 </div>
