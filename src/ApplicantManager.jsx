@@ -1805,40 +1805,14 @@ export default function ApplicantManager() {
           min-height:-webkit-fill-available;
           min-height:100dvh;
           background-color: #030712 !important;
-          background-image: 
-            radial-gradient(circle at 10% 20%, #08101e 0%, #030712 100%) !important;
+          background-image: url("/bg_gradient.png") !important;
+          background-size: cover !important;
+          background-position: center !important;
+          background-repeat: no-repeat !important;
           background-attachment: fixed !important;
           color: #f8fafc !important;
           position: relative;
           overflow-x: hidden;
-        }
-
-        /* Glassmorphism Floating Colorful Blobs */
-        body::before {
-          content: "";
-          position: fixed;
-          top: -200px;
-          right: -10%;
-          width: 600px;
-          height: 600px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%); /* Light blue neon blob */
-          filter: blur(100px);
-          pointer-events: none;
-          z-index: -1;
-        }
-        body::after {
-          content: "";
-          position: fixed;
-          bottom: -200px;
-          left: -10%;
-          width: 700px;
-          height: 700px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(167, 139, 250, 0.06) 0%, transparent 70%); /* Purple/violet neon blob */
-          filter: blur(120px);
-          pointer-events: none;
-          z-index: -1;
         }
 
         /* Safe Area (노치·홈바) */
