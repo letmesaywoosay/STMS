@@ -1933,7 +1933,7 @@ export default function ApplicantManager() {
               const MobileMenu=()=>{
                 const [open,setOpen]=useState(false);
                 const allTabs=isOfficer
-                  ?[{id:"briefing",icon:"",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}]
+                  ?[{id:"briefing",icon:"",label:"브리핑"}]
                   :[
                     {id:"list",icon:"≡",label:"관리 리스트"},
                     ...(can(userRole,"ai_menu")?[{id:"ai",icon:"",label:"AI 자동분류"}]:[]),
@@ -1985,7 +1985,7 @@ export default function ApplicantManager() {
         {/* 하단 바: 탭 메뉴 (데스크탑) */}
         <div className="hide-mobile gnb-inner gnb-tab-bar" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",justifyContent:"center",height:"52px",gap:"0",overflowX:"auto",overflowY:"hidden",scrollbarWidth:"none"}}>
           <style>{`.gnb-tabs-bar::-webkit-scrollbar{display:none}`}</style>
-          {isOfficer&&[{id:"briefing",icon:"",label:"브리핑"},{id:"list",icon:"≡",label:"응시자 목록"}].map(tab=>{
+          {isOfficer&&[{id:"briefing",icon:"",label:"브리핑"}].map(tab=>{
             const active=safeMenu===tab.id;
             return(
               <button key={tab.id} onClick={()=>setMainMenu(tab.id)} className="gnb-tab"
@@ -2046,14 +2046,15 @@ export default function ApplicantManager() {
           const BriefingPage=()=>{
             const [year,setYear]=useState(allYears[0]||"");
             const months=Array.from({length:12},(_,i)=>String(i+1).padStart(2,"0"));
+            const [selectedAtt, setSelectedAtt] = useState(null);
 
             // 월별 응시 데이터
             const monthStats=months.map(m=>{
               const ym=`${year}-${m}`;
               const atts=visibleApplicants.flatMap(a=>[
-                a.date1?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"1차",score:a.score1,pass:a.pass1,date:a.date1}:null,
-                a.date2?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"2차",score:a.score2,pass:a.pass2,date:a.date2}:null,
-                a.date3?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"3차",score:a.score3,pass:a.pass3,date:a.date3}:null,
+                a.date1?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"1차",score:a.score1,pass:a.pass1,date:a.date1,subScores:a.subScores1,subScoresSnapshot:a.subScoresSnapshot1,testType:a.testType}:null,
+                a.date2?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"2차",score:a.score2,pass:a.pass2,date:a.date2,subScores:a.subScores2,subScoresSnapshot:a.subScoresSnapshot2,testType:a.testType}:null,
+                a.date3?.startsWith(ym)?{id:a.id,name:a.name,division:a.division,team:a.team,nth:"3차",score:a.score3,pass:a.pass3,date:a.date3,subScores:a.subScores3,subScoresSnapshot:a.subScoresSnapshot3,testType:a.testType}:null,
               ].filter(Boolean));
               const pass=atts.filter(a=>a.pass==="합격").length;
               const fail=atts.filter(a=>a.pass==="불합격").length;
@@ -2162,8 +2163,11 @@ export default function ApplicantManager() {
                 {/* 선택 월 응시자 상세 */}
                 {detailData&&(
                   <div style={{background:C.surface,borderRadius:"16px",border:`1.5px solid ${C.blue}33`,overflow:"hidden",boxShadow:shadowLg}}>
-                    <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.purple}05)`,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>{detailData.m}월 응시자 상세</div>
+                    <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.purple}05)`,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"8px"}}>
+                      <div style={{fontWeight:800,fontSize:"14px",color:C.text,display:"flex",alignItems:"center",gap:"6px"}}>
+                        <span>{detailData.m}월 응시자 상세</span>
+                        <span style={{fontSize:"11px",color:C.muted,fontWeight:500}}>· 🔍 응시자를 클릭하면 세부 과목 점수를 볼 수 있습니다.</span>
+                      </div>
                       <div style={{display:"flex",gap:"10px",fontSize:"12px"}}>
                         <span style={{color:C.green,fontWeight:700}}>합격 {detailData.pass}명</span>
                         <span style={{color:C.red,fontWeight:700}}>❌ 불합격 {detailData.fail}명</span>
@@ -2184,7 +2188,7 @@ export default function ApplicantManager() {
                           const sNum=parseFloat(att.score);
                           const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
                           return(
-                            <tr className="anim-row" key={att.id+att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                            <tr className="anim-row" key={att.id+att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"} onClick={()=>setSelectedAtt(att)}>
                               <td style={{padding:"10px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>{att.name}</td>
                               <td style={{padding:"10px 14px",color:C.muted,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{att.team||att.division||"—"}</td>
                               <td style={{padding:"10px 14px",textAlign:"center",borderRight:`1px solid ${C.border}`}}><span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"20px",background:`${C.blue}10`,color:C.blue,fontWeight:700}}>{att.nth}</span></td>
@@ -2198,6 +2202,106 @@ export default function ApplicantManager() {
                     </table>
                   </div>
                 )}
+
+                {/* 세부 과목 점수 팝업 모달 */}
+                {selectedAtt && (()=>{
+                  let snap = selectedAtt.subScoresSnapshot;
+                  if (!snap || snap.length === 0) {
+                    const ss = selectedAtt.subScores || {};
+                    if (Object.keys(ss).length > 0) {
+                      const typeSubjects = selectedAtt.testType && subjectTypes[selectedAtt.testType]
+                        ? (subjectTypes[selectedAtt.testType].subjects || subjectTypes[selectedAtt.testType])
+                        : null;
+                      if (typeSubjects) {
+                        snap = typeSubjects.map(({name,max})=>({
+                          subjectName: name,
+                          score: parseFloat(ss[name])||0,
+                          max: max||100,
+                        }));
+                      } else {
+                        const subjects = DEPARTMENT_SUBJECTS[selectedAtt.division] || DEFAULT_SUBJECTS;
+                        snap = subjects.map(name=>({
+                          subjectName: name,
+                          score: parseFloat(ss[name])||0,
+                          max: 100,
+                        }));
+                      }
+                    }
+                  }
+
+                  const hasDetails = snap && snap.length > 0;
+                  const pc = PASS_STATUS_COLORS[selectedAtt.pass] || PASS_STATUS_COLORS[""];
+
+                  return (
+                    <div onClick={()=>setSelectedAtt(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",animation:"modalIn 0.2s ease"}}>
+                      <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"24px",padding:"28px 24px",boxShadow:"0 20px 50px rgba(0,0,0,0.15)",width:"100%",maxWidth:"460px",animation:"modalIn 0.25s ease",border:`1px solid ${C.blue}22`}}>
+                        
+                        {/* 헤더 */}
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"20px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:"10px"}}>
+                            <span style={{fontSize:"24px"}}>📊</span>
+                            <div>
+                              <div style={{fontSize:"17px",fontWeight:900,color:C.text}}>{selectedAtt.name}님 성적 리포트</div>
+                              <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>{selectedAtt.team || selectedAtt.division || "소속 미지정"} · {selectedAtt.nth} 테스트</div>
+                            </div>
+                          </div>
+                          <button onClick={()=>setSelectedAtt(null)} style={{background:"none",border:"none",fontSize:"20px",color:C.muted,cursor:"pointer",padding:"4px"}}>✕</button>
+                        </div>
+
+                        {/* 메타 요약 */}
+                        <div style={{background:C.bg,borderRadius:"14px",padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"24px",border:`1px solid ${C.border}`}}>
+                          <div style={{textAlign:"center",flex:1}}>
+                            <div style={{fontSize:"10px",color:C.muted,marginBottom:"4px"}}>응시일자</div>
+                            <div style={{fontSize:"13px",fontWeight:700,color:C.text}}>{selectedAtt.date || "—"}</div>
+                          </div>
+                          <div style={{width:"1px",height:"24px",background:C.border}}/>
+                          <div style={{textAlign:"center",flex:1}}>
+                            <div style={{fontSize:"10px",color:C.muted,marginBottom:"4px"}}>총합 점수</div>
+                            <div style={{fontSize:"16px",fontWeight:900,color:selectedAtt.score >= 60 ? C.green : C.red}}>{selectedAtt.score ? selectedAtt.score + "점" : "—"}</div>
+                          </div>
+                          <div style={{width:"1px",height:"24px",background:C.border}}/>
+                          <div style={{textAlign:"center",flex:1}}>
+                            <div style={{fontSize:"10px",color:C.muted,marginBottom:"4px"}}>평가 결과</div>
+                            <span style={{fontSize:"11px",padding:"3px 12px",borderRadius:"20px",background:pc.bg,color:pc.text,border:`1px solid ${pc.border}`,fontWeight:700}}>{selectedAtt.pass || "—"}</span>
+                          </div>
+                        </div>
+
+                        {/* 세부 과목 성적 */}
+                        <div style={{marginBottom:"24px"}}>
+                          <div style={{fontSize:"12px",fontWeight:800,color:C.text,marginBottom:"12px"}}>과목별 상세 성적</div>
+                          {hasDetails ? (
+                            <div style={{display:"flex",flexDirection:"column",gap:"12px",maxHeight:"260px",overflowY:"auto",paddingRight:"4px"}}>
+                              {snap.map((s,i)=>{
+                                const pct = Math.min(100, Math.max(0, Math.round((s.score / s.max) * 100)));
+                                const barColor = s.score >= (s.max * 0.6) ? C.blue : C.red;
+                                return (
+                                  <div key={i} style={{background:`${C.blue}03`,borderRadius:"10px",padding:"10px 12px",border:`1px solid ${C.border}`}}>
+                                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"6px"}}>
+                                      <span style={{fontSize:"12px",fontWeight:700,color:C.text}}>{s.subjectName}</span>
+                                      <span style={{fontSize:"12px",fontWeight:800,color:barColor}}>{s.score} <span style={{fontSize:"10px",color:C.muted,fontWeight:500}}>/ {s.max}점</span></span>
+                                    </div>
+                                    <div style={{height:"8px",borderRadius:"4px",background:"#e2e8f0",overflow:"hidden"}}>
+                                      <div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${barColor}cc,${barColor})`,borderRadius:"4px",transition:"width 0.4s"}}/>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div style={{textAlign:"center",padding:"32px 0",background:`${C.blue}03`,borderRadius:"12px",border:`1px dashed ${C.border}`,color:C.muted,fontSize:"12px"}}>
+                              📭 세부 과목 점수가 등록되지 않았습니다.
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 푸터 */}
+                        <button onClick={()=>setSelectedAtt(null)} style={{width:"100%",padding:"12px",borderRadius:"12px",border:"none",background:`linear-gradient(135deg,${C.blue}dd,${C.blue})`,color:"#fff",fontSize:"13px",fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}>
+                          리포트 닫기
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {monthStats.length===0&&(
                   <div style={{textAlign:"center",padding:"60px",background:C.surface,borderRadius:"16px",border:`1.5px dashed ${C.border}`,color:C.muted}}>
