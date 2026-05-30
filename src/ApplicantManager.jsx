@@ -32,10 +32,10 @@ const stSet = async (key, value) => {
   catch(e){ try{localStorage.setItem(key,JSON.stringify(value));}catch{} return "local:"+e.message; }
 };
 
-// ── 공통 디자인 토큰 (프리미엄 브라이트 글래스모피즘 디자인 시스템 - 투명도 50%) ──
+// ── 공통 디자인 토큰 (프리미엄 브라이트 글래스모피즘 디자인 시스템 - 투명도 35%) ──
 const C = {
   bg:"transparent",
-  surface:"rgba(255, 255, 255, 0.5)",
+  surface:"rgba(255, 255, 255, 0.35)",
   border:"rgba(255, 255, 255, 0.4)",
   border2:"rgba(0, 0, 0, 0.08)",
   blue:"#1d4ed8",     blueMid:"#2563eb",  blueLight:"#3b82f6",
@@ -1839,9 +1839,9 @@ export default function ApplicantManager() {
         }
         .gnb-tab:hover{color:#1d4ed8!important;background:rgba(29,78,216,0.05)!important;}
 
-        /* Glassmorphism Card Overrides - 50% Opacity Bright Glass */
+         /* Glassmorphism Card Overrides - 35% Opacity Bright Glass */
         .dash-card, .kpi-card, .login-box, .modal-content, .card, .quick-tile {
-          background: rgba(255, 255, 255, 0.5) !important;
+          background: rgba(255, 255, 255, 0.35) !important;
           backdrop-filter: blur(20px) saturate(190%) !important;
           -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
           border: 1px solid rgba(255, 255, 255, 0.45) !important;
@@ -1856,12 +1856,12 @@ export default function ApplicantManager() {
           transform:translateY(-3px)!important;
           box-shadow:0 12px 32px rgba(31, 38, 135, 0.12) !important;
           border-color: rgba(255, 255, 255, 0.7) !important;
-          background: rgba(255, 255, 255, 0.6) !important;
+          background: rgba(255, 255, 255, 0.45) !important;
         }
 
-        /* GNB header glassmorphism - 50% Opacity Bright Glass */
+        /* GNB header glassmorphism - 35% Opacity Bright Glass */
         div[style*="position: sticky"][style*="top: 0"], .mobile-drawer {
-          background: rgba(255, 255, 255, 0.5) !important;
+          background: rgba(255, 255, 255, 0.35) !important;
           backdrop-filter: blur(20px) saturate(190%) !important;
           -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
           border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
@@ -1869,7 +1869,7 @@ export default function ApplicantManager() {
 
         /* 테이블 헤더/셀 스타일 */
         th {
-          background: rgba(255, 255, 255, 0.6) !important;
+          background: rgba(255, 255, 255, 0.45) !important;
           color: #1e293b !important;
           font-weight: 700 !important;
           border-bottom: 1.5px solid rgba(0, 0, 0, 0.08) !important;
