@@ -32,17 +32,19 @@ const stSet = async (key, value) => {
   catch(e){ try{localStorage.setItem(key,JSON.stringify(value));}catch{} return "local:"+e.message; }
 };
 
-// ── 공통 디자인 토큰 ──────────────────────────────────────────
+// ── 공통 디자인 토큰 (프리미엄 네이비 글래스모피즘 디자인 시스템) ──
 const C = {
-  bg:"#f5f5f7",    surface:"#ffffff",
-  border:"#d2d2d7", border2:"#c7c7cc",
-  blue:"#0071e3",  blueMid:"#0077ed",  blueLight:"#2997ff",
-  text:"#1d1d1f",  subtle:"#424245",   muted:"#86868b",
-  green:"#1d8348", red:"#d32f2f",      amber:"#b7700d",
-  purple:"#6e3cbf", teal:"#0b7a75",
+  bg:"transparent",
+  surface:"rgba(10, 25, 47, 0.45)",
+  border:"rgba(255, 255, 255, 0.08)",
+  border2:"rgba(255, 255, 255, 0.15)",
+  blue:"#38bdf8",     blueMid:"#0ea5e9",  blueLight:"#7dd3fc",
+  text:"#f8fafc",     subtle:"#cbd5e1",   muted:"#94a3b8",
+  green:"#34d399",    red:"#fb7185",      amber:"#fbbf24",
+  purple:"#a78bfa",   teal:"#2dd4bf",
 };
-const shadow   = "0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.08)";
-const shadowLg = "0 4px 20px rgba(0,0,0,0.1),0 1px 4px rgba(0,0,0,0.06)";
+const shadow   = "0 8px 32px 0 rgba(0, 0, 0, 0.3)";
+const shadowLg = "0 12px 40px 0 rgba(0, 0, 0, 0.45)";
 const uid = () => Math.random().toString(36).slice(2, 8);
 
 // ── RBAC 설정 ────────────────────────────────────────────────
@@ -1798,7 +1800,46 @@ export default function ApplicantManager() {
 
         /* iOS 주소창 대응 Dynamic Viewport */
         html{height:-webkit-fill-available;}
-        body{min-height:100vh;min-height:-webkit-fill-available;min-height:100dvh;}
+        body{
+          min-height:100vh;
+          min-height:-webkit-fill-available;
+          min-height:100dvh;
+          background-color: #030712 !important;
+          background-image: 
+            radial-gradient(circle at 10% 20%, #08101e 0%, #030712 100%) !important;
+          background-attachment: fixed !important;
+          color: #f8fafc !important;
+          position: relative;
+          overflow-x: hidden;
+        }
+
+        /* Glassmorphism Floating Colorful Blobs */
+        body::before {
+          content: "";
+          position: fixed;
+          top: -200px;
+          right: -10%;
+          width: 600px;
+          height: 600px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(56, 189, 248, 0.08) 0%, transparent 70%); /* Light blue neon blob */
+          filter: blur(100px);
+          pointer-events: none;
+          z-index: -1;
+        }
+        body::after {
+          content: "";
+          position: fixed;
+          bottom: -200px;
+          left: -10%;
+          width: 700px;
+          height: 700px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(167, 139, 250, 0.06) 0%, transparent 70%); /* Purple/violet neon blob */
+          filter: blur(120px);
+          pointer-events: none;
+          z-index: -1;
+        }
 
         /* Safe Area (노치·홈바) */
         .gnb-top-bar{padding-left:max(40px,env(safe-area-inset-left));padding-right:max(40px,env(safe-area-inset-right));}
@@ -1813,7 +1854,7 @@ export default function ApplicantManager() {
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
         @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(29,78,216,0.15)}50%{box-shadow:0 0 0 6px rgba(29,78,216,0)}}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(56,189,248,0.15)}50%{box-shadow:0 0 0 6px rgba(56,189,248,0)}}
         @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.65}}
 
         /* GNB 탭 hover */
@@ -1822,11 +1863,34 @@ export default function ApplicantManager() {
           transition:color 0.15s,border-color 0.15s,background 0.15s!important;
           -webkit-font-smoothing:antialiased;
         }
-        .gnb-tab:hover{color:#0071e3!important;background:rgba(0,113,227,0.04)!important;}
+        .gnb-tab:hover{color:#38bdf8!important;background:rgba(56,189,248,0.06)!important;}
+
+        /* Glassmorphism Card Overrides */
+        .dash-card, .kpi-card, .login-box, .modal-content, .card {
+          background: rgba(13, 27, 42, 0.45) !important;
+          backdrop-filter: blur(18px) saturate(180%) !important;
+          -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+          border-radius: 20px !important;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+          color: #f8fafc !important;
+        }
 
         /* 카드 공통 hover */
         .anim-card{transition:transform 0.22s cubic-bezier(.34,1.56,.64,1),box-shadow 0.22s ease!important;}
-        .anim-card:hover{transform:translateY(-3px)!important;box-shadow:0 8px 24px rgba(0,0,0,0.10)!important;}
+        .anim-card:hover{
+          transform:translateY(-3px)!important;
+          box-shadow:0 12px 32px rgba(0,0,0,0.35)!important;
+          border-color: rgba(56, 189, 248, 0.25) !important;
+        }
+
+        /* GNB header glassmorphism */
+        div[style*="position: sticky"][style*="top: 0"], .mobile-drawer {
+          background: rgba(8, 16, 30, 0.7) !important;
+          backdrop-filter: blur(20px) saturate(190%) !important;
+          -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
 
         /* 버튼 hover */
         .anim-btn{
@@ -1834,16 +1898,16 @@ export default function ApplicantManager() {
           transition:filter 0.15s,transform 0.12s,box-shadow 0.15s!important;
           cursor:pointer;
         }
-        .anim-btn:hover{filter:brightness(1.06);transform:translateY(-1px)!important;box-shadow:0 4px 12px rgba(0,0,0,0.12)!important;}
+        .anim-btn:hover{filter:brightness(1.08);transform:translateY(-1px)!important;box-shadow:0 4px 12px rgba(0,0,0,0.25)!important;}
         .anim-btn:active{transform:translateY(0)!important;}
 
         /* 테이블 행 hover */
         .anim-row{transition:background 0.15s!important;}
-        .anim-row:hover{background:rgba(0,0,0,0.025)!important;}
+        .anim-row:hover{background:rgba(255,255,255,0.04)!important;}
 
         /* 입력 필드 포커스 */
         .anim-input{transition:border-color 0.15s,box-shadow 0.15s!important;}
-        .anim-input:focus{border-color:#0071e3!important;box-shadow:0 0 0 3px rgba(0,113,227,0.1)!important;outline:none!important;}
+        .anim-input:focus{border-color:#38bdf8!important;box-shadow:0 0 0 3px rgba(56,189,248,0.15)!important;outline:none!important;}
 
         /* 페이지 컨텐츠 진입 */
         .page-enter{animation:fadeUp 0.35s ease both;}
