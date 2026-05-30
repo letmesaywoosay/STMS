@@ -255,6 +255,56 @@ export default function ApplicantManager() {
   },[]);
   useEffect(()=>{ if(!deptLoaded) return; stSet('aida:deptData_v1', deptData); },[deptData, deptLoaded]);
 
+  // ── 부서/팀 직책자 이메일 & 응시자 자동 동기화 ─────────────────
+  useEffect(() => {
+    if (!loaded || !deptLoaded) return;
+    
+    let changed = false;
+    const synced = applicants.map(a => {
+      let headName = a.divisionHeadName || "";
+      let headEmail = a.divisionHeadEmail || "";
+      let leaderName = a.teamLeaderName || "";
+      let leaderEmail = a.teamLeaderEmail || "";
+      
+      // deptData 에서 해당 회사/본부/팀 검색
+      const companyData = deptData.find(c => c.company === a.company);
+      if (companyData) {
+        const divisionData = companyData.divisions.find(d => d.name === a.division);
+        if (divisionData) {
+          headName = divisionData.headName || "";
+          headEmail = divisionData.headEmail || "";
+          
+          const teamData = divisionData.teams.find(t => t.name === a.team);
+          if (teamData) {
+            leaderName = teamData.leaderName || "";
+            leaderEmail = teamData.leaderEmail || "";
+          }
+        }
+      }
+      
+      if (
+        a.divisionHeadName !== headName ||
+        a.divisionHeadEmail !== headEmail ||
+        a.teamLeaderName !== leaderName ||
+        a.teamLeaderEmail !== leaderEmail
+      ) {
+        changed = true;
+        return {
+          ...a,
+          divisionHeadName: headName,
+          divisionHeadEmail: headEmail,
+          teamLeaderName: leaderName,
+          teamLeaderEmail: leaderEmail
+        };
+      }
+      return a;
+    });
+    
+    if (changed) {
+      setApplicants(synced);
+    }
+  }, [loaded, deptLoaded, deptData, applicants]);
+
   useEffect(()=>{
     (async()=>{
       try{
@@ -760,11 +810,113 @@ export default function ApplicantManager() {
   };
 
   // ── 직책자 권한 필터 ──────────────────────────────────────
+  const officerEmail = (loginUser?.email || "").trim().toLowerCase();
+  const officerName = (loginUser?.name || "").trim().toLowerCase();
+  const officerUsername = officerEmail ? officerEmail.split('@')[0] : (officerName.includes('@') ? officerName.split('@')[0] : officerName);
+
+  let resolvedRealName = "";
+
+  // 1. 내가 본부장인 본부 목록
+  const myDivisions = new Set();
+  if (officerEmail || officerName || officerUsername) {
+    deptData.forEach(comp => {
+      comp.divisions.forEach(div => {
+        const divHeadEmail = (div.headEmail || "").trim().toLowerCase();
+        const divHeadName = (div.headName || "").trim().toLowerCase();
+        const divHeadEmailPrefix = divHeadEmail.split('@')[0];
+        if (
+          (officerEmail && divHeadEmail === officerEmail) ||
+          (officerName && divHeadName === officerName) ||
+          (officerUsername && divHeadEmailPrefix === officerUsername)
+        ) {
+          myDivisions.add(div.name);
+          if (div.headName) resolvedRealName = div.headName;
+        }
+      });
+    });
+    applicants.forEach(a => {
+      const aHeadEmail = (a.divisionHeadEmail || "").trim().toLowerCase();
+      const aHeadName = (a.divisionHeadName || "").trim().toLowerCase();
+      const aHeadEmailPrefix = aHeadEmail.split('@')[0];
+      if (
+        ((officerEmail && aHeadEmail === officerEmail) ||
+         (officerName && aHeadName === officerName) ||
+         (officerUsername && aHeadEmailPrefix === officerUsername)) &&
+        a.division
+      ) {
+        myDivisions.add(a.division);
+        if (a.divisionHeadName) resolvedRealName = a.divisionHeadName;
+      }
+    });
+  }
+  if (loginUser?.type_code === "division" && loginUser?.division) {
+    myDivisions.add(loginUser.division);
+  }
+
+  // 2. 내가 팀장인 팀 목록 ("본부:팀" 형태)
+  const myTeams = new Set();
+  if (officerEmail || officerName || officerUsername) {
+    deptData.forEach(comp => {
+      comp.divisions.forEach(div => {
+        div.teams.forEach(team => {
+          const tLeaderEmail = (team.leaderEmail || "").trim().toLowerCase();
+          const tLeaderName = (team.leaderName || "").trim().toLowerCase();
+          const tLeaderEmailPrefix = tLeaderEmail.split('@')[0];
+          if (
+            (officerEmail && tLeaderEmail === officerEmail) ||
+            (officerName && tLeaderName === officerName) ||
+            (officerUsername && tLeaderEmailPrefix === officerUsername)
+          ) {
+            myTeams.add(`${div.name}:${team.name}`);
+            if (team.leaderName && !resolvedRealName) resolvedRealName = team.leaderName;
+          }
+        });
+      });
+    });
+    applicants.forEach(a => {
+      const aLeaderEmail = (a.teamLeaderEmail || "").trim().toLowerCase();
+      const aLeaderName = (a.teamLeaderName || "").trim().toLowerCase();
+      const aLeaderEmailPrefix = aLeaderEmail.split('@')[0];
+      if (
+        ((officerEmail && aLeaderEmail === officerEmail) ||
+         (officerName && aLeaderName === officerName) ||
+         (officerUsername && aLeaderEmailPrefix === officerUsername)) &&
+        a.division && a.team
+      ) {
+        myTeams.add(`${a.division}:${a.team}`);
+        if (a.teamLeaderName && !resolvedRealName) resolvedRealName = a.teamLeaderName;
+      }
+    });
+  }
+  if (loginUser?.type_code === "team" && loginUser?.division && loginUser?.team) {
+    myTeams.add(`${loginUser.division}:${loginUser.team}`);
+  }
+
+  // 3. 현재 직책자 역할 및 소속 텍스트 동적 결정
+  const dynamicName = resolvedRealName || loginUser?.name || "직책자";
+  const dynamicTypeCode = myDivisions.size > 0 ? "division" : (myTeams.size > 0 ? "team" : (loginUser?.type_code || "division"));
+  const dynamicRoleLabel = dynamicTypeCode === "division" ? "본부장" : "팀장";
+  const dynamicDivision = myDivisions.size > 0 
+    ? [...myDivisions].join(", ") 
+    : (myTeams.size > 0 ? [...new Set([...myTeams].map(t => t.split(":")[0]))].join(", ") : (loginUser?.division || ""));
+  const dynamicTeam = myTeams.size > 0 
+    ? [...new Set([...myTeams].map(t => t.split(":")[1]))].join(", ") 
+    : (loginUser?.team || "");
+
   const visibleApplicants = loginUser?.type==="officer"
     ? applicants.filter(a=>{
-        if(loginUser.type_code==="division") return a.division===loginUser.division;
-        if(loginUser.type_code==="team") return a.division===loginUser.division&&a.team===loginUser.team;
-        return false;
+        let matched = false;
+        if (myDivisions.size > 0) {
+          if (myDivisions.has(a.division)) matched = true;
+        }
+        if (myTeams.size > 0) {
+          if (myTeams.has(`${a.division}:${a.team}`)) matched = true;
+        }
+        if (myDivisions.size === 0 && myTeams.size === 0) {
+          if(loginUser.type_code==="division") matched = a.division===loginUser.division;
+          if(loginUser.type_code==="team") matched = a.division===loginUser.division&&a.team===loginUser.team;
+        }
+        return matched;
       })
     : applicants;
 
@@ -1421,6 +1573,8 @@ export default function ApplicantManager() {
       const [otpSending,   setOtpSending]   = useState(false);
       const [countdown,    setCountdown]    = useState(0);
 
+      const fullEmail = email.trim() ? `${email.trim().split('@')[0]}@okestro.com` : "";
+
       // 카운트다운 타이머
       useEffect(()=>{
         if(!otpExpiry) return;
@@ -1436,11 +1590,9 @@ export default function ApplicantManager() {
 
       // 코드 받기
       const sendOtp=async()=>{
-        if(!email.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())){
-          setEmailErr("올바른 이메일 주소를 입력해주세요.");return;
+        if(!email.trim()){
+          setEmailErr("아이디를 입력해주세요.");return;
         }
-        // 이메일 주소가 officerCodes 에 등록돼 있는지 확인 (선택적 보안)
-        // 등록된 이메일과 상관없이 누구에게나 OTP를 보내려면 아래 확인 블록을 제거하세요
         setOtpSending(true); setEmailErr("");
         try{
           const code=Array.from({length:6},()=>"ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random()*32)]).join("");
@@ -1455,10 +1607,10 @@ export default function ApplicantManager() {
             window.emailjs.init(EMAILJS_PUBLIC_KEY);
           }
           await window.emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            to_email: email.trim(),
-            to_name:  email.trim().split("@")[0],
-            name:     email.trim().split("@")[0],   // From Name 필드 {{name}}
-            email:    email.trim(),                  // Reply To 필드 {{email}}
+            to_email: fullEmail,
+            to_name:  fullEmail.split("@")[0],
+            name:     fullEmail.split("@")[0],   // From Name 필드 {{name}}
+            email:    fullEmail,                  // Reply To 필드 {{email}}
             title:    "임시 로그인 코드",              // Subject 필드 {{title}}
             code,
           });
@@ -1482,9 +1634,9 @@ export default function ApplicantManager() {
         // OTP 확인
         if(otpSent&&otpCode&&Date.now()<otpExpiry&&input===otpCode){
           // OTP 로그인: 이메일 기반으로 매칭 시도, 없으면 이메일 전용 직책자로 처리
-          const matched=officerCodes.find(o=>o.email&&o.email.toLowerCase()===email.trim().toLowerCase());
-          if(matched){ doLogin({...matched,type:"officer",type_code:matched.type}); }
-          else{ doLogin({type:"officer",type_code:"division",code:otpCode,name:email.trim().split("@")[0],division:"",team:"",isOtpLogin:true}); }
+          const matched=officerCodes.find(o=>o.email&&o.email.toLowerCase()===fullEmail.toLowerCase());
+          if(matched){ doLogin({...matched,type:"officer",type_code:matched.type,email:fullEmail}); }
+          else{ doLogin({type:"officer",type_code:"division",code:otpCode,email:fullEmail,name:fullEmail.split("@")[0],division:"",team:"",isOtpLogin:true}); }
           return;
         }
         if(otpSent&&input===otpCode&&Date.now()>=otpExpiry){ setOfficerErr("임시 코드가 만료됐습니다. 다시 발급해주세요."); return; }
@@ -1502,7 +1654,7 @@ export default function ApplicantManager() {
                 <div style={{width:"60px",height:"60px",borderRadius:"50%",background:`${C.green}15`,border:`2px solid ${C.green}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",margin:"0 auto 16px"}}>📧</div>
                 <div style={{fontWeight:800,fontSize:"17px",color:C.text,marginBottom:"8px"}}>코드가 발송됐습니다</div>
                 <div style={{fontSize:"13px",color:C.muted,lineHeight:"1.7",marginBottom:"24px"}}>
-                  <span style={{fontWeight:600,color:C.subtle}}>{email}</span><br/>으로 직책자 코드를 전송했습니다.<br/>
+                  <span style={{fontWeight:600,color:C.subtle}}>{fullEmail}</span><br/>으로 직책자 코드를 전송했습니다.<br/>
                   이메일을 확인 후 코드를 입력해 주세요.
                 </div>
                 <button onClick={()=>setEmailToast(false)}
@@ -1527,24 +1679,52 @@ export default function ApplicantManager() {
 
               {/* 직책자 코드 입력 */}
               <div style={{fontSize:"12px",color:C.subtle,lineHeight:"1.6",padding:"10px 12px",borderRadius:"9px",background:`${C.purple}08`,border:`1px solid ${C.purple}22`}}>
-                이메일 주소를 입력하고<br/>받은 직책자 코드를 입력해 주세요.
+                이메일 아이디를 입력하고<br/>받은 직책자 코드를 입력해 주세요.
               </div>
 
               {/* 이메일 입력 + 코드 받기 */}
               <div>
                 <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>
-                  이메일 주소
+                  이메일 아이디
                   {otpSent&&<span style={{marginLeft:"8px",fontSize:"10px",color:C.green,fontWeight:600}}>코드 발송됨 · {fmtCountdown(countdown)} 남음</span>}
                 </label>
                 <div style={{display:"flex",gap:"6px"}}>
-                  <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setEmailErr("");}}
-                    onKeyDown={e=>{if(e.key==="Enter") sendOtp();}}
-                    placeholder="이메일 주소 입력" disabled={otpSending}
-                    style={{flex:1,background:C.bg,border:`1.5px solid ${emailErr?C.red:otpSent?C.green:C.border}`,borderRadius:"10px",padding:"10px 12px",fontSize:"13px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}
-                    onFocus={e=>e.target.style.borderColor=emailErr?C.red:C.purple} onBlur={e=>e.target.style.borderColor=emailErr?C.red:otpSent?C.green:C.border}/>
+                  <div style={{
+                    flex:1,
+                    display:"flex",
+                    alignItems:"center",
+                    background:C.bg,
+                    border:`1.5px solid ${emailErr?C.red:otpSent?C.green:C.border}`,
+                    borderRadius:"10px",
+                    padding:"0 12px",
+                    boxSizing:"border-box",
+                    transition:"border-color 0.15s"
+                  }}
+                    onFocusCapture={e=>{ e.currentTarget.style.borderColor = emailErr?C.red:C.purple }}
+                    onBlurCapture={e=>{ e.currentTarget.style.borderColor = emailErr?C.red:otpSent?C.green:C.border }}
+                  >
+                    <input type="text" value={email} onChange={e=>{
+                      const val = e.target.value.split('@')[0];
+                      setEmail(val);
+                      setEmailErr("");
+                    }}
+                      onKeyDown={e=>{if(e.key==="Enter") sendOtp();}}
+                      placeholder="아이디 입력" disabled={otpSending}
+                      style={{
+                        flex:1,
+                        background:"transparent",
+                        border:"none",
+                        padding:"10px 0",
+                        fontSize:"13px",
+                        color:C.text,
+                        outline:"none",
+                        fontFamily:"inherit"
+                      }}
+                    />
+                    <span style={{fontSize:"13px",color:C.muted,paddingLeft:"4px",fontWeight:600,userSelect:"none"}}>@okestro.com</span>
+                  </div>
                   <button className="anim-btn" onClick={async()=>{
                     await sendOtp();
-                    // 성공 시 토스트 표시는 sendOtp 내에서 처리
                   }} disabled={otpSending||!email.trim()}
                     style={{padding:"10px 14px",borderRadius:"10px",border:"none",cursor:(otpSending||!email.trim())?"not-allowed":"pointer",background:(otpSending||!email.trim())?C.border:`linear-gradient(135deg,${C.teal}cc,${C.teal})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap",transition:"all 0.15s"}}>
                     {otpSending?"발송 중...":(otpSent?"재발송":"코드 받기")}
@@ -1732,8 +1912,8 @@ export default function ApplicantManager() {
             )}
             {isOfficer&&<div style={{display:"flex",alignItems:"center",gap:"5px",padding:"3px 10px",borderRadius:"20px",background:`${C.purple}10`,border:`1px solid ${C.purple}22`}}>
               <span style={{fontSize:"11px"}}>👤</span>
-              <span style={{fontWeight:700,color:C.purple,fontSize:"11px",whiteSpace:"nowrap"}}>{loginUser?.name||"직책자"}</span>
-              <span style={{fontSize:"10px",color:C.muted,whiteSpace:"nowrap"}}>{loginUser?.type_code==="division"?"본부장":"팀장"}{loginUser?.division?` · ${loginUser.division}`:""}</span>
+              <span style={{fontWeight:700,color:C.purple,fontSize:"11px",whiteSpace:"nowrap"}}>{dynamicName}</span>
+              <span style={{fontSize:"10px",color:C.muted,whiteSpace:"nowrap"}}>{dynamicRoleLabel}{dynamicDivision?` · ${dynamicDivision}`:""}{dynamicTeam?` · ${dynamicTeam}`:""}</span>
             </div>}
             {dbStatus==="local"&&<span style={{color:C.amber,fontWeight:600,fontSize:"10px",whiteSpace:"nowrap"}}>⚠️ 로컬 저장</span>}
             {dbStatus?.startsWith("error:")&&<span style={{color:C.red,fontWeight:600,fontSize:"10px",whiteSpace:"nowrap"}}>⚠️ DB 오류</span>}
@@ -1855,9 +2035,11 @@ export default function ApplicantManager() {
 
         {/* ═══ 브리핑 (직책자 전용) ═══ */}
         {safeMenu==="briefing"&&isOfficer&&(()=>{
-          const orgLabel = loginUser.type_code==="division"
-            ? `🏢 ${loginUser.division}`
-            : `👥 ${loginUser.division} · ${loginUser.team}`;
+          const labelDiv = dynamicDivision || loginUser.division || "소속 미지정";
+          const labelTeam = dynamicTeam || loginUser.team || "";
+          const orgLabel = dynamicTypeCode==="division"
+            ? `🏢 ${labelDiv}`
+            : `👥 ${labelDiv}${labelTeam ? ` · ${labelTeam}` : ""}`;
 
           // 연도 목록
           const allYears=[...new Set(visibleApplicants.flatMap(a=>[a.date1,a.date2,a.date3].filter(Boolean).map(d=>d.slice(0,4))))].sort().reverse();
@@ -1897,7 +2079,7 @@ export default function ApplicantManager() {
                 <div style={{background:`linear-gradient(135deg,${C.blue}0d,${C.purple}08)`,borderRadius:"16px",border:`1px solid ${C.blue}22`,padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"12px"}}>
                   <div>
                     <div style={{fontSize:"18px",fontWeight:900,color:C.text,marginBottom:"4px"}}>{orgLabel}</div>
-                    <div style={{fontSize:"12px",color:C.muted}}>안녕하세요, <b style={{color:C.blue}}>{loginUser.name}</b>님. 조직의 솔루션 테스트 현황을 확인하세요.</div>
+                    <div style={{fontSize:"12px",color:C.muted}}>안녕하세요, <b style={{color:C.blue}}>{dynamicName}</b>님. 조직의 솔루션 테스트 현황을 확인하세요.</div>
                   </div>
                   <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
                     <label style={{fontSize:"12px",color:C.muted,fontWeight:600}}>연도 선택</label>
