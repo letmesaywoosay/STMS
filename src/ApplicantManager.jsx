@@ -2556,8 +2556,8 @@ export default function ApplicantManager() {
             });
 
             // SVG 차트 좌표 계산용 상수 및 함수
-            const chartHeight = 180;
-            const chartWidth = 560;
+            const chartHeight = 220;
+            const chartWidth = 1000;
             const maxVal = Math.max(...monthlyTrend.map(d => d.total), 5); // 최소 5명 기준 Y축 확보
             
             const getPoints = (type) => {
