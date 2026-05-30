@@ -2899,14 +2899,6 @@ export default function ApplicantManager() {
                     </div>
 
                     <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:"14px",flex:1}}>
-                      <button onClick={downloadApplicantTemplate} className="quick-tile">
-                        <span style={{fontSize:"24px"}}>📄</span>
-                        <div>
-                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>양식 다운로드</div>
-                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>일괄등록용 엑셀 표준 템플릿</div>
-                        </div>
-                      </button>
-
                       <button onClick={()=>setApplicantModal({mode:"excel"})} className="quick-tile">
                         <span style={{fontSize:"24px"}}>📥</span>
                         <div>
@@ -2920,14 +2912,6 @@ export default function ApplicantManager() {
                         <div>
                           <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>데이터 통합백업</div>
                           <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>응시자 정보 및 부서·팀 백업 동시 수행</div>
-                        </div>
-                      </button>
-
-                      <button onClick={()=>setMainMenu("dept")} className="quick-tile">
-                        <span style={{fontSize:"24px"}}>🏢</span>
-                        <div>
-                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>부서·팀 구조 관리</div>
-                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>본부·팀 계층 구조 및 직책자</div>
                         </div>
                       </button>
                     </div>
