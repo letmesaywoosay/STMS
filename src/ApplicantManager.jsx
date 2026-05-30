@@ -1822,7 +1822,7 @@ export default function ApplicantManager() {
           background-size: cover !important;
           background-position: center !important;
           background-repeat: no-repeat !important;
-          opacity: 0.5 !important; /* 50% Opacity Rainbow Background */
+          opacity: 0.85 !important; /* Premium Blue-Violet Pastel Background */
           z-index: -2;
           pointer-events: none;
         }
