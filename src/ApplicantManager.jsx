@@ -2724,139 +2724,110 @@ export default function ApplicantManager() {
                 </div>
 
                 {/* Section B: Main Analytics Charts */}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(440px, 1fr))",gap:"20px"}}>
-                  {/* 월별 합격 추이 차트 - 반응형 & 합격률 반영 */}
-                  <div className="dash-card" style={{position:"relative",minHeight:"340px",boxSizing:"border-box"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
-                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📊 월별 응시자 추이</span>
-                      <div style={{display:"flex",gap:"8px"}}>
-                        <select value={dashYear} onChange={e=>setDashYear(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer"}}>
-                          <option value="2026">2026년</option>
-                          <option value="2025">2025년</option>
-                        </select>
-                        <select value={dashDiv} onChange={e=>setDashDiv(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer",maxWidth:"140px"}}>
-                          <option value="all">전체 소속본부</option>
-                          {allDivs.map(d=><option key={d} value={d}>{d}</option>)}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div style={{position:"relative",height:`${chartHeight}px`,marginTop:"16px",width:"100%"}}>
-                      {/* SVG Line Graph - Responsive viewBox */}
-                      <svg viewBox={`0 0 ${chartWidth + 60} ${chartHeight}`} width="100%" height="100%" style={{overflow:"visible"}}>
-                        <defs>
-                          <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
-                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
-                          </linearGradient>
-                          <linearGradient id="passGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
-                            <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                          </linearGradient>
-                          <linearGradient id="avgGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.15" />
-                            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.0" />
-                          </linearGradient>
-                        </defs>
-
-                        {/* 수평 보조선 및 이중 Y축(좌: 인원, 우: 합격률/점수) */}
-                        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
-                          const y = chartHeight - 15 - ratio * (chartHeight - 40);
-                          const gridVal = Math.round(ratio * maxVal);
-                          return (
-                            <g key={i}>
-                              <line x1="28" y1={y} x2={chartWidth + 30} y2={y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
-                              <text x="5" y={y + 4} fontSize="9" fill={C.muted} textAnchor="start">{gridVal}명</text>
-                              <text x={chartWidth + 34} y={y + 4} fontSize="9" fill={C.green} textAnchor="start" fontWeight={700}>{Math.round(ratio * 100)}% / 점</text>
-                            </g>
-                          );
-                        })}
-
-                        {/* 면적 그라데이션 필 패스 */}
-                        {totalPath && <path d={`${totalPath} L ${totalPoints[totalPoints.length - 1].x} ${chartHeight - 15} L ${totalPoints[0].x} ${chartHeight - 15} Z`} fill="url(#totalGrad)" />}
-                        {passPath && <path d={`${passPath} L ${passPoints[passPoints.length - 1].x} ${chartHeight - 15} L ${passPoints[0].x} ${chartHeight - 15} Z`} fill="url(#passGrad)" />}
-                        {avgScorePath && <path d={`${avgScorePath} L ${avgScorePoints[avgScorePoints.length - 1].x} ${chartHeight - 15} L ${avgScorePoints[0].x} ${chartHeight - 15} Z`} fill="url(#avgGrad)" />}
-
-                        {/* 꺾은선 패스 */}
-                        {totalPath && <path d={totalPath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-                        {passPath && <path d={passPath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-                        {avgScorePath && <path d={avgScorePath} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-
-                        {/* 데이터 마커 포인트 루프 */}
-                        {totalPoints.map((pt, i) => {
-                          const isHovered = hoveredMonth === i;
-                          return (
-                            <g key={i} onMouseEnter={() => setHoveredMonth(i)} onMouseLeave={() => setHoveredMonth(null)} style={{cursor:"pointer"}}>
-                              {/* 응시수 마커 */}
-                              <circle cx={pt.x} cy={pt.y} r={isHovered ? 6 : 4} fill="#fff" stroke="#3b82f6" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
-                              {/* 합격률 마커 */}
-                              <circle cx={passPoints[i].x} cy={passPoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#10b981" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
-                              {/* 평균점수 마커 */}
-                              <circle cx={avgScorePoints[i].x} cy={avgScorePoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#7c3aed" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
-                              
-                              {/* X축 월 텍스트 */}
-                              <text x={pt.x} y={chartHeight + 10} fontSize="9" fill={C.muted} textAnchor="middle" fontWeight={600}>{pt.month}</text>
-                            </g>
-                          );
-                        })}
-                      </svg>
-
-                      {/* 실시간 툴팁 풍선 */}
-                      {hoveredMonth !== null && (() => {
-                        const pt = totalPoints[hoveredMonth];
-                        const passPt = passPoints[hoveredMonth];
-                        const avgPt = avgScorePoints[hoveredMonth];
-                        return (
-                          <div style={{position:"absolute",left:`${pt.x}px`,top:`${Math.min(pt.y, passPt.y, avgPt.y) - 76}px`,transform:"translateX(-50%)",background:"rgba(15,23,42,0.95)",color:"#fff",borderRadius:"8px",padding:"8px 12px",fontSize:"10px",whiteSpace:"nowrap",boxShadow:"0 6px 16px rgba(0,0,0,0.15)",pointerEvents:"none",zIndex:30}}>
-                            <div style={{fontWeight:800,marginBottom:"2px",color:"#94a3b8",borderBottom:"1px solid #334155",paddingBottom:"2px"}}>{pt.month} 성적 현황</div>
-                            <div style={{display:"flex",gap:"8px",marginTop:"3.5px",flexDirection:"column"}}>
-                              <div style={{display:"flex",gap:"8px"}}>
-                                <span>총 응시: <strong style={{color:"#3b82f6"}}>{pt.total}명</strong></span>
-                                <span>합격률: <strong style={{color:"#10b981"}}>{pt.rate}%</strong></span>
-                              </div>
-                              <div style={{marginTop:"2px"}}>
-                                <span>평균 점수: <strong style={{color:"#7c3aed"}}>{pt.avgScore}점</strong></span>
-                              </div>
-                            </div>
-                            <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",borderTop:"4px solid rgba(15,23,42,0.95)",borderLeft:"4px solid transparent",borderRight:"4px solid transparent"}}/>
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    {/* 차트 캡션 레전드 */}
-                    <div style={{display:"flex",justifyContent:"center",gap:"16px",marginTop:"24px",fontSize:"11px",fontWeight:700}}>
-                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#3b82f6"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#3b82f6",display:"inline-block"}}/> 총 응시인원</span>
-                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#10b981"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#10b981",display:"inline-block"}}/> 합격률 (%)</span>
-                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#7c3aed"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#7c3aed",display:"inline-block"}}/> 평균점수</span>
+                {/* 월별 합격 추이 차트 - 반응형 & 합격률 반영 */}
+                <div className="dash-card" style={{position:"relative",minHeight:"340px",boxSizing:"border-box",width:"100%"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
+                    <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📊 월별 응시자 추이</span>
+                    <div style={{display:"flex",gap:"8px"}}>
+                      <select value={dashYear} onChange={e=>setDashYear(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer"}}>
+                        <option value="2026">2026년</option>
+                        <option value="2025">2025년</option>
+                      </select>
+                      <select value={dashDiv} onChange={e=>setDashDiv(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer",maxWidth:"140px"}}>
+                        <option value="all">전체 소속본부</option>
+                        {allDivs.map(d=><option key={d} value={d}>{d}</option>)}
+                      </select>
                     </div>
                   </div>
 
-                  {/* 본부별 합격률 랭킹 */}
-                  <div className="dash-card" style={{minHeight:"340px"}}>
-                    <div style={{marginBottom:"20px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
-                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>🏆 본부별 합격률 상위 5</span>
-                    </div>
-                    {divRanking.length === 0 ? (
-                      <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"200px",fontSize:"12px",color:C.muted}}>등록된 부서 성적 데이터가 없습니다.</div>
-                    ) : (
-                      <div style={{display:"flex",flexDirection:"column",gap:"16px",marginTop:"8px"}}>
-                        {divRanking.map((rank, i) => {
-                          const barColors = ["#002060", "#1d4ed8", "#2563eb", "#3b82f6", "#60a5fa"];
-                          return (
-                            <div key={i}>
-                              <div style={{display:"flex",justifyContent:"space-between",fontSize:"12px",fontWeight:700,color:C.text,marginBottom:"4px"}}>
-                                <span>{i+1}. {rank.division}</span>
-                                <span style={{color:barColors[i]}}>{rank.rate}% <span style={{fontWeight:400,color:C.muted,fontSize:"10px"}}>({rank.passed}/{rank.total}명)</span></span>
-                              </div>
-                              <div style={{width:"100%",height:"8px",background:"#f1f5f9",borderRadius:"4px",overflow:"hidden"}}>
-                                <div style={{width:`${rank.rate}%`,height:"100%",background:barColors[i],borderRadius:"4px",transition:"width 0.5s ease"}}/>
-                              </div>
+                  <div style={{position:"relative",height:`${chartHeight}px`,marginTop:"16px",width:"100%"}}>
+                    {/* SVG Line Graph - Responsive viewBox */}
+                    <svg viewBox={`0 0 ${chartWidth + 60} ${chartHeight}`} width="100%" height="100%" style={{overflow:"visible"}}>
+                      <defs>
+                        <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
+                        </linearGradient>
+                        <linearGradient id="passGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                        </linearGradient>
+                        <linearGradient id="avgGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.15" />
+                          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* 수평 보조선 및 이중 Y축(좌: 인원, 우: 합격률/점수) */}
+                      {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
+                        const y = chartHeight - 15 - ratio * (chartHeight - 40);
+                        const gridVal = Math.round(ratio * maxVal);
+                        return (
+                          <g key={i}>
+                            <line x1="28" y1={y} x2={chartWidth + 30} y2={y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
+                            <text x="5" y={y + 4} fontSize="9" fill={C.muted} textAnchor="start">{gridVal}명</text>
+                            <text x={chartWidth + 34} y={y + 4} fontSize="9" fill={C.green} textAnchor="start" fontWeight={700}>{Math.round(ratio * 100)}% / 점</text>
+                          </g>
+                        );
+                      })}
+
+                      {/* 면적 그라데이션 필 패스 */}
+                      {totalPath && <path d={`${totalPath} L ${totalPoints[totalPoints.length - 1].x} ${chartHeight - 15} L ${totalPoints[0].x} ${chartHeight - 15} Z`} fill="url(#totalGrad)" />}
+                      {passPath && <path d={`${passPath} L ${passPoints[passPoints.length - 1].x} ${chartHeight - 15} L ${passPoints[0].x} ${chartHeight - 15} Z`} fill="url(#passGrad)" />}
+                      {avgScorePath && <path d={`${avgScorePath} L ${avgScorePoints[avgScorePoints.length - 1].x} ${chartHeight - 15} L ${avgScorePoints[0].x} ${chartHeight - 15} Z`} fill="url(#avgGrad)" />}
+
+                      {/* 꺾은선 패스 */}
+                      {totalPath && <path d={totalPath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                      {passPath && <path d={passPath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                      {avgScorePath && <path d={avgScorePath} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+
+                      {/* 데이터 마커 포인트 루프 */}
+                      {totalPoints.map((pt, i) => {
+                        const isHovered = hoveredMonth === i;
+                        return (
+                          <g key={i} onMouseEnter={() => setHoveredMonth(i)} onMouseLeave={() => setHoveredMonth(null)} style={{cursor:"pointer"}}>
+                            {/* 응시수 마커 */}
+                            <circle cx={pt.x} cy={pt.y} r={isHovered ? 6 : 4} fill="#fff" stroke="#3b82f6" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
+                            {/* 합격률 마커 */}
+                            <circle cx={passPoints[i].x} cy={passPoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#10b981" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
+                            {/* 평균점수 마커 */}
+                            <circle cx={avgScorePoints[i].x} cy={avgScorePoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#7c3aed" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
+                            
+                            {/* X축 월 텍스트 */}
+                            <text x={pt.x} y={chartHeight + 10} fontSize="9" fill={C.muted} textAnchor="middle" fontWeight={600}>{pt.month}</text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    {/* 실시간 툴팁 풍선 */}
+                    {hoveredMonth !== null && (() => {
+                      const pt = totalPoints[hoveredMonth];
+                      const passPt = passPoints[hoveredMonth];
+                      const avgPt = avgScorePoints[hoveredMonth];
+                      return (
+                        <div style={{position:"absolute",left:`${pt.x}px`,top:`${Math.min(pt.y, passPt.y, avgPt.y) - 76}px`,transform:"translateX(-50%)",background:"rgba(15,23,42,0.95)",color:"#fff",borderRadius:"8px",padding:"8px 12px",fontSize:"10px",whiteSpace:"nowrap",boxShadow:"0 6px 16px rgba(0,0,0,0.15)",pointerEvents:"none",zIndex:30}}>
+                          <div style={{fontWeight:800,marginBottom:"2px",color:"#94a3b8",borderBottom:"1px solid #334155",paddingBottom:"2px"}}>{pt.month} 성적 현황</div>
+                          <div style={{display:"flex",gap:"8px",marginTop:"3.5px",flexDirection:"column"}}>
+                            <div style={{display:"flex",gap:"8px"}}>
+                              <span>총 응시: <strong style={{color:"#3b82f6"}}>{pt.total}명</strong></span>
+                              <span>합격률: <strong style={{color:"#10b981"}}>{pt.rate}%</strong></span>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            <div style={{marginTop:"2px"}}>
+                              <span>평균 점수: <strong style={{color:"#7c3aed"}}>{pt.avgScore}점</strong></span>
+                            </div>
+                          </div>
+                          <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",borderTop:"4px solid rgba(15,23,42,0.95)",borderLeft:"4px solid transparent",borderRight:"4px solid transparent"}}/>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 차트 캡션 레전드 */}
+                  <div style={{display:"flex",justifyContent:"center",gap:"16px",marginTop:"24px",fontSize:"11px",fontWeight:700}}>
+                    <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#3b82f6"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#3b82f6",display:"inline-block"}}/> 총 응시인원</span>
+                    <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#10b981"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#10b981",display:"inline-block"}}/> 합격률 (%)</span>
+                    <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#7c3aed"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#7c3aed",display:"inline-block"}}/> 평균점수</span>
                   </div>
                 </div>
 
