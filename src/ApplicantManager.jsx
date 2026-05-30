@@ -2076,16 +2076,27 @@ export default function ApplicantManager() {
             return(
               <div style={{display:"flex",flexDirection:"column",gap:"20px"}}>
                 {/* 헤더 */}
-                <div style={{background:`linear-gradient(135deg,${C.blue}0d,${C.purple}08)`,borderRadius:"16px",border:`1px solid ${C.blue}22`,padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"12px"}}>
+                <div style={{
+                  background:`linear-gradient(135deg,${C.blue}0d,${C.purple}08)`,
+                  borderRadius:"16px",
+                  border:`1px solid ${C.blue}22`,
+                  padding:"24px",
+                  display:"flex",
+                  flexDirection:"column",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  gap:"16px",
+                  textAlign:"center"
+                }}>
                   <div>
-                    <div style={{fontSize:"18px",fontWeight:900,color:C.text,marginBottom:"4px"}}>{orgLabel}</div>
-                    <div style={{fontSize:"12px",color:C.muted}}>안녕하세요, <b style={{color:C.blue}}>{dynamicName}</b>님. 조직의 솔루션 테스트 현황을 확인하세요.</div>
+                    <div style={{fontSize:"20px",fontWeight:900,color:C.text,marginBottom:"6px"}}>{orgLabel}</div>
+                    <div style={{fontSize:"13px",color:C.muted}}>안녕하세요, <b style={{color:C.blue}}>{dynamicName}</b>님. 조직의 솔루션 테스트 현황을 확인하세요.</div>
                   </div>
-                  <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+                  <div style={{display:"flex",gap:"8px",alignItems:"center",justifyContent:"center",background:`${C.blue}08`,padding:"6px 16px",borderRadius:"30px",border:`1px solid ${C.blue}11`}}>
                     <label style={{fontSize:"12px",color:C.muted,fontWeight:600}}>연도 선택</label>
                     <div style={{display:"flex",gap:"4px"}}>
                       {allYears.length>0?allYears.map(y=>(
-                        <button key={y} onClick={()=>setYear(y)} style={{padding:"6px 14px",borderRadius:"20px",border:`1.5px solid ${year===y?C.blue:C.border}`,background:year===y?`${C.blue}10`:"transparent",color:year===y?C.blue:C.muted,fontSize:"13px",fontWeight:year===y?800:400,cursor:"pointer",fontFamily:"inherit"}}>{y}년</button>
+                        <button key={y} onClick={()=>setYear(y)} style={{padding:"4px 12px",borderRadius:"20px",border:`1.5px solid ${year===y?C.blue:C.border}`,background:year===y?C.surface:"transparent",color:year===y?C.blue:C.muted,fontSize:"12px",fontWeight:year===y?800:500,cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>{y}년</button>
                       )):<span style={{fontSize:"12px",color:C.muted}}>데이터 없음</span>}
                     </div>
                   </div>
@@ -2178,7 +2189,7 @@ export default function ApplicantManager() {
                       <thead>
                         <tr style={{background:C.bg,borderBottom:`1px solid ${C.border}`}}>
                           {["이름","소속팀","회차","응시일","점수","결과"].map((h,i)=>(
-                            <th key={i} style={{padding:"9px 14px",textAlign:"left",fontSize:"11px",fontWeight:700,color:C.muted,borderRight:i<5?`1px solid ${C.border}`:"none"}}>{h}</th>
+                            <th key={i} style={{padding:"9px 14px",textAlign:"center",fontSize:"11px",fontWeight:700,color:C.muted,borderRight:i<5?`1px solid ${C.border}`:"none"}}>{h}</th>
                           ))}
                         </tr>
                       </thead>
@@ -2189,10 +2200,10 @@ export default function ApplicantManager() {
                           const sColor=isNaN(sNum)?"":sNum>=60?C.green:C.red;
                           return(
                             <tr className="anim-row" key={att.id+att.nth} style={{borderBottom:`1px solid ${C.border}`,transition:"background 0.12s",cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.background=`${C.blue}04`} onMouseLeave={e=>e.currentTarget.style.background="transparent"} onClick={()=>setSelectedAtt(att)}>
-                              <td style={{padding:"10px 14px",fontWeight:700,color:C.text,borderRight:`1px solid ${C.border}`}}>{att.name}</td>
-                              <td style={{padding:"10px 14px",color:C.muted,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{att.team||att.division||"—"}</td>
+                              <td style={{padding:"10px 14px",fontWeight:700,color:C.text,textAlign:"center",borderRight:`1px solid ${C.border}`}}>{att.name}</td>
+                              <td style={{padding:"10px 14px",color:C.muted,fontSize:"11px",textAlign:"center",borderRight:`1px solid ${C.border}`}}>{att.team||att.division||"—"}</td>
                               <td style={{padding:"10px 14px",textAlign:"center",borderRight:`1px solid ${C.border}`}}><span style={{fontSize:"11px",padding:"2px 8px",borderRadius:"20px",background:`${C.blue}10`,color:C.blue,fontWeight:700}}>{att.nth}</span></td>
-                              <td style={{padding:"10px 14px",color:C.subtle,fontSize:"11px",borderRight:`1px solid ${C.border}`}}>{att.date||"—"}</td>
+                              <td style={{padding:"10px 14px",color:C.subtle,fontSize:"11px",textAlign:"center",borderRight:`1px solid ${C.border}`}}>{att.date||"—"}</td>
                               <td style={{padding:"10px 14px",textAlign:"center",fontWeight:900,fontSize:"14px",color:sColor,borderRight:`1px solid ${C.border}`}}>{att.score?att.score+"점":"—"}</td>
                               <td style={{padding:"10px 14px",textAlign:"center"}}>{att.pass?<span style={{fontSize:"11px",padding:"3px 10px",borderRadius:"20px",background:pc.bg,color:pc.text,border:`1px solid ${pc.border}`,fontWeight:700}}>{att.pass}</span>:<span style={{color:C.muted}}>—</span>}</td>
                             </tr>
