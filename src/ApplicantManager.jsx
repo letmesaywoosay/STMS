@@ -1688,9 +1688,8 @@ export default function ApplicantManager() {
                   이메일 아이디
                   {otpSent&&<span style={{marginLeft:"8px",fontSize:"10px",color:C.green,fontWeight:600}}>코드 발송됨 · {fmtCountdown(countdown)} 남음</span>}
                 </label>
-                <div style={{display:"flex",gap:"6px"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
                   <div style={{
-                    flex:1,
                     display:"flex",
                     alignItems:"center",
                     background:C.bg,
@@ -1714,7 +1713,7 @@ export default function ApplicantManager() {
                         flex:1,
                         background:"transparent",
                         border:"none",
-                        padding:"10px 0",
+                        padding:"11px 0",
                         fontSize:"13px",
                         color:C.text,
                         outline:"none",
@@ -1726,7 +1725,7 @@ export default function ApplicantManager() {
                   <button className="anim-btn" onClick={async()=>{
                     await sendOtp();
                   }} disabled={otpSending||!email.trim()}
-                    style={{padding:"10px 14px",borderRadius:"10px",border:"none",cursor:(otpSending||!email.trim())?"not-allowed":"pointer",background:(otpSending||!email.trim())?C.border:`linear-gradient(135deg,${C.teal}cc,${C.teal})`,color:"#fff",fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap",transition:"all 0.15s"}}>
+                    style={{width:"100%",padding:"11px",borderRadius:"10px",border:"none",cursor:(otpSending||!email.trim())?"not-allowed":"pointer",background:(otpSending||!email.trim())?C.border:`linear-gradient(135deg,${C.teal}cc,${C.teal})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit",transition:"all 0.15s"}}>
                     {otpSending?"발송 중...":(otpSent?"재발송":"코드 받기")}
                   </button>
                 </div>
