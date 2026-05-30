@@ -1805,7 +1805,7 @@ export default function ApplicantManager() {
           min-height:-webkit-fill-available;
           min-height:100dvh;
           background-color: #f1f5f9 !important;
-          background-image: url("/bg_gradient.png") !important;
+          background-image: url("/bg_gradient.jpg") !important;
           background-size: cover !important;
           background-position: center !important;
           background-repeat: no-repeat !important;
