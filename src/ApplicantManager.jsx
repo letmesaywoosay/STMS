@@ -1142,8 +1142,29 @@ export default function ApplicantManager() {
                     return{...a,score:parseFloat(s.score)||0,max:s.max||100};
                   }).filter(Boolean);
 
+                  const maxVal = getSubjectMax(subjectName);
+                  const maxValYPx = chartH - (maxVal / yMax * chartH);
+
                   return(
                     <div key={subjectName} style={{flex:1,minWidth:`${colWidth}px`,position:"relative",height:`${chartH}px`,borderRight:si<allSubjects.length-1?`1px solid ${C.border}33`:"none"}}>
+                      {/* 과목 최대점수 가이드라인 */}
+                      <div style={{
+                        position:"absolute",
+                        left:0,
+                        right:0,
+                        top:`${maxValYPx}px`,
+                        borderTop:`1.5px dashed ${C.purple}88`,
+                        zIndex:1,
+                        pointerEvents:"none",
+                        display:"flex",
+                        alignItems:"center",
+                        justifyContent:"flex-end",
+                        paddingRight:"6px"
+                      }}>
+                        <span style={{fontSize:"8px",color:C.purple,fontWeight:800,background:`${C.surface}dd`,padding:"1px 4px",borderRadius:"4px",transform:"translateY(-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.05)",userSelect:"none"}}>
+                          만점 {maxVal}점
+                        </span>
+                      </div>
                       {dots.map((a,di)=>{
                         const yPx=chartH-(a.score/yMax*chartH);
                         const col=divColorMap[a.division||"기타"];
@@ -4660,8 +4681,29 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                               return{...a,score:parseFloat(s.score)||0,max:s.max||100};
                             }).filter(Boolean);
 
+                            const maxVal = getSubjectMax(subjectName);
+                            const maxValYPx = chartH - (maxVal / yMax * chartH);
+
                             return(
                               <div key={subjectName} style={{flex:1,minWidth:`${colWidth}px`,position:"relative",height:`${chartH}px`,borderRight:si<allSubjects.length-1?`1px solid ${C.border}33`:"none"}}>
+                                {/* 과목 최대점수 가이드라인 */}
+                                <div style={{
+                                  position:"absolute",
+                                  left:0,
+                                  right:0,
+                                  top:`${maxValYPx}px`,
+                                  borderTop:`1.5px dashed ${C.purple}88`,
+                                  zIndex:1,
+                                  pointerEvents:"none",
+                                  display:"flex",
+                                  alignItems:"center",
+                                  justifyContent:"flex-end",
+                                  paddingRight:"6px"
+                                }}>
+                                  <span style={{fontSize:"8px",color:C.purple,fontWeight:800,background:`${C.surface}dd`,padding:"1px 4px",borderRadius:"4px",transform:"translateY(-50%)",boxShadow:"0 1px 3px rgba(0,0,0,0.05)",userSelect:"none"}}>
+                                    만점 {maxVal}점
+                                  </span>
+                                </div>
                                 {dots.map((a,di)=>{
                                   const yPx=chartH-(a.score/yMax*chartH);
                                   const col=divColorMap[a.division||"기타"];
