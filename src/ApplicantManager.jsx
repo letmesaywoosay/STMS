@@ -32,19 +32,19 @@ const stSet = async (key, value) => {
   catch(e){ try{localStorage.setItem(key,JSON.stringify(value));}catch{} return "local:"+e.message; }
 };
 
-// ── 공통 디자인 토큰 (프리미엄 네이비 글래스모피즘 디자인 시스템) ──
+// ── 공통 디자인 토큰 (프리미엄 브라이트 글래스모피즘 디자인 시스템 - 투명도 50%) ──
 const C = {
   bg:"transparent",
-  surface:"rgba(10, 25, 47, 0.45)",
-  border:"rgba(255, 255, 255, 0.08)",
-  border2:"rgba(255, 255, 255, 0.15)",
-  blue:"#38bdf8",     blueMid:"#0ea5e9",  blueLight:"#7dd3fc",
-  text:"#f8fafc",     subtle:"#cbd5e1",   muted:"#94a3b8",
-  green:"#34d399",    red:"#fb7185",      amber:"#fbbf24",
-  purple:"#a78bfa",   teal:"#2dd4bf",
+  surface:"rgba(255, 255, 255, 0.5)",
+  border:"rgba(255, 255, 255, 0.4)",
+  border2:"rgba(0, 0, 0, 0.08)",
+  blue:"#1d4ed8",     blueMid:"#2563eb",  blueLight:"#3b82f6",
+  text:"#0f172a",     subtle:"#334155",   muted:"#64748b",
+  green:"#059669",    red:"#dc2626",      amber:"#d97706",
+  purple:"#7c3aed",   teal:"#0d9488",
 };
-const shadow   = "0 8px 32px 0 rgba(0, 0, 0, 0.3)";
-const shadowLg = "0 12px 40px 0 rgba(0, 0, 0, 0.45)";
+const shadow   = "0 8px 32px 0 rgba(31, 38, 135, 0.06)";
+const shadowLg = "0 12px 40px 0 rgba(31, 38, 135, 0.12)";
 const uid = () => Math.random().toString(36).slice(2, 8);
 
 // ── RBAC 설정 ────────────────────────────────────────────────
@@ -1804,13 +1804,13 @@ export default function ApplicantManager() {
           min-height:100vh;
           min-height:-webkit-fill-available;
           min-height:100dvh;
-          background-color: #030712 !important;
+          background-color: #f1f5f9 !important;
           background-image: url("/bg_gradient.png") !important;
           background-size: cover !important;
           background-position: center !important;
           background-repeat: no-repeat !important;
           background-attachment: fixed !important;
-          color: #f8fafc !important;
+          color: #0f172a !important;
           position: relative;
           overflow-x: hidden;
         }
@@ -1828,7 +1828,7 @@ export default function ApplicantManager() {
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
         @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(56,189,248,0.15)}50%{box-shadow:0 0 0 6px rgba(56,189,248,0)}}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(29,78,216,0.15)}50%{box-shadow:0 0 0 6px rgba(29,78,216,0)}}
         @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.65}}
 
         /* GNB 탭 hover */
@@ -1837,33 +1837,46 @@ export default function ApplicantManager() {
           transition:color 0.15s,border-color 0.15s,background 0.15s!important;
           -webkit-font-smoothing:antialiased;
         }
-        .gnb-tab:hover{color:#38bdf8!important;background:rgba(56,189,248,0.06)!important;}
+        .gnb-tab:hover{color:#1d4ed8!important;background:rgba(29,78,216,0.05)!important;}
 
-        /* Glassmorphism Card Overrides */
-        .dash-card, .kpi-card, .login-box, .modal-content, .card {
-          background: rgba(13, 27, 42, 0.45) !important;
-          backdrop-filter: blur(18px) saturate(180%) !important;
-          -webkit-backdrop-filter: blur(18px) saturate(180%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        /* Glassmorphism Card Overrides - 50% Opacity Bright Glass */
+        .dash-card, .kpi-card, .login-box, .modal-content, .card, .quick-tile {
+          background: rgba(255, 255, 255, 0.5) !important;
+          backdrop-filter: blur(20px) saturate(190%) !important;
+          -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.45) !important;
           border-radius: 20px !important;
-          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
-          color: #f8fafc !important;
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06) !important;
+          color: #0f172a !important;
         }
 
         /* 카드 공통 hover */
         .anim-card{transition:transform 0.22s cubic-bezier(.34,1.56,.64,1),box-shadow 0.22s ease!important;}
         .anim-card:hover{
           transform:translateY(-3px)!important;
-          box-shadow:0 12px 32px rgba(0,0,0,0.35)!important;
-          border-color: rgba(56, 189, 248, 0.25) !important;
+          box-shadow:0 12px 32px rgba(31, 38, 135, 0.12) !important;
+          border-color: rgba(255, 255, 255, 0.7) !important;
+          background: rgba(255, 255, 255, 0.6) !important;
         }
 
-        /* GNB header glassmorphism */
+        /* GNB header glassmorphism - 50% Opacity Bright Glass */
         div[style*="position: sticky"][style*="top: 0"], .mobile-drawer {
-          background: rgba(8, 16, 30, 0.7) !important;
+          background: rgba(255, 255, 255, 0.5) !important;
           backdrop-filter: blur(20px) saturate(190%) !important;
           -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
+        }
+
+        /* 테이블 헤더/셀 스타일 */
+        th {
+          background: rgba(255, 255, 255, 0.6) !important;
+          color: #1e293b !important;
+          font-weight: 700 !important;
+          border-bottom: 1.5px solid rgba(0, 0, 0, 0.08) !important;
+        }
+        td {
+          border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+          color: #334155 !important;
         }
 
         /* 버튼 hover */
@@ -1877,11 +1890,11 @@ export default function ApplicantManager() {
 
         /* 테이블 행 hover */
         .anim-row{transition:background 0.15s!important;}
-        .anim-row:hover{background:rgba(255,255,255,0.04)!important;}
+        .anim-row:hover{background:rgba(255,255,255,0.3)!important;}
 
         /* 입력 필드 포커스 */
         .anim-input{transition:border-color 0.15s,box-shadow 0.15s!important;}
-        .anim-input:focus{border-color:#38bdf8!important;box-shadow:0 0 0 3px rgba(56,189,248,0.15)!important;outline:none!important;}
+        .anim-input:focus{border-color:#1d4ed8!important;box-shadow:0 0 0 3px rgba(29, 78, 216, 0.12)!important;outline:none!important;}
 
         /* 페이지 컨텐츠 진입 */
         .page-enter{animation:fadeUp 0.35s ease both;}
