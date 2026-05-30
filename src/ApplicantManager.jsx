@@ -2518,23 +2518,41 @@ export default function ApplicantManager() {
 
               let total = 0;
               let passed = 0;
+              let scoreSum = 0;
+              let scoreCount = 0;
               monthApps.forEach(a => {
                 if (a.date1 && a.date1.substring(0, 7) === targetYM && isWithinRange(a.date1)) {
                   total++;
                   if (a.pass1 === "합격") passed++;
+                  const s = parseFloat(a.score1);
+                  if (!isNaN(s)) {
+                    scoreSum += s;
+                    scoreCount++;
+                  }
                 }
                 if (a.date2 && a.date2.substring(0, 7) === targetYM && isWithinRange(a.date2)) {
                   total++;
                   if (a.pass2 === "합격") passed++;
+                  const s = parseFloat(a.score2);
+                  if (!isNaN(s)) {
+                    scoreSum += s;
+                    scoreCount++;
+                  }
                 }
                 if (a.date3 && a.date3.substring(0, 7) === targetYM && isWithinRange(a.date3)) {
                   total++;
                   if (a.pass3 === "합격") passed++;
+                  const s = parseFloat(a.score3);
+                  if (!isNaN(s)) {
+                    scoreSum += s;
+                    scoreCount++;
+                  }
                 }
               });
 
               const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
-              return { month: `${i + 1}월`, total, passed, rate };
+              const avgScore = scoreCount > 0 ? Math.round((scoreSum / scoreCount) * 10) / 10 : 0;
+              return { month: `${i + 1}월`, total, passed, rate, avgScore };
             });
 
             // SVG 차트 좌표 계산용 상수 및 함수
@@ -2544,7 +2562,7 @@ export default function ApplicantManager() {
             
             const getPoints = (type) => {
               return monthlyTrend.map((d, index) => {
-                const val = type === "total" ? d.total : d.rate;
+                const val = type === "total" ? d.total : (type === "avgScore" ? d.avgScore : d.rate);
                 const limit = type === "total" ? maxVal : 100;
                 const x = 30 + index * (chartWidth / 11.5);
                 const y = chartHeight - 15 - (val / limit) * (chartHeight - 40);
@@ -2554,9 +2572,11 @@ export default function ApplicantManager() {
 
             const totalPoints = getPoints("total");
             const passPoints = getPoints("passed"); // 여기서 passed는 실질적으로 합격률 점들입니다.
+            const avgScorePoints = getPoints("avgScore");
 
             const totalPath = totalPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
             const passPath = passPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+            const avgScorePath = avgScorePoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
             // 3. 본부별 합격률 랭킹 집계 - 실제 데이터 반영
             const allDivisions = [...new Set(applicants.map(a => a && a.division).filter(Boolean))];
@@ -2708,7 +2728,7 @@ export default function ApplicantManager() {
                   {/* 월별 합격 추이 차트 - 반응형 & 합격률 반영 */}
                   <div className="dash-card" style={{position:"relative",minHeight:"340px",boxSizing:"border-box"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"20px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
-                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📊 월별 응시 및 합격률 추이</span>
+                      <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>📊 월별 응시자 추이</span>
                       <div style={{display:"flex",gap:"8px"}}>
                         <select value={dashYear} onChange={e=>setDashYear(e.target.value)} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #cbd5e1",fontSize:"11px",fontWeight:700,background:"#fff",cursor:"pointer"}}>
                           <option value="2026">2026년</option>
@@ -2733,9 +2753,13 @@ export default function ApplicantManager() {
                             <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
                             <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                           </linearGradient>
+                          <linearGradient id="avgGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.15" />
+                            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.0" />
+                          </linearGradient>
                         </defs>
 
-                        {/* 수평 보조선 및 이중 Y축(좌: 인원, 우: 합격률) */}
+                        {/* 수평 보조선 및 이중 Y축(좌: 인원, 우: 합격률/점수) */}
                         {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
                           const y = chartHeight - 15 - ratio * (chartHeight - 40);
                           const gridVal = Math.round(ratio * maxVal);
@@ -2743,7 +2767,7 @@ export default function ApplicantManager() {
                             <g key={i}>
                               <line x1="28" y1={y} x2={chartWidth + 30} y2={y} stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" opacity="0.4" />
                               <text x="5" y={y + 4} fontSize="9" fill={C.muted} textAnchor="start">{gridVal}명</text>
-                              <text x={chartWidth + 34} y={y + 4} fontSize="9" fill={C.green} textAnchor="start" fontWeight={700}>{Math.round(ratio * 100)}%</text>
+                              <text x={chartWidth + 34} y={y + 4} fontSize="9" fill={C.green} textAnchor="start" fontWeight={700}>{Math.round(ratio * 100)}% / 점</text>
                             </g>
                           );
                         })}
@@ -2751,10 +2775,12 @@ export default function ApplicantManager() {
                         {/* 면적 그라데이션 필 패스 */}
                         {totalPath && <path d={`${totalPath} L ${totalPoints[totalPoints.length - 1].x} ${chartHeight - 15} L ${totalPoints[0].x} ${chartHeight - 15} Z`} fill="url(#totalGrad)" />}
                         {passPath && <path d={`${passPath} L ${passPoints[passPoints.length - 1].x} ${chartHeight - 15} L ${passPoints[0].x} ${chartHeight - 15} Z`} fill="url(#passGrad)" />}
+                        {avgScorePath && <path d={`${avgScorePath} L ${avgScorePoints[avgScorePoints.length - 1].x} ${chartHeight - 15} L ${avgScorePoints[0].x} ${chartHeight - 15} Z`} fill="url(#avgGrad)" />}
 
                         {/* 꺾은선 패스 */}
                         {totalPath && <path d={totalPath} fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
                         {passPath && <path d={passPath} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                        {avgScorePath && <path d={avgScorePath} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
 
                         {/* 데이터 마커 포인트 루프 */}
                         {totalPoints.map((pt, i) => {
@@ -2765,6 +2791,8 @@ export default function ApplicantManager() {
                               <circle cx={pt.x} cy={pt.y} r={isHovered ? 6 : 4} fill="#fff" stroke="#3b82f6" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
                               {/* 합격률 마커 */}
                               <circle cx={passPoints[i].x} cy={passPoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#10b981" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
+                              {/* 평균점수 마커 */}
+                              <circle cx={avgScorePoints[i].x} cy={avgScorePoints[i].y} r={isHovered ? 6 : 4} fill="#fff" stroke="#7c3aed" strokeWidth="2.5" style={{transition:"r 0.1s"}} />
                               
                               {/* X축 월 텍스트 */}
                               <text x={pt.x} y={chartHeight + 10} fontSize="9" fill={C.muted} textAnchor="middle" fontWeight={600}>{pt.month}</text>
@@ -2777,12 +2805,18 @@ export default function ApplicantManager() {
                       {hoveredMonth !== null && (() => {
                         const pt = totalPoints[hoveredMonth];
                         const passPt = passPoints[hoveredMonth];
+                        const avgPt = avgScorePoints[hoveredMonth];
                         return (
-                          <div style={{position:"absolute",left:`${pt.x}px`,top:`${Math.min(pt.y, passPt.y) - 62}px`,transform:"translateX(-50%)",background:"rgba(15,23,42,0.95)",color:"#fff",borderRadius:"8px",padding:"6px 10px",fontSize:"10px",whiteSpace:"nowrap",boxShadow:"0 6px 16px rgba(0,0,0,0.15)",pointerEvents:"none",zIndex:30}}>
+                          <div style={{position:"absolute",left:`${pt.x}px`,top:`${Math.min(pt.y, passPt.y, avgPt.y) - 76}px`,transform:"translateX(-50%)",background:"rgba(15,23,42,0.95)",color:"#fff",borderRadius:"8px",padding:"8px 12px",fontSize:"10px",whiteSpace:"nowrap",boxShadow:"0 6px 16px rgba(0,0,0,0.15)",pointerEvents:"none",zIndex:30}}>
                             <div style={{fontWeight:800,marginBottom:"2px",color:"#94a3b8",borderBottom:"1px solid #334155",paddingBottom:"2px"}}>{pt.month} 성적 현황</div>
-                            <div style={{display:"flex",gap:"8px",marginTop:"3px"}}>
-                              <span>총 응시: <strong style={{color:"#3b82f6"}}>{pt.total}명</strong></span>
-                              <span>합격률: <strong style={{color:"#10b981"}}>{pt.rate}%</strong></span>
+                            <div style={{display:"flex",gap:"8px",marginTop:"3.5px",flexDirection:"column"}}>
+                              <div style={{display:"flex",gap:"8px"}}>
+                                <span>총 응시: <strong style={{color:"#3b82f6"}}>{pt.total}명</strong></span>
+                                <span>합격률: <strong style={{color:"#10b981"}}>{pt.rate}%</strong></span>
+                              </div>
+                              <div style={{marginTop:"2px"}}>
+                                <span>평균 점수: <strong style={{color:"#7c3aed"}}>{pt.avgScore}점</strong></span>
+                              </div>
                             </div>
                             <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",borderTop:"4px solid rgba(15,23,42,0.95)",borderLeft:"4px solid transparent",borderRight:"4px solid transparent"}}/>
                           </div>
@@ -2794,6 +2828,7 @@ export default function ApplicantManager() {
                     <div style={{display:"flex",justifyContent:"center",gap:"16px",marginTop:"24px",fontSize:"11px",fontWeight:700}}>
                       <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#3b82f6"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#3b82f6",display:"inline-block"}}/> 총 응시인원</span>
                       <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#10b981"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#10b981",display:"inline-block"}}/> 합격률 (%)</span>
+                      <span style={{display:"flex",alignItems:"center",gap:"6px",color:"#7c3aed"}}><span style={{width:"8px",height:"8px",borderRadius:"50%",background:"#7c3aed",display:"inline-block"}}/> 평균점수</span>
                     </div>
                   </div>
 
