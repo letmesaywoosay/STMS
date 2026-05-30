@@ -2016,7 +2016,7 @@ export default function ApplicantManager() {
 
       {/* 메인 콘텐츠 */}
       <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 108px)"}}>
-        {mainMenu!=="home"&&(
+        {mainMenu!=="home"&&!isOfficer&&(
         <div style={{marginBottom:"20px",paddingBottom:"14px",borderBottom:`2px solid ${C.blue}22`}}>
           <h1 style={{fontSize:"20px",fontWeight:900,color:C.text,margin:0,letterSpacing:"-0.3px"}}>
             {({
