@@ -1805,26 +1805,14 @@ export default function ApplicantManager() {
           min-height:-webkit-fill-available;
           min-height:100dvh;
           background-color: #f1f5f9 !important;
-          color: #0f172a !important;
-          position: relative;
-          overflow-x: hidden;
-        }
-
-        /* 50% Opacity Background Wallpaper Override */
-        body::before {
-          content: "";
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
           background-image: url("/bg_gradient.png") !important;
           background-size: cover !important;
           background-position: center !important;
           background-repeat: no-repeat !important;
-          opacity: 0.85 !important; /* Premium Blue-Violet Pastel Background */
-          z-index: -2;
-          pointer-events: none;
+          background-attachment: fixed !important;
+          color: #0f172a !important;
+          position: relative;
+          overflow-x: hidden;
         }
 
         /* Safe Area (노치·홈바) */
