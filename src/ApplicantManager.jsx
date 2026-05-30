@@ -2915,11 +2915,11 @@ export default function ApplicantManager() {
                         </div>
                       </button>
 
-                      <button onClick={backupApplicantData} className="quick-tile">
+                      <button onClick={() => { backupApplicantData(); backupDeptData(); }} className="quick-tile">
                         <span style={{fontSize:"24px"}}>💾</span>
                         <div>
-                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>데이터 수동백업</div>
-                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>현재 응시자 전체 백업 수행</div>
+                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>데이터 통합백업</div>
+                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>응시자 정보 및 부서·팀 백업 동시 수행</div>
                         </div>
                       </button>
 
