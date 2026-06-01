@@ -576,18 +576,19 @@ export default function ApplicantManager() {
     }catch(e){alert(`파일 읽기 오류: ${e.message}`);}
   };
 
-  // ── 응시자 점수등록 ─────────────────────────────────────────
+  // ── 응시자 점수등록 (성적표 엑셀 → 응시자 수정 > 테스트 결과 반영) ──
   const importApplicantScoresExcel = async file => {
     try {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array' });
       const ws = wb.Sheets[wb.SheetNames[0]];
+      // header:'A' → 열 인덱스를 A,B,C... 문자로 사용
       const rows = XLSX.utils.sheet_to_json(ws, { header: 'A', defval: '' });
-      
+
       let updatedApplicants = [...applicants];
       let registerCount = 0;
-      let skippedCount = 0;
-      
+      let skippedCount  = 0;
+
       const parseNum = val => {
         if (val === undefined || val === null) return null;
         const clean = String(val).trim();
@@ -595,125 +596,136 @@ export default function ApplicantManager() {
         const num = parseFloat(clean);
         return isNaN(num) ? null : num;
       };
-      
+
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
+
+        // STEP 2-1: C열 이름 파싱 & 헤더 행 스킵
         const name = String(row.C || '').trim();
-        if (!name || name === '이름' || name === '성명' || name === 'Name' || name === '이름\n(C열)') {
-          continue;
-        }
-        
-        // 1. Find applicant by name
+        if (!name || ['이름','성명','Name','이름\n(C열)'].includes(name)) continue;
+
+        // STEP 3: 응시자 이름으로 찾기
         const matches = updatedApplicants.filter(a => a.name === name);
-        if (matches.length === 0) {
-          skippedCount++;
-          continue;
-        }
-        
-        // 3-1. Duplicate check
+        if (matches.length === 0) { skippedCount++; continue; }
         if (matches.length > 1) {
           const ok = window.confirm('중복된 이름인 [ ' + name + ' ] 응시자가 여러 명 존재합니다. 모두 등록하시겠습니까?');
-          if (!ok) {
-            skippedCount += matches.length;
-            continue;
-          }
+          if (!ok) { skippedCount += matches.length; continue; }
         }
-        
-        // ── H열 선택과목 파싱: 쉼표·줄바꿈 또는 숫자로 과목 수 결정 ──
+
+        // STEP 2-2: H열 선택과목으로 과목 수 파악
+        // 형식A: 숫자("2","3") / 형식B: 쉼표·줄바꿈으로 구분된 과목명 목록
         const hRaw = String(row.H || '').trim();
         let selCount = 0;
         if (hRaw) {
-          // 형식1: 숫자만 있는 경우 (예: "2", "3")
-          const numOnly = hRaw.match(/^\d+$/);
-          if (numOnly) {
+          if (/^\d+$/.test(hRaw)) {
             selCount = parseInt(hRaw, 10);
           } else {
-            // 형식2: 쉼표 또는 줄바꿈으로 구분된 과목 목록 (예: "과목A, 과목B" or "과목A\n과목B")
-            const parts = hRaw.split(/[,\n]+/).map(s => s.trim()).filter(s => s.length > 0);
-            selCount = parts.length;
+            selCount = hRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean).length;
           }
         }
-        // 2과목 → A타입, 3과목 → B타입
+
+        // STEP 4: 과목 수로 타입 결정 (2과목→A타입, 3과목→B타입)
         const detectedType = selCount === 2 ? 'A' : selCount === 3 ? 'B' : '';
-        
-        const rawTotal = String(row.E || '').trim();
-        const totalScore = parseFloat(rawTotal);
-        if (isNaN(totalScore)) {
-          // If total score is empty or '-', skip
-          continue;
-        }
-        
-        // A타입(2과목)은 총점 ×2, B타입(3과목)은 그대로
+
+        // STEP 2-3: E열 총점 파싱 (점수 없으면 스킵)
+        const totalScore = parseFloat(String(row.E || '').trim());
+        if (isNaN(totalScore)) continue;
+
+        // A타입(2과목)은 ×2 환산, B타입(3과목)은 그대로
         const scoreVal = detectedType === 'A' ? totalScore * 2 : totalScore;
         const scoreStr = String(scoreVal);
-        const passStr = scoreVal >= 60 ? '합격' : '불합격';
+        const passStr  = scoreVal >= 60 ? '합격' : '불합격';
         const todayStr = new Date().toISOString().split('T')[0];
-        
-        // ── 과목별 점수 파싱 (I열=클라우드 기본, J열=솔루션 오버뷰, K-N열=심화) ──
-        const cloudVal = parseNum(row.I);      // 클라우드 기본
-        const solutionVal = parseNum(row.J);   // 솔루션 오버뷰
-        const deepVal = [row.K, row.L, row.M, row.N]  // 솔루션의 이해(심화)
-          .map(parseNum)
-          .find(val => val !== null) ?? null;
-          
-        // Update matched applicants
+
+        // STEP 2-4: 과목별 점수 파싱
+        // I열=클라우드 기본 / J열=솔루션 오버뷰 / K~N열 중 첫 번째 값=솔루션의 이해(심화)
+        const cloudVal    = parseNum(row.I);
+        const solutionVal = parseNum(row.J);
+        const deepVal     = [row.K, row.L, row.M, row.N].map(parseNum).find(v => v !== null) ?? null;
+
+        // STEP 5: 타입별 과목 정의 (subjectTypes state에 의존하지 않음 → LocalStorage 오염 방지)
+        const SUBJECT_DEF = {
+          A: [
+            { name: '클라우드 기본',       val: cloudVal,    max: 100 },
+            { name: '솔루션 오버뷰',       val: solutionVal, max: 100 },
+          ],
+          B: [
+            { name: '클라우드 기본',        val: cloudVal,    max: 100 },
+            { name: '솔루션 오버뷰',        val: solutionVal, max: 100 },
+            { name: '솔루션의 이해(심화)',  val: deepVal,     max: 100 },
+          ],
+        };
+        const subjectDefs = SUBJECT_DEF[detectedType] || [];
+
+        // STEP 3 & 5: 응시자별 데이터 업데이트
         updatedApplicants = updatedApplicants.map(app => {
           if (app.name !== name) return app;
-          
-          // Determine the next active round N
-          const n = !app.score1 && !app.pass1 ? 1 : (!app.score2 && !app.pass2 ? 2 : 3);
-          
-          const subKey = 'subScores' + n;
-          const scoreKey = 'score' + n;
-          const passKey = 'pass' + n;
-          const dateKey = 'date' + n;
-          
-          // ── 과목별 점수 객체 구성 (타입에 따라 과목 범위 결정) ──
+
+          // 다음 응시 회차(N) 결정: 점수·합격여부 모두 없는 가장 이른 회차
+          const n       = !app.score1 && !app.pass1 ? 1 : (!app.score2 && !app.pass2 ? 2 : 3);
+          const subKey  = 'subScores'         + n;
+          const snapKey = 'subScoresSnapshot' + n;
+          const scoreKey= 'score'             + n;
+          const passKey = 'pass'              + n;
+          const dateKey = 'date'              + n;
+
+          // 과목별 점수 객체 { 과목명: '점수문자열' }
           const newSubScores = {};
-          if (cloudVal !== null) newSubScores['클라우드 기본'] = String(cloudVal);
-          if (solutionVal !== null) newSubScores['솔루션 오버뷰'] = String(solutionVal);
-          // B타입(3과목)일 때만 심화 과목 포함
-          if (detectedType === 'B' && deepVal !== null) newSubScores['솔루션의 이해(심화)'] = String(deepVal);
-          
+          subjectDefs.forEach(({ name: sName, val }) => {
+            if (val !== null) newSubScores[sName] = String(val);
+          });
+
+          // 스냅샷 직접 생성 (buildSnapshots의 subjectTypes 의존성 우회)
+          const newSnapshot = subjectDefs.length > 0
+            ? subjectDefs.map(({ name: sName, val, max }) => ({
+                subjectName: sName,
+                score: val !== null ? val : 0,
+                max,
+              }))
+            : null;
+
           let d = {
             ...app,
-            testType: detectedType || app.testType || '',  // 엑셀에서 판별된 타입 저장
+            testType:   detectedType || app.testType || '',   // STEP 4 저장
             [scoreKey]: scoreStr,
-            [passKey]: passStr,
-            [dateKey]: todayStr,
-            [subKey]: Object.keys(newSubScores).length > 0 ? newSubScores : (app[subKey] || {}),
+            [passKey]:  passStr,
+            [dateKey]:  todayStr,
+            [subKey]:   Object.keys(newSubScores).length > 0 ? newSubScores : (app[subKey] || {}),
+            ...(newSnapshot ? { [snapKey]: newSnapshot } : {}),
           };
-          
-          // Apply finalStatus update logic
+
+          // finalStatus 자동 갱신
           const wasManual = ['퇴사', '면제'].includes(d.finalStatus);
           if (!wasManual) {
-            const latestPassVal = d.pass3 || d.pass2 || d.pass1 || '';
-            if ([d.pass1, d.pass2, d.pass3].some(v => v === '합격')) d.finalStatus = '합격';
-            else if (latestPassVal === '불합격') {
-              if (d.pass3 === '불합격' || (d.pass2 === '불합격' && !d.pass3 && !d.score3) || (d.pass1 === '불합격' && !d.pass2 && !d.score2 && !d.pass3 && !d.score3)) {
-                d.finalStatus = '불합격';
-              } else {
+            if ([d.pass1, d.pass2, d.pass3].some(v => v === '합격')) {
+              d.finalStatus = '합격';
+            } else {
+              const latestPass = d.pass3 || d.pass2 || d.pass1 || '';
+              if (latestPass === '불합격') {
+                const ended = d.pass3 === '불합격'
+                  || (d.pass2 === '불합격' && !d.pass3 && !d.score3)
+                  || (d.pass1 === '불합격' && !d.pass2 && !d.score2 && !d.pass3 && !d.score3);
+                d.finalStatus = ended ? '불합격' : '진행중';
+              } else if (d.pass1 || d.pass2 || d.pass3 || d.score1 || d.score2 || d.score3) {
                 d.finalStatus = '진행중';
+              } else {
+                d.finalStatus = d.finalStatus || '진행중';
               }
             }
-            else if (d.pass1 || d.pass2 || d.pass3 || d.score1 || d.score2 || d.score3) d.finalStatus = '진행중';
-            else d.finalStatus = d.finalStatus || '진행중';
           }
-          
-          // Build subScoresSnapshot for the round N
-          d = buildSnapshots(d);
-          
+
           registerCount++;
           return d;
         });
       }
-      
+
       setApplicants(updatedApplicants);
       alert('점수 등록이 완료되었습니다.\n등록 성공: ' + registerCount + '건\n일치하는 응시자 없음: ' + skippedCount + '건');
     } catch (e) {
       alert('파일 읽기 오류: ' + e.message);
     }
   };
+
 
 
   // ── 양식 다운로드 ─────────────────────────────────────────
