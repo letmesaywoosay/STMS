@@ -3070,6 +3070,7 @@ export default function ApplicantManager() {
                   </div>
 
                   {/* 퀵 메뉴 타일 링크 */}
+                                    {/* 퀵 메뉴 타일 링크 */}
                   <div className="dash-card" style={{minHeight:"320px",display:"flex",flexDirection:"column"}}>
                     <div style={{marginBottom:"16px",borderBottom:"1px solid #f1f5f9",paddingBottom:"12px"}}>
                       <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>⚡ 퀵 유틸리티 바로가기</span>
@@ -3084,11 +3085,6 @@ export default function ApplicantManager() {
                         </div>
                       </button>
 
-                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>응시자 일괄등록</div>
-                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>엑셀 업로드로 응시자 대량추가</div>
-                        </div>
-                      </button>
-
                       <button onClick={()=>scoreFileRef.current?.click()} className="quick-tile">
                         <span style={{fontSize:"24px"}}>📝</span>
                         <div>
@@ -3096,7 +3092,6 @@ export default function ApplicantManager() {
                           <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>테스트 후 응시자들의 점수 등록</div>
                         </div>
                       </button>
-
 
                       <button onClick={() => { backupApplicantData(); backupDeptData(); }} className="quick-tile">
                         <span style={{fontSize:"24px"}}>💾</span>
@@ -3107,7 +3102,7 @@ export default function ApplicantManager() {
                       </button>
                     </div>
                   </div>
-                </div>
+
 
                 <div style={{textAlign:"center",marginTop:"12px",borderTop:"1px solid #e2e8f0",paddingTop:"16px",animation:"fadeUp 0.6s 0.3s ease both"}}>
                   <img src={OKESTRO_LOGO_B64} alt="OKESTRO" style={{height:"24px",opacity:0.4,objectFit:"contain"}} />
