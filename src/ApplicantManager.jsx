@@ -177,8 +177,8 @@ export default function ApplicantManager() {
     }
   }, [applicantModal?.mode, applicantModal?.data?.id]);
   const [subjectTypes,    setSubjectTypes]     = useState({
-    A:{ label:"A타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100}] },
-    B:{ label:"B타입", subjects:[{name:"클라우드 기초",max:100},{name:"솔루션 아키텍처",max:100},{name:"DevOps 실무",max:100}] },
+    A:{ label:"A타입", subjects:[{name:"클라우드 기본",max:100},{name:"솔루션 오버뷰",max:100}] },
+    B:{ label:"B타입", subjects:[{name:"클라우드 기본",max:100},{name:"솔루션 오버뷰",max:100},{name:"솔루션의 이해(심화)",max:100}] },
   });
   const [subjectTypesLoaded, setSubjectTypesLoaded] = useState(false); // {field, x, y}
 
@@ -619,9 +619,22 @@ export default function ApplicantManager() {
           }
         }
         
-        // Parse selection count and total score
-        const selMatch = String(row.H || '').match(/\d+/);
-        const selCount = selMatch ? parseInt(selMatch[0], 10) : 0;
+        // ── H열 선택과목 파싱: 쉼표·줄바꿈 또는 숫자로 과목 수 결정 ──
+        const hRaw = String(row.H || '').trim();
+        let selCount = 0;
+        if (hRaw) {
+          // 형식1: 숫자만 있는 경우 (예: "2", "3")
+          const numOnly = hRaw.match(/^\d+$/);
+          if (numOnly) {
+            selCount = parseInt(hRaw, 10);
+          } else {
+            // 형식2: 쉼표 또는 줄바꿈으로 구분된 과목 목록 (예: "과목A, 과목B" or "과목A\n과목B")
+            const parts = hRaw.split(/[,\n]+/).map(s => s.trim()).filter(s => s.length > 0);
+            selCount = parts.length;
+          }
+        }
+        // 2과목 → A타입, 3과목 → B타입
+        const detectedType = selCount === 2 ? 'A' : selCount === 3 ? 'B' : '';
         
         const rawTotal = String(row.E || '').trim();
         const totalScore = parseFloat(rawTotal);
@@ -630,20 +643,16 @@ export default function ApplicantManager() {
           continue;
         }
         
-        // Calculate score based on rules
-        let scoreVal = totalScore;
-        if (selCount === 2) {
-          scoreVal = totalScore * 2;
-        }
-        
+        // 총점 그대로 사용 (Excel E열이 이미 합산 점수)
+        const scoreVal = totalScore;
         const scoreStr = String(scoreVal);
         const passStr = scoreVal >= 60 ? '합격' : '불합격';
         const todayStr = new Date().toISOString().split('T')[0];
         
-        // Parse subject scores
-        const cloudVal = parseNum(row.I);
-        const solutionVal = parseNum(row.J);
-        const deepVal = [row.K, row.L, row.M, row.N]
+        // ── 과목별 점수 파싱 (I열=클라우드 기본, J열=솔루션 오버뷰, K-N열=심화) ──
+        const cloudVal = parseNum(row.I);      // 클라우드 기본
+        const solutionVal = parseNum(row.J);   // 솔루션 오버뷰
+        const deepVal = [row.K, row.L, row.M, row.N]  // 솔루션의 이해(심화)
           .map(parseNum)
           .find(val => val !== null) ?? null;
           
@@ -659,17 +668,20 @@ export default function ApplicantManager() {
           const passKey = 'pass' + n;
           const dateKey = 'date' + n;
           
-          const newSubScores = { ...(app[subKey] || {}) };
+          // ── 과목별 점수 객체 구성 (타입에 따라 과목 범위 결정) ──
+          const newSubScores = {};
           if (cloudVal !== null) newSubScores['클라우드 기본'] = String(cloudVal);
           if (solutionVal !== null) newSubScores['솔루션 오버뷰'] = String(solutionVal);
-          if (deepVal !== null) newSubScores['솔루션의 이해(심화)'] = String(deepVal);
+          // B타입(3과목)일 때만 심화 과목 포함
+          if (detectedType === 'B' && deepVal !== null) newSubScores['솔루션의 이해(심화)'] = String(deepVal);
           
           let d = {
             ...app,
+            testType: detectedType || app.testType || '',  // 엑셀에서 판별된 타입 저장
             [scoreKey]: scoreStr,
             [passKey]: passStr,
             [dateKey]: todayStr,
-            [subKey]: newSubScores
+            [subKey]: Object.keys(newSubScores).length > 0 ? newSubScores : (app[subKey] || {}),
           };
           
           // Apply finalStatus update logic
