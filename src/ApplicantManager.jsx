@@ -586,8 +586,9 @@ export default function ApplicantManager() {
       const rows = XLSX.utils.sheet_to_json(ws, { header: 'A', defval: '' });
 
       let updatedApplicants = [...applicants];
-      let registerCount = 0;
-      let skippedCount  = 0;
+      let updateCount = 0;   // 기존 응시자 점수 업데이트
+      let newCount    = 0;   // 새로 추가된 응시자
+      let skippedCount = 0;  // 점수 없어서 스킵
 
       const parseNum = val => {
         if (val === undefined || val === null) return null;
@@ -600,61 +601,77 @@ export default function ApplicantManager() {
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
 
-        // STEP 2-1: C열 이름 파싱 & 헤더 행 스킵
-        const name = String(row.C || '').trim();
-        if (!name || ['이름','성명','Name','이름\n(C열)'].includes(name)) continue;
+        // ── 이름: A열 ─────────────────────────────────────────────────────
+        const name = String(row.A || '').trim();
+        if (!name || ['이름','성명','Name'].includes(name)) continue;
 
-        // STEP 3: 응시자 이름으로 찾기
-        const matches = updatedApplicants.filter(a => a.name === name);
-        if (matches.length === 0) { skippedCount++; continue; }
-        if (matches.length > 1) {
-          const ok = window.confirm('중복된 이름인 [ ' + name + ' ] 응시자가 여러 명 존재합니다. 모두 등록하시겠습니까?');
-          if (!ok) { skippedCount += matches.length; continue; }
-        }
+        // ── 총점: B열 (원점수 합계) ────────────────────────────────────────
+        const totalScore = parseFloat(String(row.B || '').trim());
+        if (isNaN(totalScore)) { skippedCount++; continue; }  // '-' 또는 미응시 스킵
 
-        // STEP 2-2: H열 선택과목으로 과목 수 파악
-        // 형식A: 숫자("2","3") / 형식B: 쉼표·줄바꿈으로 구분된 과목명 목록
-        const hRaw = String(row.H || '').trim();
+        // ── 선택과목 수: F열 → 타입 판별 ─────────────────────────────────
+        // 형식A: 숫자("2","3") / 형식B: "2개","3개" / 형식C: 쉼표·줄바꿈 구분 목록
+        const fRaw = String(row.F || '').trim();
         let selCount = 0;
-        if (hRaw) {
-          if (/^\d+$/.test(hRaw)) {
-            selCount = parseInt(hRaw, 10);
+        if (fRaw) {
+          const numMatch = fRaw.match(/\d+/);       // "2개", "3개", "2", "3" 모두 처리
+          if (numMatch) {
+            selCount = parseInt(numMatch[0], 10);
           } else {
-            selCount = hRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean).length;
+            selCount = fRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean).length;
           }
         }
-
-        // STEP 4: 과목 수로 타입 결정 (2과목→A타입, 3과목→B타입)
+        // 2과목 → A타입, 3과목 → B타입
         const detectedType = selCount === 2 ? 'A' : selCount === 3 ? 'B' : '';
 
-        // STEP 2-3: E열 총점 파싱 (점수 없으면 스킵)
-        const totalScore = parseFloat(String(row.E || '').trim());
-        if (isNaN(totalScore)) continue;
-
-        // A타입(2과목)은 ×2 환산, B타입(3과목)은 그대로
+        // A타입(2과목) ×2 환산, B타입(3과목) 그대로
         const scoreVal = detectedType === 'A' ? totalScore * 2 : totalScore;
         const scoreStr = String(scoreVal);
         const passStr  = scoreVal >= 60 ? '합격' : '불합격';
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // STEP 2-4: 과목별 점수 파싱 (열 위치 기반: I=1번째, J=2번째, K~N=3번째)
+        // ── 과목별 점수: G=1번째, H=2번째, I~L=3번째 ─────────────────────
         const colVals = [
-          parseNum(row.I),                                                          // 1번째 과목
-          parseNum(row.J),                                                          // 2번째 과목
-          [row.K, row.L, row.M, row.N].map(parseNum).find(v => v !== null) ?? null, // 3번째 과목
+          parseNum(row.G),                                                          // 1번째 과목
+          parseNum(row.H),                                                          // 2번째 과목
+          [row.I, row.J, row.K, row.L].map(parseNum).find(v => v !== null) ?? null, // 3번째 과목
         ];
 
-        // STEP 5: subjectTypes state에서 실제 과목명·max 가져오기
-        // (LocalStorage에 저장된 사용자 설정값과 일치해야 buildSnapshots 재실행 시 덮어써지지 않음)
+        // subjectTypes state 기준 과목명·max (buildSnapshots와 이름 동기화)
         const typeSubjects = detectedType && subjectTypes[detectedType]
           ? (subjectTypes[detectedType].subjects || [])
           : [];
 
-        // STEP 3 & 5: 응시자별 데이터 업데이트
+        // ── 응시자 찾기 → 없으면 새로 추가 ──────────────────────────────
+        const matches = updatedApplicants.filter(a => a.name === name);
+
+        if (matches.length === 0) {
+          // 명단에 없는 응시자 → 기본 정보로 자동 추가 후 점수 반영
+          updatedApplicants.push({
+            id: uid(),
+            name,
+            joinYearMonth: '', company: '오케스트로', division: '', team: '', jobType: '',
+            divisionHeadName: '', divisionHeadEmail: '',
+            teamLeaderName: '',  teamLeaderEmail: '',
+            email: '',
+            testType: '',
+            score1: '', pass1: '', date1: '', subScores1: {},
+            score2: '', pass2: '', date2: '', subScores2: {},
+            score3: '', pass3: '', date3: '', subScores3: {},
+            finalStatus: '진행중',
+            reason: '', academyNote: '', hrNote: '',
+          });
+          newCount++;
+          // fall through → 아래 map에서 새 응시자 처리
+        } else if (matches.length > 1) {
+          const ok = window.confirm('중복된 이름인 [ ' + name + ' ] 응시자가 여러 명 존재합니다. 모두 등록하시겠습니까?');
+          if (!ok) { skippedCount += matches.length; continue; }
+        }
+
+        // ── 점수 데이터 반영 ──────────────────────────────────────────────
         updatedApplicants = updatedApplicants.map(app => {
           if (app.name !== name) return app;
 
-          // 다음 응시 회차(N) 결정
           const n       = !app.score1 && !app.pass1 ? 1 : (!app.score2 && !app.pass2 ? 2 : 3);
           const subKey  = 'subScores'         + n;
           const snapKey = 'subScoresSnapshot' + n;
@@ -662,16 +679,14 @@ export default function ApplicantManager() {
           const passKey = 'pass'              + n;
           const dateKey = 'date'              + n;
 
-          // 과목명은 subjectTypes state 기준 (사용자 설정 이름과 일치)
-          // 열 위치로 매핑: typeSubjects[0] → I열, [1] → J열, [2] → K~N열
+          // 과목별 점수 객체 (위치 기반 매핑, subjectTypes 이름 사용)
           const newSubScores = {};
           typeSubjects.forEach((subj, idx) => {
             const val = colVals[idx];
             if (val !== null) newSubScores[subj.name] = String(val);
           });
 
-          // 과목별 점수가 하나라도 있을 때만 스냅샷 생성
-          // (없으면 null → 기존 스냅샷 유지, UI에서 수동 입력 가능)
+          // 과목 점수가 하나라도 있을 때만 스냅샷 생성 (없으면 기존 유지)
           const hasAnyScore = typeSubjects.some((_, idx) => colVals[idx] !== null);
           const newSnapshot = hasAnyScore
             ? typeSubjects.map((subj, idx) => ({
@@ -711,13 +726,17 @@ export default function ApplicantManager() {
             }
           }
 
-          registerCount++;
+          if (matches.length > 0) updateCount++;  // 기존 응시자 업데이트 카운트
           return d;
         });
       }
 
       setApplicants(updatedApplicants);
-      alert('점수 등록이 완료되었습니다.\n등록 성공: ' + registerCount + '건\n일치하는 응시자 없음: ' + skippedCount + '건');
+      const lines = ['✅ 점수 등록이 완료되었습니다.'];
+      if (updateCount  > 0) lines.push('기존 응시자 업데이트: ' + updateCount + '건');
+      if (newCount     > 0) lines.push('신규 응시자 추가 + 등록: ' + newCount + '건');
+      if (skippedCount > 0) lines.push('점수 없어 스킵: ' + skippedCount + '건');
+      alert(lines.join('\n'));
     } catch (e) {
       alert('파일 읽기 오류: ' + e.message);
     }
