@@ -2562,59 +2562,44 @@ export default function ApplicantManager() {
             const exemptCount = filteredApplicants.filter(a => a && (getLatest(a).pass === "면제" || a.finalStatus === "면제")).length;
             const exceptionCount = unexaminedCount + exemptCount;
 
-            // 2. 월별 합격 추이 데이터 집계 (차트용) - 실제 데이터 및 합격률 반영
+            // 2. 월별 합격 추이 데이터 집계 (차트용) - 월별보고서 메뉴와 동일하게 실제 응시 데이터만 정밀 반영
             const monthlyTrend = Array.from({length: 12}, (_, i) => {
               const monthStr = String(i + 1).padStart(2, "0");
               const targetYM = `${dashYear}-${monthStr}`;
               
-              // 해당 월의 전체 시험 인원 필터링
-              const monthApps = applicants.filter(a => {
-                if (!a) return false;
+              // 해당 월의 전체 시험 시도(Attempts) 추출
+              const mApps = [];
+              applicants.forEach(a => {
+                if (!a) return;
                 const matchesDiv = dashDiv === "all" ? true : a.division === dashDiv;
-                if (!matchesDiv) return false;
-                
-                const matches1 = a.date1 && a.date1.substring(0, 7) === targetYM && isWithinRange(a.date1);
-                const matches2 = a.date2 && a.date2.substring(0, 7) === targetYM && isWithinRange(a.date2);
-                const matches3 = a.date3 && a.date3.substring(0, 7) === targetYM && isWithinRange(a.date3);
-                return matches1 || matches2 || matches3;
+                if (!matchesDiv) return;
+
+                const atts = [
+                  a.date1 && a.date1.startsWith(targetYM) && isWithinRange(a.date1) ? { score: a.score1, pass: a.pass1 } : null,
+                  a.date2 && a.date2.startsWith(targetYM) && isWithinRange(a.date2) ? { score: a.score2, pass: a.pass2 } : null,
+                  a.date3 && a.date3.startsWith(targetYM) && isWithinRange(a.date3) ? { score: a.score3, pass: a.pass3 } : null,
+                ].filter(Boolean);
+
+                atts.forEach(att => {
+                  mApps.push({ ...a, _att: att });
+                });
               });
 
-              let total = 0;
-              let passed = 0;
-              let scoreSum = 0;
-              let scoreCount = 0;
-              monthApps.forEach(a => {
-                if (a.date1 && a.date1.substring(0, 7) === targetYM && isWithinRange(a.date1)) {
-                  total++;
-                  if (a.pass1 === "합격") passed++;
-                  const s = parseFloat(a.score1);
-                  if (!isNaN(s)) {
-                    scoreSum += s;
-                    scoreCount++;
-                  }
-                }
-                if (a.date2 && a.date2.substring(0, 7) === targetYM && isWithinRange(a.date2)) {
-                  total++;
-                  if (a.pass2 === "합격") passed++;
-                  const s = parseFloat(a.score2);
-                  if (!isNaN(s)) {
-                    scoreSum += s;
-                    scoreCount++;
-                  }
-                }
-                if (a.date3 && a.date3.substring(0, 7) === targetYM && isWithinRange(a.date3)) {
-                  total++;
-                  if (a.pass3 === "합격") passed++;
-                  const s = parseFloat(a.score3);
-                  if (!isNaN(s)) {
-                    scoreSum += s;
-                    scoreCount++;
-                  }
-                }
-              });
+              // 통계 계산 (월별보고서와 완전히 동일하게 처리)
+              // 1) 총 응시인원 (미응시 및 면제를 제외하고 실제 시험결과가 합격/불합격인 응시자 수)
+              const validApps = mApps.filter(a => ["합격", "불합격"].includes(a._att.pass));
+              const total = validApps.length;
 
+              // 2) 합격자 수
+              const passed = validApps.filter(a => a._att.pass === "합격").length;
+
+              // 3) 합격률 계산 (미응시/면제 제외한 실제 응시자 대비 합격자 비율)
               const rate = total > 0 ? Math.round((passed / total) * 100) : 0;
-              const avgScore = scoreCount > 0 ? Math.round((scoreSum / scoreCount) * 10) / 10 : 0;
+
+              // 4) 평균 점수 계산 (점수가 NaN이 아닌 유효 점수 기준)
+              const scores = validApps.map(a => parseFloat(a._att.score)).filter(v => !isNaN(v));
+              const avgScore = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10 : 0;
+
               return { month: `${i + 1}월`, total, passed, rate, avgScore };
             });
 
