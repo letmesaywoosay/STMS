@@ -643,8 +643,8 @@ export default function ApplicantManager() {
           continue;
         }
         
-        // 총점 그대로 사용 (Excel E열이 이미 합산 점수)
-        const scoreVal = totalScore;
+        // A타입(2과목)은 총점 ×2, B타입(3과목)은 그대로
+        const scoreVal = detectedType === 'A' ? totalScore * 2 : totalScore;
         const scoreStr = String(scoreVal);
         const passStr = scoreVal >= 60 ? '합격' : '불합격';
         const todayStr = new Date().toISOString().split('T')[0];
