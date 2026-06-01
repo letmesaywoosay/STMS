@@ -3101,13 +3101,13 @@ export default function ApplicantManager() {
                       </button>
                     </div>
                   </div>
+                </div>
 
                 <div style={{textAlign:"center",marginTop:"12px",borderTop:"1px solid #e2e8f0",paddingTop:"16px",animation:"fadeUp 0.6s 0.3s ease both"}}>
                   <img src={OKESTRO_LOGO_B64} alt="OKESTRO" style={{height:"24px",opacity:0.4,objectFit:"contain"}} />
                   <p style={{fontSize:"10px",color:C.muted,margin:"4px 0 0"}}>© OKESTRO ACADEMY. All Rights Reserved. Solution Test Management System.</p>
                 </div>
               </div>
-            </div>
           );
           };
           return <LandingPage key="landing"/>;
