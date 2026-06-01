@@ -215,7 +215,7 @@ export default function ApplicantManager() {
   const [acctLoaded,      setAcctLoaded]       = useState(false);
 
    const appFileRef  = useRef(null);
-  const scoreFileRef = useRef(null);
+
   const deptFileRef = useRef(null);
   const mouseDownTargetRef = useRef(null);
   const scoreConfirmBtnRef = useRef(null);
@@ -576,171 +576,7 @@ export default function ApplicantManager() {
     }catch(e){alert(`파일 읽기 오류: ${e.message}`);}
   };
 
-  // ── 응시자 점수등록 (성적표 엑셀 → 응시자 수정 > 테스트 결과 반영) ──
-  const importApplicantScoresExcel = async file => {
-    try {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      // header:'A' → 열 인덱스를 A,B,C... 문자로 사용
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 'A', defval: '' });
 
-      let updatedApplicants = [...applicants];
-      let updateCount = 0;   // 기존 응시자 점수 업데이트
-      let newCount    = 0;   // 새로 추가된 응시자
-      let skippedCount = 0;  // 점수 없어서 스킵
-
-      const parseNum = val => {
-        if (val === undefined || val === null) return null;
-        const clean = String(val).trim();
-        if (clean === '' || clean === '-' || clean.includes('선택')) return null;
-        const num = parseFloat(clean);
-        return isNaN(num) ? null : num;
-      };
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-
-        // ── 이름: A열 ─────────────────────────────────────────────────────
-        const name = String(row.A || '').trim();
-        if (!name || ['이름','성명','Name'].includes(name)) continue;
-
-        // ── 총점: B열 (원점수 합계) ────────────────────────────────────────
-        const totalScore = parseFloat(String(row.B || '').trim());
-        if (isNaN(totalScore)) { skippedCount++; continue; }  // '-' 또는 미응시 스킵
-
-        // ── 선택과목 수: F열 → 타입 판별 ─────────────────────────────────
-        // 형식A: 숫자("2","3") / 형식B: "2개","3개" / 형식C: 쉼표·줄바꿈 구분 목록
-        const fRaw = String(row.F || '').trim();
-        let selCount = 0;
-        if (fRaw) {
-          const numMatch = fRaw.match(/\d+/);       // "2개", "3개", "2", "3" 모두 처리
-          if (numMatch) {
-            selCount = parseInt(numMatch[0], 10);
-          } else {
-            selCount = fRaw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean).length;
-          }
-        }
-        // 2과목 → A타입, 3과목 → B타입
-        const detectedType = selCount === 2 ? 'A' : selCount === 3 ? 'B' : '';
-
-        // A타입(2과목) ×2 환산, B타입(3과목) 그대로
-        const scoreVal = detectedType === 'A' ? totalScore * 2 : totalScore;
-        const scoreStr = String(scoreVal);
-        const passStr  = scoreVal >= 60 ? '합격' : '불합격';
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        // ── 과목별 점수: G=1번째, H=2번째, I~L=3번째 ─────────────────────
-        const colVals = [
-          parseNum(row.G),                                                          // 1번째 과목
-          parseNum(row.H),                                                          // 2번째 과목
-          [row.I, row.J, row.K, row.L].map(parseNum).find(v => v !== null) ?? null, // 3번째 과목
-        ];
-
-        // subjectTypes state 기준 과목명·max (buildSnapshots와 이름 동기화)
-        const typeSubjects = detectedType && subjectTypes[detectedType]
-          ? (subjectTypes[detectedType].subjects || [])
-          : [];
-
-        // ── 응시자 찾기 → 없으면 새로 추가 ──────────────────────────────
-        const matches = updatedApplicants.filter(a => a.name === name);
-
-        if (matches.length === 0) {
-          // 명단에 없는 응시자 → 기본 정보로 자동 추가 후 점수 반영
-          updatedApplicants.push({
-            id: uid(),
-            name,
-            joinYearMonth: '', company: '오케스트로', division: '', team: '', jobType: '',
-            divisionHeadName: '', divisionHeadEmail: '',
-            teamLeaderName: '',  teamLeaderEmail: '',
-            email: '',
-            testType: '',
-            score1: '', pass1: '', date1: '', subScores1: {},
-            score2: '', pass2: '', date2: '', subScores2: {},
-            score3: '', pass3: '', date3: '', subScores3: {},
-            finalStatus: '진행중',
-            reason: '', academyNote: '', hrNote: '',
-          });
-          newCount++;
-          // fall through → 아래 map에서 새 응시자 처리
-        } else if (matches.length > 1) {
-          const ok = window.confirm('중복된 이름인 [ ' + name + ' ] 응시자가 여러 명 존재합니다. 모두 등록하시겠습니까?');
-          if (!ok) { skippedCount += matches.length; continue; }
-        }
-
-        // ── 점수 데이터 반영 ──────────────────────────────────────────────
-        updatedApplicants = updatedApplicants.map(app => {
-          if (app.name !== name) return app;
-
-          const n       = !app.score1 && !app.pass1 ? 1 : (!app.score2 && !app.pass2 ? 2 : 3);
-          const subKey  = 'subScores'         + n;
-          const snapKey = 'subScoresSnapshot' + n;
-          const scoreKey= 'score'             + n;
-          const passKey = 'pass'              + n;
-          const dateKey = 'date'              + n;
-
-          // 과목별 점수 객체 (위치 기반 매핑, subjectTypes 이름 사용)
-          const newSubScores = {};
-          typeSubjects.forEach((subj, idx) => {
-            const val = colVals[idx];
-            if (val !== null) newSubScores[subj.name] = String(val);
-          });
-
-          // 과목 점수가 하나라도 있을 때만 스냅샷 생성 (없으면 기존 유지)
-          const hasAnyScore = typeSubjects.some((_, idx) => colVals[idx] !== null);
-          const newSnapshot = hasAnyScore
-            ? typeSubjects.map((subj, idx) => ({
-                subjectName: subj.name,
-                score: colVals[idx] !== null ? colVals[idx] : 0,
-                max: subj.max || 100,
-              }))
-            : null;
-
-          let d = {
-            ...app,
-            testType:   detectedType || app.testType || '',
-            [scoreKey]: scoreStr,
-            [passKey]:  passStr,
-            [dateKey]:  todayStr,
-            [subKey]:   Object.keys(newSubScores).length > 0 ? newSubScores : (app[subKey] || {}),
-            ...(newSnapshot ? { [snapKey]: newSnapshot } : {}),
-          };
-
-          // finalStatus 자동 갱신
-          const wasManual = ['퇴사', '면제'].includes(d.finalStatus);
-          if (!wasManual) {
-            if ([d.pass1, d.pass2, d.pass3].some(v => v === '합격')) {
-              d.finalStatus = '합격';
-            } else {
-              const latestPass = d.pass3 || d.pass2 || d.pass1 || '';
-              if (latestPass === '불합격') {
-                const ended = d.pass3 === '불합격'
-                  || (d.pass2 === '불합격' && !d.pass3 && !d.score3)
-                  || (d.pass1 === '불합격' && !d.pass2 && !d.score2 && !d.pass3 && !d.score3);
-                d.finalStatus = ended ? '불합격' : '진행중';
-              } else if (d.pass1 || d.pass2 || d.pass3 || d.score1 || d.score2 || d.score3) {
-                d.finalStatus = '진행중';
-              } else {
-                d.finalStatus = d.finalStatus || '진행중';
-              }
-            }
-          }
-
-          if (matches.length > 0) updateCount++;  // 기존 응시자 업데이트 카운트
-          return d;
-        });
-      }
-
-      setApplicants(updatedApplicants);
-      const lines = ['✅ 점수 등록이 완료되었습니다.'];
-      if (updateCount  > 0) lines.push('기존 응시자 업데이트: ' + updateCount + '건');
-      if (newCount     > 0) lines.push('신규 응시자 추가 + 등록: ' + newCount + '건');
-      if (skippedCount > 0) lines.push('점수 없어 스킵: ' + skippedCount + '건');
-      alert(lines.join('\n'));
-    } catch (e) {
-      alert('파일 읽기 오류: ' + e.message);
-    }
-  };
 
 
 
@@ -3124,13 +2960,7 @@ export default function ApplicantManager() {
                         </div>
                       </button>
 
-                      <button onClick={()=>scoreFileRef.current?.click()} className="quick-tile">
-                        <span style={{fontSize:"24px"}}>📝</span>
-                        <div>
-                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>응시자 점수등록</div>
-                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>테스트 후 응시자들의 점수 등록</div>
-                        </div>
-                      </button>
+
 
                       <button onClick={() => { backupApplicantData(); backupDeptData(); }} className="quick-tile">
                         <span style={{fontSize:"24px"}}>💾</span>
@@ -6584,16 +6414,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
               e.target.value = '';
             }}
           />
-          <input
-            ref={scoreFileRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            style={{ display: "none" }}
-            onChange={e => {
-              if (e.target.files[0]) importApplicantScoresExcel(e.target.files[0]);
-              e.target.value = '';
-            }}
-          />
+
         </>
       )}
     </div>
