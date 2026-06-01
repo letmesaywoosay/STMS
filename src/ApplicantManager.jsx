@@ -637,31 +637,24 @@ export default function ApplicantManager() {
         const passStr  = scoreVal >= 60 ? '합격' : '불합격';
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // STEP 2-4: 과목별 점수 파싱
-        // I열=클라우드 기본 / J열=솔루션 오버뷰 / K~N열 중 첫 번째 값=솔루션의 이해(심화)
-        const cloudVal    = parseNum(row.I);
-        const solutionVal = parseNum(row.J);
-        const deepVal     = [row.K, row.L, row.M, row.N].map(parseNum).find(v => v !== null) ?? null;
+        // STEP 2-4: 과목별 점수 파싱 (열 위치 기반: I=1번째, J=2번째, K~N=3번째)
+        const colVals = [
+          parseNum(row.I),                                                          // 1번째 과목
+          parseNum(row.J),                                                          // 2번째 과목
+          [row.K, row.L, row.M, row.N].map(parseNum).find(v => v !== null) ?? null, // 3번째 과목
+        ];
 
-        // STEP 5: 타입별 과목 정의 (subjectTypes state에 의존하지 않음 → LocalStorage 오염 방지)
-        const SUBJECT_DEF = {
-          A: [
-            { name: '클라우드 기본',       val: cloudVal,    max: 100 },
-            { name: '솔루션 오버뷰',       val: solutionVal, max: 100 },
-          ],
-          B: [
-            { name: '클라우드 기본',        val: cloudVal,    max: 100 },
-            { name: '솔루션 오버뷰',        val: solutionVal, max: 100 },
-            { name: '솔루션의 이해(심화)',  val: deepVal,     max: 100 },
-          ],
-        };
-        const subjectDefs = SUBJECT_DEF[detectedType] || [];
+        // STEP 5: subjectTypes state에서 실제 과목명·max 가져오기
+        // (LocalStorage에 저장된 사용자 설정값과 일치해야 buildSnapshots 재실행 시 덮어써지지 않음)
+        const typeSubjects = detectedType && subjectTypes[detectedType]
+          ? (subjectTypes[detectedType].subjects || [])
+          : [];
 
         // STEP 3 & 5: 응시자별 데이터 업데이트
         updatedApplicants = updatedApplicants.map(app => {
           if (app.name !== name) return app;
 
-          // 다음 응시 회차(N) 결정: 점수·합격여부 모두 없는 가장 이른 회차
+          // 다음 응시 회차(N) 결정
           const n       = !app.score1 && !app.pass1 ? 1 : (!app.score2 && !app.pass2 ? 2 : 3);
           const subKey  = 'subScores'         + n;
           const snapKey = 'subScoresSnapshot' + n;
@@ -669,24 +662,28 @@ export default function ApplicantManager() {
           const passKey = 'pass'              + n;
           const dateKey = 'date'              + n;
 
-          // 과목별 점수 객체 { 과목명: '점수문자열' }
+          // 과목명은 subjectTypes state 기준 (사용자 설정 이름과 일치)
+          // 열 위치로 매핑: typeSubjects[0] → I열, [1] → J열, [2] → K~N열
           const newSubScores = {};
-          subjectDefs.forEach(({ name: sName, val }) => {
-            if (val !== null) newSubScores[sName] = String(val);
+          typeSubjects.forEach((subj, idx) => {
+            const val = colVals[idx];
+            if (val !== null) newSubScores[subj.name] = String(val);
           });
 
-          // 스냅샷 직접 생성 (buildSnapshots의 subjectTypes 의존성 우회)
-          const newSnapshot = subjectDefs.length > 0
-            ? subjectDefs.map(({ name: sName, val, max }) => ({
-                subjectName: sName,
-                score: val !== null ? val : 0,
-                max,
+          // 과목별 점수가 하나라도 있을 때만 스냅샷 생성
+          // (없으면 null → 기존 스냅샷 유지, UI에서 수동 입력 가능)
+          const hasAnyScore = typeSubjects.some((_, idx) => colVals[idx] !== null);
+          const newSnapshot = hasAnyScore
+            ? typeSubjects.map((subj, idx) => ({
+                subjectName: subj.name,
+                score: colVals[idx] !== null ? colVals[idx] : 0,
+                max: subj.max || 100,
               }))
             : null;
 
           let d = {
             ...app,
-            testType:   detectedType || app.testType || '',   // STEP 4 저장
+            testType:   detectedType || app.testType || '',
             [scoreKey]: scoreStr,
             [passKey]:  passStr,
             [dateKey]:  todayStr,
