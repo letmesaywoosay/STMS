@@ -863,7 +863,7 @@ export default function ApplicantManager() {
   };
 
   const inp=(ex={})=>({
-    width:"100%", background:C.bg, border:`1.5px solid ${C.border}`,
+    width:"100%", background:"#f1f5f9", border:"1.5px solid #cbd5e1",
     borderRadius:"9px", padding:"9px 12px", color:C.text,
     fontSize:"13px", outline:"none", fontFamily:"inherit",
     boxSizing:"border-box", ...ex,
