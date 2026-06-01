@@ -1,4 +1,4 @@
-// ApplicantManager.jsx
+﻿// ApplicantManager.jsx
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
 
@@ -215,6 +215,7 @@ export default function ApplicantManager() {
   const [acctLoaded,      setAcctLoaded]       = useState(false);
 
    const appFileRef  = useRef(null);
+  const scoreFileRef = useRef(null);
   const deptFileRef = useRef(null);
   const mouseDownTargetRef = useRef(null);
   const scoreConfirmBtnRef = useRef(null);
@@ -574,6 +575,134 @@ export default function ApplicantManager() {
       setApplicants(p=>[...p,...unique]);
     }catch(e){alert(`파일 읽기 오류: ${e.message}`);}
   };
+
+  // ── 응시자 점수등록 ─────────────────────────────────────────
+  const importApplicantScoresExcel = async file => {
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 'A', defval: '' });
+      
+      let updatedApplicants = [...applicants];
+      let registerCount = 0;
+      let skippedCount = 0;
+      
+      const parseNum = val => {
+        if (val === undefined || val === null) return null;
+        const clean = String(val).trim();
+        if (clean === '' || clean === '-' || clean.includes('선택')) return null;
+        const num = parseFloat(clean);
+        return isNaN(num) ? null : num;
+      };
+      
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const name = String(row.C || '').trim();
+        if (!name || name === '이름' || name === '성명' || name === 'Name' || name === '이름\n(C열)') {
+          continue;
+        }
+        
+        // 1. Find applicant by name
+        const matches = updatedApplicants.filter(a => a.name === name);
+        if (matches.length === 0) {
+          skippedCount++;
+          continue;
+        }
+        
+        // 3-1. Duplicate check
+        if (matches.length > 1) {
+          const ok = window.confirm('중복된 이름인 [ ' + name + ' ] 응시자가 여러 명 존재합니다. 모두 등록하시겠습니까?');
+          if (!ok) {
+            skippedCount += matches.length;
+            continue;
+          }
+        }
+        
+        // Parse selection count and total score
+        const selMatch = String(row.H || '').match(/\d+/);
+        const selCount = selMatch ? parseInt(selMatch[0], 10) : 0;
+        
+        const rawTotal = String(row.E || '').trim();
+        const totalScore = parseFloat(rawTotal);
+        if (isNaN(totalScore)) {
+          // If total score is empty or '-', skip
+          continue;
+        }
+        
+        // Calculate score based on rules
+        let scoreVal = totalScore;
+        if (selCount === 2) {
+          scoreVal = totalScore * 2;
+        }
+        
+        const scoreStr = String(scoreVal);
+        const passStr = scoreVal >= 60 ? '합격' : '불합격';
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // Parse subject scores
+        const cloudVal = parseNum(row.I);
+        const solutionVal = parseNum(row.J);
+        const deepVal = [row.K, row.L, row.M, row.N]
+          .map(parseNum)
+          .find(val => val !== null) ?? null;
+          
+        // Update matched applicants
+        updatedApplicants = updatedApplicants.map(app => {
+          if (app.name !== name) return app;
+          
+          // Determine the next active round N
+          const n = !app.score1 && !app.pass1 ? 1 : (!app.score2 && !app.pass2 ? 2 : 3);
+          
+          const subKey = 'subScores' + n;
+          const scoreKey = 'score' + n;
+          const passKey = 'pass' + n;
+          const dateKey = 'date' + n;
+          
+          const newSubScores = { ...(app[subKey] || {}) };
+          if (cloudVal !== null) newSubScores['클라우드 기본'] = String(cloudVal);
+          if (solutionVal !== null) newSubScores['솔루션 오버뷰'] = String(solutionVal);
+          if (deepVal !== null) newSubScores['솔루션의 이해(심화)'] = String(deepVal);
+          
+          let d = {
+            ...app,
+            [scoreKey]: scoreStr,
+            [passKey]: passStr,
+            [dateKey]: todayStr,
+            [subKey]: newSubScores
+          };
+          
+          // Apply finalStatus update logic
+          const wasManual = ['퇴사', '면제'].includes(d.finalStatus);
+          if (!wasManual) {
+            const latestPassVal = d.pass3 || d.pass2 || d.pass1 || '';
+            if ([d.pass1, d.pass2, d.pass3].some(v => v === '합격')) d.finalStatus = '합격';
+            else if (latestPassVal === '불합격') {
+              if (d.pass3 === '불합격' || (d.pass2 === '불합격' && !d.pass3 && !d.score3) || (d.pass1 === '불합격' && !d.pass2 && !d.score2 && !d.pass3 && !d.score3)) {
+                d.finalStatus = '불합격';
+              } else {
+                d.finalStatus = '진행중';
+              }
+            }
+            else if (d.pass1 || d.pass2 || d.pass3 || d.score1 || d.score2 || d.score3) d.finalStatus = '진행중';
+            else d.finalStatus = d.finalStatus || '진행중';
+          }
+          
+          // Build subScoresSnapshot for the round N
+          d = buildSnapshots(d);
+          
+          registerCount++;
+          return d;
+        });
+      }
+      
+      setApplicants(updatedApplicants);
+      alert('점수 등록이 완료되었습니다.\n등록 성공: ' + registerCount + '건\n일치하는 응시자 없음: ' + skippedCount + '건');
+    } catch (e) {
+      alert('파일 읽기 오류: ' + e.message);
+    }
+  };
+
 
   // ── 양식 다운로드 ─────────────────────────────────────────
   const downloadApplicantTemplate=()=>{
@@ -2946,14 +3075,28 @@ export default function ApplicantManager() {
                       <span style={{fontWeight:800,fontSize:"14px",color:"#002060",display:"flex",alignItems:"center",gap:"6px"}}>⚡ 퀵 유틸리티 바로가기</span>
                     </div>
 
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(2, 1fr)",gap:"14px",flex:1}}>
-                      <button onClick={()=>setApplicantModal({mode:"excel"})} className="quick-tile">
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(200px, 1fr))",gap:"14px",flex:1}}>
+                      <button onClick={()=>appFileRef.current?.click()} className="quick-tile">
                         <span style={{fontSize:"24px"}}>📥</span>
                         <div>
                           <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>응시자 일괄등록</div>
                           <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>엑셀 업로드로 응시자 대량추가</div>
                         </div>
                       </button>
+
+                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>응시자 일괄등록</div>
+                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>엑셀 업로드로 응시자 대량추가</div>
+                        </div>
+                      </button>
+
+                      <button onClick={()=>scoreFileRef.current?.click()} className="quick-tile">
+                        <span style={{fontSize:"24px"}}>📝</span>
+                        <div>
+                          <div style={{fontWeight:800,fontSize:"13px",color:"#002060"}}>응시자 점수등록</div>
+                          <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>테스트 후 응시자들의 점수 등록</div>
+                        </div>
+                      </button>
+
 
                       <button onClick={() => { backupApplicantData(); backupDeptData(); }} className="quick-tile">
                         <span style={{fontSize:"24px"}}>💾</span>
@@ -3089,7 +3232,7 @@ export default function ApplicantManager() {
             {/* 2단: 액션 버튼들 */}
             <div style={{display:"flex",gap:"8px",marginBottom:"14px",flexWrap:"wrap",alignItems:"center"}}>
               <button onClick={()=>setAppViewMode("monthly")} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>월별 보기</button>
-              {isAdmin&&can(userRole,"import_excel")&&<><input ref={appFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importApplicantExcel(e.target.files[0]);e.target.value='';}}/>
+              {isAdmin&&can(userRole,"import_excel")&&<>
               <button onClick={downloadApplicantTemplate} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}06`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>양식 다운로드</button>
               <button onClick={()=>appFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>일괄등록</button></>}
               {isAdmin&&can(userRole,"backup")&&<button onClick={backupApplicantData} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>데이터 백업</button>}
@@ -6393,6 +6536,32 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
         };
         return <ScrollTopBtn key={`scroll-top-${mainMenu}`}/>;
       })()}
+
+      {/* Global Hidden File Inputs for Excel Uploads */}
+      {isAdmin && can(userRole, "import_excel") && (
+        <>
+          <input
+            ref={appFileRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            style={{ display: "none" }}
+            onChange={e => {
+              if (e.target.files[0]) importApplicantExcel(e.target.files[0]);
+              e.target.value = '';
+            }}
+          />
+          <input
+            ref={scoreFileRef}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            style={{ display: "none" }}
+            onChange={e => {
+              if (e.target.files[0]) importApplicantScoresExcel(e.target.files[0]);
+              e.target.value = '';
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
