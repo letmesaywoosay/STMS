@@ -6457,7 +6457,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
         const fieldLabel={company:"구분(회사)",division:"소속본부",team:"소속팀"}[field];
         const allOpts=[...new Set(applicants.map(a=>(a[field]||"")).filter(Boolean))].sort();
         return(
-          <div className="col-dd" style={{position:"absolute",top,left,zIndex:1000,background:C.surface,border:`1.5px solid ${C.blue}33`,borderRadius:"12px",boxShadow:"0 8px 28px rgba(0,0,0,0.14)",minWidth:"200px",maxHeight:"280px",overflow:"auto",padding:"6px 0",animation:"fadeUp 0.15s ease"}}>
+          <div className="col-dd" style={{position:"absolute",top,left,zIndex:1000,background:"rgba(255, 255, 255, 0.85)",backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:`1.5px solid ${C.blue}33`,borderRadius:"12px",boxShadow:"0 8px 28px rgba(0,0,0,0.14)",minWidth:"200px",maxHeight:"280px",overflow:"auto",padding:"6px 0",animation:"fadeUp 0.15s ease"}}>
             <div style={{padding:"8px 14px 6px",fontSize:"10px",fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.06em",borderBottom:`1px solid ${C.border}`,marginBottom:"4px"}}>{fieldLabel} 필터</div>
             {/* 전체 해제 */}
             <div className="col-dd" onClick={()=>{setColFilters(p=>({...p,[field]:""}));setColDropdown(null);}}
