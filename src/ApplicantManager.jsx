@@ -4407,6 +4407,14 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
           // 통계 계산
           const scores=mApps.map(a=>parseFloat(a._att.score)).filter(v=>!isNaN(v));
           const avg=scores.length?Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10:null;
+
+          // 타입별 통계 계산 (A타입: 경영전략본부이거나 사업기획팀 / B타입: 그 외 모든 팀)
+          const scoresA=mApps.filter(a=>a.division==="경영전략본부"||a.team==="사업기획팀").map(a=>parseFloat(a._att.score)).filter(v=>!isNaN(v));
+          const avgA=scoresA.length?Math.round(scoresA.reduce((a,b)=>a+b,0)/scoresA.length*10)/10:null;
+
+          const scoresB=mApps.filter(a=>!(a.division==="경영전략본부"||a.team==="사업기획팀")).map(a=>parseFloat(a._att.score)).filter(v=>!isNaN(v));
+          const avgB=scoresB.length?Math.round(scoresB.reduce((a,b)=>a+b,0)/scoresB.length*10)/10:null;
+
           const passC=mApps.filter(a=>a._att.pass==="합격").length;
           const failC=mApps.filter(a=>a._att.pass==="불합격").length;
           const passRate=passC+failC>0?Math.round(passC/(passC+failC)*100):null;
@@ -4552,6 +4560,38 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                         <span style={{fontSize:"16px",fontWeight:800,color:avgDiff>=0?C.green:C.red}}>{avgDiff>=0?"+":""}{avgDiff}점</span>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 2-2. 타입별 점수평균 */}
+              <div style={{marginBottom:"20px"}}>
+                <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,overflow:"hidden",boxShadow:shadow}}>
+                  <div style={{padding:"14px 20px",background:`linear-gradient(135deg,${C.blue}08,${C.blue}04)`,borderBottom:`1px solid ${C.border}`}}>
+                    <div style={{fontWeight:800,fontSize:"14px",color:C.text}}>타입별 점수평균</div>
+                  </div>
+                  <div style={{padding:"24px",display:"flex",flexDirection:"column",gap:"16px",justifyContent:"center",alignItems:"stretch"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 18px",background:`${C.blue}04`,borderRadius:"12px",border:`1px solid ${C.blue}10`}}>
+                      <div style={{textAlign:"left"}}>
+                        <div style={{fontWeight:800,fontSize:"13px",color:C.text}}>A타입</div>
+                        <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>경영전략본부, 사업기획팀</div>
+                      </div>
+                      <div style={{fontSize:"24px",fontWeight:900,color:avgA!==null?(avgA>=60?C.green:C.red):C.muted}}>
+                        {avgA!==null?avgA:"—"}<span style={{fontSize:"12px",fontWeight:500,color:C.muted}}>점</span>
+                        <span style={{fontSize:"10px",fontWeight:500,color:C.muted,marginLeft:"6px"}}>({scoresA.length}명)</span>
+                      </div>
+                    </div>
+
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 18px",background:`${C.purple}04`,borderRadius:"12px",border:`1px solid ${C.purple}10`}}>
+                      <div style={{textAlign:"left"}}>
+                        <div style={{fontWeight:800,fontSize:"13px",color:C.text}}>B타입</div>
+                        <div style={{fontSize:"10px",color:C.muted,marginTop:"2px"}}>그 외 모든 팀</div>
+                      </div>
+                      <div style={{fontSize:"24px",fontWeight:900,color:avgB!==null?(avgB>=60?C.green:C.red):C.muted}}>
+                        {avgB!==null?avgB:"—"}<span style={{fontSize:"12px",fontWeight:500,color:C.muted}}>점</span>
+                        <span style={{fontSize:"10px",fontWeight:500,color:C.muted,marginLeft:"6px"}}>({scoresB.length}명)</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
