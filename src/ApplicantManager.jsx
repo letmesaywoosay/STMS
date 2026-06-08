@@ -32,19 +32,19 @@ const stSet = async (key, value) => {
   catch(e){ try{localStorage.setItem(key,JSON.stringify(value));}catch{} return "local:"+e.message; }
 };
 
-// ── 공통 디자인 토큰 (프리미엄 브라이트 글래스모피즘 디자인 시스템 - 투명도 35%) ──
+// ── 공통 디자인 토큰 (네오 브루탈리즘 Neo-Brutalisim 디자인 시스템) ──
 const C = {
-  bg:"transparent",
-  surface:"rgba(255, 255, 255, 0.35)",
-  border:"rgba(255, 255, 255, 0.4)",
-  border2:"rgba(0, 0, 0, 0.08)",
-  blue:"#1d4ed8",     blueMid:"#2563eb",  blueLight:"#3b82f6",
-  text:"#0f172a",     subtle:"#334155",   muted:"#64748b",
-  green:"#059669",    red:"#dc2626",      amber:"#d97706",
-  purple:"#7c3aed",   teal:"#0d9488",
+  bg:"#f3f3eb",
+  surface:"#ffffff",
+  border:"#000000",
+  border2:"#000000",
+  blue:"#3b82f6",     blueMid:"#2563eb",  blueLight:"#60a5fa",
+  text:"#000000",     subtle:"#000000",   muted:"#2d3748",
+  green:"#00a86b",    red:"#ff4d4d",      amber:"#ff9f43",
+  purple:"#9c27b0",   teal:"#00bcd4",
 };
-const shadow   = "0 8px 32px 0 rgba(31, 38, 135, 0.06)";
-const shadowLg = "0 12px 40px 0 rgba(31, 38, 135, 0.12)";
+const shadow   = "4px 4px 0px #000000";
+const shadowLg = "6px 6px 0px #000000";
 const uid = () => Math.random().toString(36).slice(2, 8);
 
 // ── RBAC 설정 ────────────────────────────────────────────────
@@ -1809,27 +1809,18 @@ export default function ApplicantManager() {
           min-height:100vh;
           min-height:-webkit-fill-available;
           min-height:100dvh;
-          background-color: #f1f5f9 !important;
-          color: #0f172a !important;
+          background-color: #f3f3eb !important; /* 브루탈리즘 미색 배경 */
+          background-image: radial-gradient(#000000 1px, transparent 1px) !important;
+          background-size: 20px 20px !important; /* 격자 도트 무늬 */
+          color: #000000 !important;
           position: relative;
           overflow-x: hidden;
+          font-family: 'Outfit', 'Inter', -apple-system, sans-serif !important;
         }
 
-        /* 50% Opacity Background Wallpaper Override */
+        /* 기존 배경 월페이퍼 무효화 */
         body::before {
-          content: "";
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-image: url("/bg_gradient.jpg") !important;
-          background-size: cover !important;
-          background-position: center !important;
-          background-repeat: no-repeat !important;
-          opacity: 0.5 !important; /* 50% Opacity Background Wallpaper */
-          z-index: -2;
-          pointer-events: none;
+          display: none !important;
         }
 
         /* Safe Area (노치·홈바) */
@@ -1839,90 +1830,148 @@ export default function ApplicantManager() {
         .scroll-top-btn{bottom:max(32px,calc(32px + env(safe-area-inset-bottom)));}
 
         /* ── 애니메이션 ── */
-        @keyframes modalIn{from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes modalIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
         @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.3}40%{transform:translateY(-7px);opacity:1}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
         @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(29,78,216,0.15)}50%{box-shadow:0 0 0 6px rgba(29,78,216,0)}}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,0,0,0.15)}50%{box-shadow:0 0 0 6px rgba(0,0,0,0)}}
         @keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.65}}
 
         /* GNB 탭 hover */
         .gnb-tab{
           -webkit-appearance:none;appearance:none;
-          transition:color 0.15s,border-color 0.15s,background 0.15s!important;
+          transition:all 0.15s !important;
           -webkit-font-smoothing:antialiased;
+          border: 2px solid transparent !important;
+          border-radius: 4px !important;
+          font-weight: 800 !important;
+          color: #2d3748 !important;
         }
-        .gnb-tab:hover{color:#1d4ed8!important;background:rgba(29,78,216,0.05)!important;}
+        .gnb-tab:hover{
+          color:#000000 !important;
+          background:#ffde4d !important; /* 노란색 브루탈리즘 하이라이트 */
+          border: 2px solid #000000 !important;
+          box-shadow: 2px 2px 0px #000000 !important;
+          transform: translate(-1px, -1px);
+        }
+        .gnb-tab.active{
+          background:#ffde4d !important;
+          border: 2px solid #000000 !important;
+          box-shadow: 2px 2px 0px #000000 !important;
+          color:#000000 !important;
+        }
 
-         /* Glassmorphism Card Overrides - 35% Opacity Bright Glass */
+        /* Neo-Brutalism Card Override */
         .dash-card, .kpi-card, .login-box, .modal-content, .card, .quick-tile {
-          background: rgba(255, 255, 255, 0.35) !important;
-          backdrop-filter: blur(20px) saturate(190%) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.45) !important;
-          border-radius: 20px !important;
-          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.06) !important;
-          color: #0f172a !important;
+          background: #ffffff !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border: 3px solid #000000 !important;
+          border-radius: 8px !important;
+          box-shadow: 6px 6px 0px #000000 !important;
+          color: #000000 !important;
+          transition: transform 0.15s, box-shadow 0.15s !important;
         }
 
-        /* 카드 공통 hover */
-        .anim-card{transition:transform 0.22s cubic-bezier(.34,1.56,.64,1),box-shadow 0.22s ease!important;}
+        /* 카드 hover 효과 */
+        .anim-card{transition:transform 0.15s, box-shadow 0.15s !important;}
         .anim-card:hover{
-          transform:translateY(-3px)!important;
-          box-shadow:0 12px 32px rgba(31, 38, 135, 0.12) !important;
-          border-color: rgba(255, 255, 255, 0.7) !important;
-          background: rgba(255, 255, 255, 0.45) !important;
+          transform: translate(-3px, -3px) !important;
+          box-shadow: 9px 9px 0px #000000 !important;
+          background: #ffffff !important;
         }
 
-        /* GNB header glassmorphism - 35% Opacity Bright Glass */
+        /* GNB header neo-brutalisim */
         div[style*="position: sticky"][style*="top: 0"], .mobile-drawer {
-          background: rgba(255, 255, 255, 0.35) !important;
-          backdrop-filter: blur(20px) saturate(190%) !important;
-          -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
+          background: #ffffff !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+          border-bottom: 3px solid #000000 !important;
+          box-shadow: 0px 4px 0px rgba(0,0,0,0.05) !important;
         }
 
         /* 테이블 헤더/셀 스타일 */
+        table {
+          border-collapse: collapse !important;
+          border: 3px solid #000000 !important;
+        }
         th {
-          background: rgba(255, 255, 255, 0.45) !important;
-          color: #1e293b !important;
-          font-weight: 700 !important;
-          border-bottom: 1.5px solid rgba(0, 0, 0, 0.08) !important;
+          background: #ffe066 !important; /* 브루탈리즘 옐로우 */
+          color: #000000 !important;
+          font-weight: 900 !important;
+          border: 2px solid #000000 !important;
+          text-transform: uppercase;
         }
         td {
-          border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
-          color: #334155 !important;
+          border: 2px solid #000000 !important;
+          color: #000000 !important;
+          background: #ffffff !important;
+          font-weight: 600 !important;
+        }
+
+        /* 테이블 행 hover */
+        .anim-row:hover td {
+          background: #f1f3f5 !important;
         }
 
         /* 버튼 hover */
-        .anim-btn{
+        button, .anim-btn {
           -webkit-appearance:none;appearance:none;
-          transition:filter 0.15s,transform 0.12s,box-shadow 0.15s!important;
+          border: 2px solid #000000 !important;
+          box-shadow: 3px 3px 0px #000000 !important;
+          transition: all 0.1s !important;
           cursor:pointer;
+          font-weight: 800 !important;
+          border-radius: 4px !important;
+          background: #ffffff;
+          color: #000000;
         }
-        .anim-btn:hover{filter:brightness(1.08);transform:translateY(-1px)!important;box-shadow:0 4px 12px rgba(0,0,0,0.25)!important;}
-        .anim-btn:active{transform:translateY(0)!important;}
-
-        /* 테이블 행 hover */
-        .anim-row{transition:background 0.15s!important;}
-        .anim-row:hover{background:rgba(255,255,255,0.3)!important;}
+        button:hover, .anim-btn:hover {
+          transform: translate(-2px, -2px) !important;
+          box-shadow: 5px 5px 0px #000000 !important;
+          background: #ffde4d !important;
+          filter: none !important;
+        }
+        button:active, .anim-btn:active {
+          transform: translate(1px, 1px) !important;
+          box-shadow: 1px 1px 0px #000000 !important;
+        }
 
         /* 입력 필드 포커스 */
-        .anim-input{transition:border-color 0.15s,box-shadow 0.15s!important;}
-        .anim-input:focus{border-color:#1d4ed8!important;box-shadow:0 0 0 3px rgba(29, 78, 216, 0.12)!important;outline:none!important;}
+        input[type="text"], input[type="password"], input[type="email"], input[type="search"], input[type="month"], select, textarea, .anim-input {
+          border: 2px solid #000000 !important;
+          border-radius: 4px !important;
+          transition: all 0.15s !important;
+          box-shadow: 2px 2px 0px #000000 !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, input[type="search"]:focus, input[type="month"]:focus, select:focus, textarea:focus, .anim-input:focus {
+          background: #eef2ff !important;
+          box-shadow: 4px 4px 0px #000000 !important;
+          outline: none !important;
+        }
 
         /* 페이지 컨텐츠 진입 */
-        .page-enter{animation:fadeUp 0.35s ease both;}
-        .page-enter-fast{animation:fadeUp 0.25s ease both;}
+        .page-enter{animation:fadeUp 0.25s ease both;}
+        .page-enter-fast{animation:fadeUp 0.15s ease both;}
 
-        /* 배지/태그 hover */
-        .anim-badge{transition:transform 0.15s,filter 0.15s!important;}
-        .anim-badge:hover{transform:scale(1.06)!important;filter:brightness(1.05)!important;}
+        /* 배지/태그 */
+        .anim-badge{
+          border: 1.5px solid #000000 !important;
+          box-shadow: 1.5px 1.5px 0px #000000 !important;
+          transition: all 0.1s !important;
+          border-radius: 4px !important;
+        }
+        .anim-badge:hover{
+          transform: translate(-1px, -1px) !important;
+          box-shadow: 2.5px 2.5px 0px #000000 !important;
+        }
 
         /* 사이드 슬라이드 */
-        .slide-in{animation:slideIn 0.3s ease both;}
+        .slide-in{animation:slideIn 0.2s ease both;}
 
         /* 테이블 컨테이너 가로 스크롤 */
         .resp-table-wrap,.table-container{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -1930,11 +1979,19 @@ export default function ApplicantManager() {
 
         /* 랜딩 카드 */
         .land-card{
-          transition:transform 0.25s cubic-bezier(.34,1.56,.64,1),box-shadow 0.25s ease!important;
+          transition: all 0.15s !important;
           width:100%;
         }
-        .land-card:hover{transform:translateY(-4px)!important;box-shadow:0 12px 28px rgba(0,0,0,0.10)!important;border-color:#a1a1a6!important;}
-        .land-card:hover .land-cta{background:#0071e3!important;color:#fff!important;border-color:transparent!important;}
+        .land-card:hover{
+          transform: translate(-4px, -4px) !important;
+          box-shadow: 10px 10px 0px #000000 !important;
+        }
+        .land-card:hover .land-cta{
+          background:#ffde4d !important;
+          color:#000000 !important;
+          border: 2px solid #000000 !important;
+          box-shadow: 2px 2px 0px #000000 !important;
+        }
 
         /* 햄버거 메뉴 드로어 */
         .mobile-drawer{animation:slideDown 0.22s ease both;}
@@ -1978,7 +2035,7 @@ export default function ApplicantManager() {
         .resp-table-wrap{-webkit-overflow-scrolling:touch;}
 
         /* font smoothing */
-        body,button,input,textarea,select{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif!important;}
+        body,button,input,textarea,select{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-family:'Outfit', 'Inter', -apple-system, sans-serif !important;}
       `}</style>
 
       {/* GNB - 2단 구조 */}
@@ -2665,14 +2722,7 @@ export default function ApplicantManager() {
 
             return(
               <div className="dash-container" style={{width:"100%",boxSizing:"border-box",padding:"16px 40px 48px",display:"flex",flexDirection:"column",gap:"24px",animation:"fadeUp 0.5s ease"}}>
-                <style>{`
-                  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-                  .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -10px rgba(0,32,96,0.15)!important; }
-                  .dash-card { background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 20px; transition: all 0.2s; box-sizing: border-box; }
-                  .dash-card:hover { box-shadow: 0 10px 20px -8px rgba(0,0,0,0.08); }
-                  .quick-tile { display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: transparent; cursor: pointer; transition: all 0.2s; text-align: left; font-family: inherit; box-sizing: border-box; }
-                  .quick-tile:hover { border-color: #002060; background: rgba(0,32,96,0.02); transform: translateY(-2px); }
-                `}</style>
+
 
                 {/* 환영 헤더 */}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px",marginTop:"12px"}}>
