@@ -217,6 +217,8 @@ export default function ApplicantManager() {
    const appFileRef  = useRef(null);
 
   const deptFileRef = useRef(null);
+  const deptValidateFileRef = useRef(null);
+  const [deptValidationResult, setDeptValidationResult] = useState(null);
   const mouseDownTargetRef = useRef(null);
   const scoreConfirmBtnRef = useRef(null);
 
@@ -711,6 +713,175 @@ export default function ApplicantManager() {
       });
       setDeptData([...nd]); alert("부서/팀 데이터를 등록했습니다.");
     }catch(e){alert(`파일 읽기 오류: ${e.message}`);}
+  };
+
+  // ── 부서/팀 직책자 엑셀 검증 ──────────────────────────────
+  const validateDeptExcel = async file => {
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+      const norm = s => String(s || "").replace(/\s+/g, "").trim();
+
+      const excelHeads = {};
+      const excelLeaders = {};
+      const excelDivsOriginal = {};
+      const excelTeamsOriginal = {};
+
+      rows.forEach(row => {
+        const g = pats => {
+          const k = Object.keys(row).find(k => pats.some(p => new RegExp(p, 'i').test(k)));
+          return k ? String(row[k] || "").trim() : "";
+        };
+        const co = g(['법인', '회사', 'company']);
+        const dn = g(['본부명', '본부', 'division']);
+        const tn = g(['팀명', '팀', 'team']);
+        const name = g(['성명', '이름', 'name']);
+        const role = g(['직책', 'position', 'role']);
+
+        if (!co && !dn && !tn) return;
+
+        const coKey = norm(co);
+        const dnKey = norm(dn);
+        const tnKey = norm(tn);
+
+        if (coKey && dnKey) {
+          const divKey = `${coKey}_${dnKey}`;
+          excelDivsOriginal[divKey] = { company: co, division: dn };
+          if (role === "본부장" && name) {
+            excelHeads[divKey] = name;
+          }
+          if (tnKey) {
+            const teamKey = `${divKey}_${tnKey}`;
+            excelTeamsOriginal[teamKey] = { company: co, division: dn, team: tn };
+            if (role === "팀장" && name) {
+              excelLeaders[teamKey] = name;
+            }
+          }
+        }
+      });
+
+      const dbHeads = {};
+      const dbLeaders = {};
+      const dbDivsOriginal = {};
+      const dbTeamsOriginal = {};
+
+      deptData.forEach(comp => {
+        const coKey = norm(comp.company);
+        comp.divisions.forEach(div => {
+          const dnKey = norm(div.name);
+          const divKey = `${coKey}_${dnKey}`;
+          dbDivsOriginal[divKey] = { company: comp.company, division: div.name };
+          if (div.headName) {
+            dbHeads[divKey] = div.headName;
+          }
+          div.teams.forEach(team => {
+            const tnKey = norm(team.name);
+            const teamKey = `${divKey}_${tnKey}`;
+            dbTeamsOriginal[teamKey] = { company: comp.company, division: div.name, team: team.name };
+            if (team.leaderName) {
+              dbLeaders[teamKey] = team.leaderName;
+            }
+          });
+        });
+      });
+
+      const results = [];
+
+      Object.keys(excelDivsOriginal).forEach(divKey => {
+        const orig = excelDivsOriginal[divKey];
+        if (!(divKey in dbDivsOriginal)) {
+          results.push({
+            type: "본부 미존재",
+            company: orig.company,
+            division: orig.division,
+            team: "-",
+            excelVal: excelHeads[divKey] ? `${excelHeads[divKey]} (본부장)` : "(본부장 명시 없음)",
+            dbVal: "(DB에 본부 없음)",
+            desc: "등록하려는 본부가 현재 시스템에 존재하지 않습니다."
+          });
+        } else {
+          const excelHead = excelHeads[divKey] || "";
+          const dbHead = dbHeads[divKey] || "";
+          if (norm(excelHead) !== norm(dbHead)) {
+            results.push({
+              type: "본부장 불일치",
+              company: orig.company,
+              division: orig.division,
+              team: "-",
+              excelVal: excelHead || "(빈값)",
+              dbVal: dbHead || "(빈값)",
+              desc: "본부장 이름이 일치하지 않습니다."
+            });
+          }
+        }
+      });
+
+      Object.keys(dbDivsOriginal).forEach(divKey => {
+        const orig = dbDivsOriginal[divKey];
+        if (!(divKey in excelDivsOriginal)) {
+          results.push({
+            type: "본부 미존재",
+            company: orig.company,
+            division: orig.division,
+            team: "-",
+            excelVal: "(엑셀에 본부 없음)",
+            dbVal: dbHeads[divKey] ? `${dbHeads[divKey]} (본부장)` : "(본부장 없음)",
+            desc: "현재 시스템에 등록된 본부가 업로드한 엑셀 파일에 없습니다."
+          });
+        }
+      });
+
+      Object.keys(excelTeamsOriginal).forEach(teamKey => {
+        const orig = excelTeamsOriginal[teamKey];
+        if (!(teamKey in dbTeamsOriginal)) {
+          results.push({
+            type: "팀 미존재",
+            company: orig.company,
+            division: orig.division,
+            team: orig.team,
+            excelVal: excelLeaders[teamKey] ? `${excelLeaders[teamKey]} (팀장)` : "(팀장 명시 없음)",
+            dbVal: "(DB에 팀 없음)",
+            desc: "등록하려는 팀이 현재 시스템에 존재하지 않습니다."
+          });
+        } else {
+          const excelLeader = excelLeaders[teamKey] || "";
+          const dbLeader = dbLeaders[teamKey] || "";
+          if (norm(excelLeader) !== norm(dbLeader)) {
+            results.push({
+              type: "팀장 불일치",
+              company: orig.company,
+              division: orig.division,
+              team: orig.team,
+              excelVal: excelLeader || "(빈값)",
+              dbVal: dbLeader || "(빈값)",
+              desc: "팀장 이름이 일치하지 않습니다."
+            });
+          }
+        }
+      });
+
+      Object.keys(dbTeamsOriginal).forEach(teamKey => {
+        const orig = dbTeamsOriginal[teamKey];
+        if (!(teamKey in excelTeamsOriginal)) {
+          results.push({
+            type: "팀 미존재",
+            company: orig.company,
+            division: orig.division,
+            team: orig.team,
+            excelVal: "(엑셀에 팀 없음)",
+            dbVal: dbLeaders[teamKey] ? `${dbLeaders[teamKey]} (팀장)` : "(팀장 없음)",
+            desc: "현재 시스템에 등록된 팀이 업로드한 엑셀 파일에 없습니다."
+          });
+        }
+      });
+
+      setDeptValidationResult(results);
+    } catch (e) {
+      alert(`검증 오류: ${e.message}`);
+    }
   };
   const downloadDeptTemplate = () => {
     const headers=["법인","본부","팀","성명","직책"];
@@ -4375,6 +4546,8 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
             <div style={{display:"flex",gap:"8px",marginBottom:"20px",flexWrap:"wrap",alignItems:"center"}}>
               <div style={{flex:1,fontSize:"13px",color:C.muted,textAlign:"left"}}>회사 › 본부 › 팀 구조를 등록하고 관리합니다.</div>
               <input ref={deptFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importDeptExcel(e.target.files[0]);e.target.value='';}}/>
+              <input ref={deptValidateFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])validateDeptExcel(e.target.files[0]);e.target.value='';}}/>
+              <button onClick={()=>deptValidateFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.purple}44`,cursor:"pointer",background:`${C.purple}06`,color:C.purple,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>검증</button>
               <button onClick={downloadDeptTemplate} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}06`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>엑셀 양식</button>
               <button onClick={()=>deptFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.teal}55`,cursor:"pointer",background:`${C.teal}10`,color:C.teal,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>엑셀 일괄등록</button>
               <button onClick={backupDeptData} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.blue}44`,cursor:"pointer",background:`${C.blue}08`,color:C.blue,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>현재 데이터 백업</button>
@@ -6411,6 +6584,105 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
               <div style={{padding:"12px 22px 18px",display:"flex",gap:"8px"}}>
                 <button onClick={()=>saveDeptModal(m.data)} style={{flex:1,padding:"10px",borderRadius:"9px",border:"none",cursor:"pointer",background:`linear-gradient(135deg,${C.blue}dd,${C.blue})`,color:"#fff",fontSize:"13px",fontWeight:800,fontFamily:"inherit"}}>{m.mode==="add"?"추가하기":"저장하기"}</button>
                 <button onClick={()=>setDeptModal(null)} style={{padding:"10px 18px",borderRadius:"9px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"13px",fontFamily:"inherit"}}>취소</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 부서/팀 직책자 검증 결과 모달 */}
+      {deptValidationResult && (() => {
+        return (
+          <div style={backdropStyle} onClick={e => { if (e.target === e.currentTarget) setDeptValidationResult(null); }}>
+            <div style={{
+              background: C.surface,
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "880px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+              border: `1px solid ${C.border}`,
+              animation: "modalIn 0.2s ease",
+              display: "flex",
+              flexDirection: "column",
+              maxHeight: "90vh"
+            }}>
+              {/* 헤더 */}
+              <div style={{ padding: "18px 24px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 800, fontSize: "16px", color: C.text, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📊</span> 부서/팀 직책자 엑셀 검증 보고서
+                </div>
+                <button onClick={() => setDeptValidationResult(null)} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted, fontSize: "20px", padding: "4px" }}>✕</button>
+              </div>
+
+              {/* 본문 콘텐츠 */}
+              <div style={{ padding: "24px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "16px" }}>
+                
+                {deptValidationResult.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "48px 24px", background: "#f0fdf4", borderRadius: "12px", border: "1px solid #bbf7d0", color: "#166534" }}>
+                    <div style={{ fontSize: "36px", marginBottom: "12px" }}>🎉</div>
+                    <div style={{ fontWeight: 700, fontSize: "15px", marginBottom: "6px" }}>검증 결과: 모든 명단 일치</div>
+                    <div style={{ fontSize: "13px" }}>업로드하신 직책자 명단 엑셀이 현재 시스템에 등록된 부서, 팀, 본부장, 팀장 명단과 완전히 일치합니다. (띄어쓰기 무시)</div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ background: "#eff6ff", borderRadius: "12px", padding: "16px 20px", border: "1px solid #bfdbfe", display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span style={{ fontSize: "20px" }}>ℹ️</span>
+                      <div style={{ fontSize: "13px", color: "#1e3a8a", textAlign: "left" }}>
+                        현재 시스템 데이터와 업로드한 엑셀 파일 사이에 <strong>총 {deptValidationResult.length}건</strong>의 불일치가 확인되었습니다. 아래 표를 참고하여 데이터를 정비해 주세요. (띄어쓰기는 자동으로 무시되어 비교되었습니다.)
+                      </div>
+                    </div>
+
+                    <div style={{ border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden" }}>
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", border: "none" }}>
+                          <thead>
+                            <tr style={{ background: "#f8fafc" }}>
+                              <th style={{ padding: "12px 16px", fontSize: "11px", color: C.muted, borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, textAlign: "left", width: "120px" }}>구분</th>
+                              <th style={{ padding: "12px 16px", fontSize: "11px", color: C.muted, borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, textAlign: "left" }}>법인/회사</th>
+                              <th style={{ padding: "12px 16px", fontSize: "11px", color: C.muted, borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, textAlign: "left" }}>본부</th>
+                              <th style={{ padding: "12px 16px", fontSize: "11px", color: C.muted, borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, textAlign: "left" }}>팀</th>
+                              <th style={{ padding: "12px 16px", fontSize: "11px", color: C.muted, borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, textAlign: "left" }}>엑셀 데이터</th>
+                              <th style={{ padding: "12px 16px", fontSize: "11px", color: C.muted, borderBottom: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, textAlign: "left" }}>시스템(현재) 데이터</th>
+                              <th style={{ padding: "12px 16px", fontSize: "11px", color: C.muted, borderBottom: `1px solid ${C.border}`, textAlign: "left", width: "80px" }}>결과</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {deptValidationResult.map((res, idx) => {
+                              const isErr = res.type.includes("불일치");
+                              const typeBg = isErr ? "#fef2f2" : "#fffbeb";
+                              const typeColor = isErr ? "#ef4444" : "#d97706";
+                              const typeBorder = isErr ? "#fecaca" : "#fde68a";
+
+                              return (
+                                <tr key={idx} style={{ borderBottom: idx === deptValidationResult.length - 1 ? "none" : `1px solid ${C.border}` }}>
+                                  <td style={{ padding: "12px 16px", borderRight: `1px solid ${C.border}`, textAlign: "left" }}>
+                                    <span style={{ display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "10px", fontWeight: 700, background: typeBg, color: typeColor, border: `1px solid ${typeBorder}` }}>
+                                      {res.type}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: "12px 16px", fontSize: "12px", color: C.text, borderRight: `1px solid ${C.border}`, fontWeight: 600, textAlign: "left" }}>{res.company}</td>
+                                  <td style={{ padding: "12px 16px", fontSize: "12px", color: C.text, borderRight: `1px solid ${C.border}`, fontWeight: 500, textAlign: "left" }}>{res.division}</td>
+                                  <td style={{ padding: "12px 16px", fontSize: "12px", color: C.text, borderRight: `1px solid ${C.border}`, fontWeight: 500, textAlign: "left" }}>{res.team}</td>
+                                  <td style={{ padding: "12px 16px", fontSize: "12px", color: isErr ? "#dc2626" : C.muted, borderRight: `1px solid ${C.border}`, fontWeight: isErr ? 600 : 400, textAlign: "left" }}>{res.excelVal}</td>
+                                  <td style={{ padding: "12px 16px", fontSize: "12px", color: isErr ? "#2563eb" : C.muted, borderRight: `1px solid ${C.border}`, fontWeight: isErr ? 600 : 400, textAlign: "left" }}>{res.dbVal}</td>
+                                  <td style={{ padding: "12px 16px", fontSize: "12px", color: isErr ? "#ef4444" : "#d97706", fontWeight: 700, textAlign: "left" }}>{isErr ? "불일치" : "정보 누락"}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+              </div>
+
+              {/* 하단 푸터 버튼 */}
+              <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end", background: "#f8fafc", borderBottomLeftRadius: "16px", borderBottomRightRadius: "16px" }}>
+                <button onClick={() => setDeptValidationResult(null)} style={{ padding: "8px 20px", borderRadius: "8px", border: `1px solid ${C.border}`, cursor: "pointer", background: "#ffffff", color: C.subtle, fontSize: "12px", fontWeight: 700, fontFamily: "inherit" }}>
+                  확인 및 닫기
+                </button>
               </div>
             </div>
           </div>
