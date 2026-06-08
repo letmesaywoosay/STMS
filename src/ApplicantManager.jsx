@@ -668,28 +668,58 @@ export default function ApplicantManager() {
       const ws=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(ws,{defval:""});
       const nd=[...deptData];
+      const alertedNames=new Set();
       rows.forEach(row=>{
         const g=pats=>{const k=Object.keys(row).find(k=>pats.some(p=>new RegExp(p,'i').test(k)));return k?String(row[k]||"").trim():"";};
-        const co=g(['회사','company']); const dn=g(['본부명','본부','division']); const hN=g(['본부장이름','본부장 이름','headName']); const hE=g(['본부장이메일','본부장 이메일','headEmail']);
-        const tn=g(['팀명','팀','team']); const lN=g(['팀장이름','팀장 이름','leaderName']); const lE=g(['팀장이메일','팀장 이메일','leaderEmail']);
+        const co=g(['법인','회사','company']);
+        const dn=g(['본부명','본부','division']);
+        const tn=g(['팀명','팀','team']);
+        const name=g(['성명','이름','name']);
+        const role=g(['직책','position','role']);
         if(!co&&!dn&&!tn) return;
         let comp=nd.find(c=>c.company===co); if(!comp&&co){comp={id:uid(),company:co,divisions:[]};nd.push(comp);}
         if(!comp) return;
-        let div=comp.divisions.find(d=>d.name===dn); if(!div&&dn){div={id:uid(),name:dn,headName:hN,headEmail:hE,teams:[]};comp.divisions.push(div);}
+        let div=comp.divisions.find(d=>d.name===dn); if(!div&&dn){div={id:uid(),name:dn,headName:"",headEmail:"",teams:[]};comp.divisions.push(div);}
         if(!div) return;
-        if(hN&&!div.headName) div.headName=hN; if(hE&&!div.headEmail) div.headEmail=hE;
-        if(tn&&!div.teams.find(t=>t.name===tn)) div.teams.push({id:uid(),name:tn,leaderName:lN,leaderEmail:lE});
+        if(role==="본부장" && name){
+          div.headName=name;
+          const found=applicants.find(a=>a.name===name);
+          const email=found?(found.email||"").trim():"";
+          div.headEmail=email;
+          if(!email && !alertedNames.has(name)){
+            alertedNames.add(name);
+            alert(`${name} 의 이메일이 없습니다. 등록해주세요`);
+          }
+        }
+        if(tn){
+          let team=div.teams.find(t=>t.name===tn);
+          if(!team){
+            team={id:uid(),name:tn,leaderName:"",leaderEmail:""};
+            div.teams.push(team);
+          }
+          if(role==="팀장" && name){
+            team.leaderName=name;
+            const found=applicants.find(a=>a.name===name);
+            const email=found?(found.email||"").trim():"";
+            team.leaderEmail=email;
+            if(!email && !alertedNames.has(name)){
+              alertedNames.add(name);
+              alert(`${name} 의 이메일이 없습니다. 등록해주세요`);
+            }
+          }
+        }
       });
       setDeptData([...nd]); alert("부서/팀 데이터를 등록했습니다.");
     }catch(e){alert(`파일 읽기 오류: ${e.message}`);}
   };
   const downloadDeptTemplate = () => {
-    const headers=["회사","본부명","본부장이름","본부장이메일","팀명","팀장이름","팀장이메일"];
-    const ex=[["오케스트로","솔루션개발본부","홍본부장","head@okestro.com","IaaS개발실","김팀장","leader@okestro.com"],
-              ["오케스트로","솔루션개발본부","홍본부장","head@okestro.com","PaaS개발실","박팀장","park@okestro.com"]];
+    const headers=["법인","본부","팀","성명","직책"];
+    const ex=[["오케스트로","솔루션개발본부","","홍본부장","본부장"],
+              ["오케스트로","솔루션개발본부","IaaS개발실","김팀장","팀장"],
+              ["오케스트로","솔루션개발본부","PaaS개발실","박팀장","팀장"]];
     const wb=XLSX.utils.book_new();
     const ws=XLSX.utils.aoa_to_sheet([headers,...ex]);
-    ws['!cols']=[{wch:16},{wch:20},{wch:12},{wch:26},{wch:18},{wch:12},{wch:26}];
+    ws['!cols']=[{wch:16},{wch:20},{wch:18},{wch:12},{wch:12}];
     XLSX.utils.book_append_sheet(wb,ws,"부서팀등록");
     XLSX.writeFile(wb,"부서팀_등록_양식.xlsx");
   };
@@ -699,24 +729,28 @@ export default function ApplicantManager() {
     const rows=[];
     deptData.forEach(comp=>{
       if(comp.divisions.length===0){
-        rows.push([comp.company,"","","","","",""]);
+        rows.push([comp.company,"","","",""]);
       } else {
         comp.divisions.forEach(div=>{
+          if(div.headName){
+            rows.push([comp.company,div.name,"",div.headName,"본부장"]);
+          }
           if(div.teams.length===0){
-            rows.push([comp.company,div.name,div.headName||"",div.headEmail||"","","",""]);
+            if(!div.headName){
+              rows.push([comp.company,div.name,"","",""]);
+            }
           } else {
             div.teams.forEach(team=>{
-              rows.push([comp.company,div.name,div.headName||"",div.headEmail||"",team.name,team.leaderName||"",team.leaderEmail||""]);
+              rows.push([comp.company,div.name,team.name,team.leaderName||"","팀장"]);
             });
           }
         });
       }
     });
-    const headers=["회사","본부명","본부장이름","본부장이메일","팀명","팀장이름","팀장이메일"];
+    const headers=["법인","본부","팀","성명","직책"];
     const wb=XLSX.utils.book_new();
     const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-    ws['!cols']=[{wch:16},{wch:20},{wch:12},{wch:26},{wch:18},{wch:12},{wch:26}];
-    // 스타일: 헤더 행 굵게 표시 (sheetjs-style 미지원 환경 대비 try/catch)
+    ws['!cols']=[{wch:16},{wch:20},{wch:18},{wch:12},{wch:12}];
     try{
       const headerRange=XLSX.utils.decode_range(ws['!ref']);
       for(let c=headerRange.s.c;c<=headerRange.e.c;c++){
