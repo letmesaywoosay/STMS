@@ -219,6 +219,7 @@ export default function ApplicantManager() {
   const deptFileRef = useRef(null);
   const deptValidateFileRef = useRef(null);
   const [deptValidationResult, setDeptValidationResult] = useState(null);
+  const [validatedMismatches, setValidatedMismatches] = useState({ divs: new Set(), teams: new Set() });
   const mouseDownTargetRef = useRef(null);
   const scoreConfirmBtnRef = useRef(null);
 
@@ -883,6 +884,37 @@ export default function ApplicantManager() {
       alert(`검증 오류: ${e.message}`);
     }
   };
+
+  // 검증 결과에서 불일치 부서/팀을 마킹 상태로 저장하고 닫기
+  const applyValidationMismatchesAndClose = () => {
+    if (!deptValidationResult) return;
+    const norm = s => String(s || "").replace(/\s+/g, "").trim();
+    const newDivs = new Set();
+    const newTeams = new Set();
+
+    deptValidationResult.forEach(res => {
+      const coKey = norm(res.company);
+      const dnKey = norm(res.division);
+      const tnKey = norm(res.team);
+
+      if (coKey && dnKey) {
+        const divKey = `${coKey}_${dnKey}`;
+        if (res.type.includes("본부")) {
+          newDivs.add(divKey);
+        }
+        if (tnKey) {
+          const teamKey = `${divKey}_${tnKey}`;
+          if (res.type.includes("팀") || res.type.includes("본부")) {
+            newTeams.add(teamKey);
+          }
+        }
+      }
+    });
+
+    setValidatedMismatches({ divs: newDivs, teams: newTeams });
+    setDeptValidationResult(null);
+  };
+
   const downloadDeptTemplate = () => {
     const headers=["법인","본부","팀","성명","직책"];
     const ex=[["오케스트로","솔루션개발본부","","홍본부장","본부장"],
@@ -4541,10 +4573,36 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
         })()}
 
         {/* 부서/팀 관리 페이지 */}
-        {isAdmin&&mainMenu==="dept"&&(
-          <div className="page-enter">
-            <div style={{display:"flex",gap:"8px",marginBottom:"20px",flexWrap:"wrap",alignItems:"center"}}>
-              <div style={{flex:1,fontSize:"13px",color:C.muted,textAlign:"left"}}>회사 › 본부 › 팀 구조를 등록하고 관리합니다.</div>
+        {isAdmin&&mainMenu==="dept"&&(()=>{
+          const norm = s => String(s || "").replace(/\s+/g, "").trim();
+          return (
+            <div className="page-enter">
+              <div style={{display:"flex",gap:"8px",marginBottom:"20px",flexWrap:"wrap",alignItems:"center"}}>
+                <div style={{flex:1,display:"flex",alignItems:"center",gap:"12px"}}>
+                  <span style={{fontSize:"13px",color:C.muted,textAlign:"left"}}>회사 › 본부 › 팀 구조를 등록하고 관리합니다.</span>
+                  {(validatedMismatches.divs.size > 0 || validatedMismatches.teams.size > 0) && (
+                    <button 
+                      onClick={() => setValidatedMismatches({ divs: new Set(), teams: new Set() })} 
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid #fecaca",
+                        cursor: "pointer",
+                        background: "#fef2f2",
+                        color: "#ef4444",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        fontFamily: "inherit",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                      }}
+                    >
+                      ⚠️ 검증 불일치 마킹 해제 ({validatedMismatches.divs.size + validatedMismatches.teams.size}건)
+                    </button>
+                  )}
+                </div>
               <input ref={deptFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])importDeptExcel(e.target.files[0]);e.target.value='';}}/>
               <input ref={deptValidateFileRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{if(e.target.files[0])validateDeptExcel(e.target.files[0]);e.target.value='';}}/>
               <button onClick={()=>deptValidateFileRef.current?.click()} style={{padding:"7px 14px",borderRadius:"9px",border:`1.5px solid ${C.purple}44`,cursor:"pointer",background:`${C.purple}06`,color:C.purple,fontSize:"12px",fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>검증</button>
@@ -4571,66 +4629,118 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                   <button onClick={()=>confirmDelete(`'${comp.company}' 회사를 삭제하시겠습니까?`,()=>delCompany(comp.id))} style={{padding:"5px 10px",borderRadius:"7px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
                 </div>
                 {comp.divisions.length===0&&<div style={{padding:"24px",textAlign:"center",color:C.muted,fontSize:"12px"}}>본부를 추가하세요</div>}
-                {comp.divisions.map((div,di)=>(
-                  <div key={div.id} style={{borderBottom:di<comp.divisions.length-1?`1px solid ${C.border}`:"none"}}>
-                    <div style={{padding:"12px 20px 12px 28px",background:`${C.purple}04`,display:"flex",alignItems:"center",borderBottom:`1px solid ${C.border}44`}}>
-                      <div style={{width:"32px",display:"flex",alignItems:"center"}}>
-                        {/* 아이콘 컬럼 정렬용 빈 공간 */}
-                      </div>
-                      <div style={{width:"220px",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:"10px"}}>
-                        <span style={{fontWeight:800,fontSize:"13px",color:C.text}}>{div.name}</span>
-                      </div>
-                      <div style={{flex:1,textAlign:"left",fontSize:"11px",color:C.purple,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                        {div.headName ? (
-                          <>
-                            <span>본부장: {div.headName}</span>
-                            {div.headEmail && <span style={{marginLeft:"6px",color:C.muted}}>({div.headEmail})</span>}
-                          </>
-                        ) : (
-                          <span style={{color:C.muted}}>—</span>
-                        )}
-                      </div>
-                      <span style={{fontSize:"11px",color:C.muted,marginRight:"12px",width:"80px",textAlign:"right"}}>{div.teams.length}개 팀</span>
-                      <button onClick={()=>setDeptModal({type:"team",mode:"add",cid:comp.id,did:div.id,data:{name:"",leaderName:"",leaderEmail:""}})} style={{padding:"4px 10px",borderRadius:"6px",border:`1px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}08`,color:C.teal,fontSize:"11px",fontWeight:700,fontFamily:"inherit"}}>+ 팀</button>
-                      <button onClick={()=>setDeptModal({type:"division",mode:"edit",cid:comp.id,did:div.id,data:{name:div.name,headName:div.headName||"",headEmail:div.headEmail||""}})} style={{padding:"4px 8px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
-                      <button onClick={()=>confirmDelete(`'${div.name}' 본부를 삭제하시겠습니까?`,()=>delDivision(comp.id,div.id))} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
-                    </div>
-                    {div.teams.map((team,ti)=>(
-                      <div key={team.id} style={{padding:"9px 20px 9px 28px",display:"flex",alignItems:"center",background:ti%2===0?"transparent":`${C.bg}88`,borderTop:`1px solid ${C.border}22`}}>
-                        <div style={{width:"32px",display:"flex",alignItems:"center",fontSize:"12px",textAlign:"left"}}>
-                          👥
+                {comp.divisions.map((div,di)=>{
+                  const divKey = `${norm(comp.company)}_${norm(div.name)}`;
+                  const isDivMismatched = validatedMismatches.divs.has(divKey);
+                  return (
+                    <div key={div.id} style={{borderBottom:di<comp.divisions.length-1?`1px solid ${C.border}`:"none"}}>
+                      <div style={{
+                        padding:"12px 20px 12px 28px",
+                        background: isDivMismatched ? "#fff5f5" : `${C.purple}04`,
+                        display:"flex",
+                        alignItems:"center",
+                        borderBottom:`1px solid ${isDivMismatched ? "#fecaca" : `${C.border}44`}`,
+                        transition: "all 0.2s ease"
+                      }}>
+                        <div style={{width:"32px",display:"flex",alignItems:"center"}}>
+                          {/* 아이콘 컬럼 정렬용 빈 공간 */}
                         </div>
                         <div style={{width:"220px",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:"10px"}}>
-                          <span style={{fontWeight:700,fontSize:"12px",color:C.subtle}}>{team.name}</span>
+                          <span style={{fontWeight:800,fontSize:"13px",color:C.text}}>{div.name}</span>
                         </div>
-                        <div style={{flex:1,textAlign:"left",fontSize:"11px",color:C.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                          {team.leaderName ? (
+                        <div style={{flex:1,textAlign:"left",fontSize:"11px",color:C.purple,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+                          {div.headName ? (
                             <>
-                              <span>팀장: {team.leaderName}</span>
-                              {team.leaderEmail && <span style={{marginLeft:"6px",color:C.muted}}>({team.leaderEmail})</span>}
+                              <span>본부장: {div.headName}</span>
+                              {div.headEmail && <span style={{color:C.muted}}>({div.headEmail})</span>}
                             </>
                           ) : (
                             <span style={{color:C.muted}}>—</span>
                           )}
+                          {isDivMismatched && (
+                            <span style={{
+                              display: "inline-block",
+                              padding: "1.5px 5px",
+                              borderRadius: "4px",
+                              fontSize: "9px",
+                              fontWeight: 800,
+                              background: "#fee2e2",
+                              color: "#ef4444",
+                              border: "1px solid #fca5a5"
+                            }}>
+                              ⚠️ 엑셀 데이터 불일치
+                            </span>
+                          )}
                         </div>
-                        <div style={{width:"80px",marginRight:"12px"}}>
-                          {/* 본부의 N개팀 열과 넓이를 맞추기 위한 빈 컬럼 */}
-                        </div>
-                        <div style={{display:"flex",gap:"4px",alignItems:"center",minWidth:"154px",justifyContent:"flex-end"}}>
-                          {/* GNB 본부의 '+ 팀' 버튼과 여백을 맞추기 위한 Spacer */}
-                          <div style={{width:"48px"}} />
-                          <button onClick={()=>setDeptModal({type:"team",mode:"edit",cid:comp.id,did:div.id,tid:team.id,data:{name:team.name,leaderName:team.leaderName||"",leaderEmail:team.leaderEmail||""}})} style={{padding:"3px 8px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
-                          <button onClick={()=>confirmDelete(`'${team.name}' 팀을 삭제하시겠습니까?`,()=>delTeam(comp.id,div.id,team.id))} style={{padding:"3px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
-                        </div>
+                        <span style={{fontSize:"11px",color:C.muted,marginRight:"12px",width:"80px",textAlign:"right"}}>{div.teams.length}개 팀</span>
+                        <button onClick={()=>setDeptModal({type:"team",mode:"add",cid:comp.id,did:div.id,data:{name:"",leaderName:"",leaderEmail:""}})} style={{padding:"4px 10px",borderRadius:"6px",border:`1px solid ${C.teal}44`,cursor:"pointer",background:`${C.teal}08`,color:C.teal,fontSize:"11px",fontWeight:700,fontFamily:"inherit"}}>+ 팀</button>
+                        <button onClick={()=>setDeptModal({type:"division",mode:"edit",cid:comp.id,did:div.id,data:{name:div.name,headName:div.headName||"",headEmail:div.headEmail||""}})} style={{padding:"4px 8px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
+                        <button onClick={()=>confirmDelete(`'${div.name}' 본부를 삭제하시겠습니까?`,()=>delDivision(comp.id,div.id))} style={{padding:"4px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
                       </div>
-                    ))}
-                    {div.teams.length===0&&<div style={{padding:"8px 60px",fontSize:"11px",color:C.muted}}>팀을 추가하세요</div>}
-                  </div>
-                ))}
+                      {div.teams.map((team,ti)=>{
+                        const teamKey = `${divKey}_${norm(team.name)}`;
+                        const isTeamMismatched = validatedMismatches.teams.has(teamKey);
+                        return (
+                          <div key={team.id} style={{
+                            padding:"9px 20px 9px 28px",
+                            display:"flex",
+                            alignItems:"center",
+                            background: isTeamMismatched ? "#fffafa" : (ti%2===0?"transparent":`${C.bg}88`),
+                            borderTop: `1px solid ${isTeamMismatched ? "#fecaca" : `${C.border}22`}`,
+                            borderBottom: isTeamMismatched ? "1px solid #fecaca" : "none",
+                            transition: "all 0.2s ease"
+                          }}>
+                            <div style={{width:"32px",display:"flex",alignItems:"center",fontSize:"12px",textAlign:"left"}}>
+                              👥
+                            </div>
+                            <div style={{width:"220px",textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",paddingRight:"10px"}}>
+                              <span style={{fontWeight:700,fontSize:"12px",color:C.subtle}}>{team.name}</span>
+                            </div>
+                            <div style={{flex:1,textAlign:"left",fontSize:"11px",color:C.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"6px"}}>
+                              {team.leaderName ? (
+                                <>
+                                  <span>팀장: {team.leaderName}</span>
+                                  {team.leaderEmail && <span style={{color:C.muted}}>({team.leaderEmail})</span>}
+                                </>
+                              ) : (
+                                <span style={{color:C.muted}}>—</span>
+                              )}
+                              {isTeamMismatched && (
+                                <span style={{
+                                  display: "inline-block",
+                                  padding: "1.5px 5px",
+                                  borderRadius: "4px",
+                                  fontSize: "9px",
+                                  fontWeight: 800,
+                                  background: "#fee2e2",
+                                  color: "#ef4444",
+                                  border: "1px solid #fca5a5"
+                                }}>
+                                  ⚠️ 엑셀 데이터 불일치
+                                </span>
+                              )}
+                            </div>
+                            <div style={{width:"80px",marginRight:"12px"}}>
+                              {/* 본부의 N개팀 열과 넓이를 맞추기 위한 빈 컬럼 */}
+                            </div>
+                            <div style={{display:"flex",gap:"4px",alignItems:"center",minWidth:"154px",justifyContent:"flex-end"}}>
+                              {/* GNB 본부의 '+ 팀' 버튼과 여백을 맞추기 위한 Spacer */}
+                              <div style={{width:"48px"}} />
+                              <button onClick={()=>setDeptModal({type:"team",mode:"edit",cid:comp.id,did:div.id,tid:team.id,data:{name:team.name,leaderName:team.leaderName||"",leaderEmail:team.leaderEmail||""}})} style={{padding:"3px 8px",borderRadius:"6px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"11px",fontFamily:"inherit"}}>✏️</button>
+                              <button onClick={()=>confirmDelete(`'${team.name}' 팀을 삭제하시겠습니까?`,()=>delTeam(comp.id,div.id,team.id))} style={{padding:"3px 8px",borderRadius:"6px",border:"1px solid #fecaca",cursor:"pointer",background:"#fef2f2",color:C.red,fontSize:"11px",fontFamily:"inherit"}}>🗑</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {div.teams.length===0&&<div style={{padding:"8px 60px",fontSize:"11px",color:C.muted}}>팀을 추가하세요</div>}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
-        )}
+        )
+      })()}
 
         {/* ═══ 월별 보고서 ═══ */}
         {isAdmin&&mainMenu==="report"&&(()=>{
@@ -6680,7 +6790,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
 
               {/* 하단 푸터 버튼 */}
               <div style={{ padding: "16px 24px", borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "flex-end", background: "#f8fafc", borderBottomLeftRadius: "16px", borderBottomRightRadius: "16px" }}>
-                <button onClick={() => setDeptValidationResult(null)} style={{ padding: "8px 20px", borderRadius: "8px", border: `1px solid ${C.border}`, cursor: "pointer", background: "#ffffff", color: C.subtle, fontSize: "12px", fontWeight: 700, fontFamily: "inherit" }}>
+                <button onClick={applyValidationMismatchesAndClose} style={{ padding: "8px 20px", borderRadius: "8px", border: `1px solid ${C.border}`, cursor: "pointer", background: "#ffffff", color: C.subtle, fontSize: "12px", fontWeight: 700, fontFamily: "inherit" }}>
                   확인 및 닫기
                 </button>
               </div>
