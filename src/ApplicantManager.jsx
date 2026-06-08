@@ -1863,6 +1863,16 @@ export default function ApplicantManager() {
           color:#000000 !important;
         }
 
+        /* 인라인 스타일로 지정된 모든 부드러운 그림자를 강제로 네오 브루탈리즘 하드 섀도우로 전환 */
+        div[style*="boxShadow"]:not([style*="none"]), div[style*="box-shadow"]:not([style*="none"]) {
+          box-shadow: 4px 4px 0px #000000 !important;
+        }
+        
+        /* 인라인 스타일로 지정된 모든 둥근 모서리(border-radius)를 네오 브루탈리즘의 8px로 강제 고정 (원형 50% 제외) */
+        div[style*="borderRadius"]:not([style*="50%"]), div[style*="border-radius"]:not([style*="50%"]) {
+          border-radius: 8px !important;
+        }
+
         /* Neo-Brutalism Card Override */
         .dash-card, .kpi-card, .login-box, .modal-content, .card, .quick-tile {
           background: #ffffff !important;
