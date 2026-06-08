@@ -1780,7 +1780,7 @@ export default function ApplicantManager() {
       return(
         <div style={{
           minHeight:"100vh",
-          backgroundImage: "linear-gradient(rgba(10, 15, 30, 0.4), rgba(10, 15, 30, 0.6)), url('/login_bg.jpg')",
+          backgroundImage: "linear-gradient(rgba(10, 15, 30, 0.4), rgba(10, 15, 30, 0.6)), url('/login_bg.gif')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
@@ -1957,7 +1957,7 @@ export default function ApplicantManager() {
       return(
         <div style={{
           minHeight:"100vh",
-          backgroundImage: "linear-gradient(rgba(10, 15, 30, 0.4), rgba(10, 15, 30, 0.6)), url('/login_bg.jpg')",
+          backgroundImage: "linear-gradient(rgba(10, 15, 30, 0.4), rgba(10, 15, 30, 0.6)), url('/login_bg.gif')",
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
