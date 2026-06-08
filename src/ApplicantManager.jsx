@@ -1778,33 +1778,79 @@ export default function ApplicantManager() {
         finally{ setLoading(false); }
       };
       return(
-        <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.blue}11,${C.purple}08,${C.bg})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+        <div style={{
+          minHeight:"100vh",
+          backgroundImage: "linear-gradient(rgba(10, 15, 30, 0.4), rgba(10, 15, 30, 0.6)), url('/login_bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          display:"flex",
+          flexDirection:"column",
+          alignItems:"center",
+          justifyContent:"center",
+          padding:"24px"
+        }}>
           <style>{`@keyframes modalIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}`}</style>
           <div style={{textAlign:"center",marginBottom:"36px",animation:"modalIn 0.4s ease"}}>
-            <div style={{fontSize:"12px",color:C.muted,marginTop:"4px"}}>관리자 로그인</div>
+            <div style={{fontSize:"12px",color:"rgba(255,255,255,0.6)",marginTop:"4px",fontWeight:700,letterSpacing:"1px"}}>ADMINISTRATOR</div>
           </div>
           <div style={{width:"100%",maxWidth:"380px",animation:"modalIn 0.5s ease"}}>
-            <div style={{background:C.surface,borderRadius:"20px",padding:"32px",boxShadow:shadowLg,border:`1.5px solid ${C.blue}22`,display:"flex",flexDirection:"column",gap:"18px"}}>
+            <div style={{
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              borderRadius:"20px",
+              padding:"32px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              display:"flex",
+              flexDirection:"column",
+              gap:"18px"
+            }}>
               <div style={{textAlign:"center",marginBottom:"4px"}}>
                 <div style={{fontSize:"28px",marginBottom:"6px"}}></div>
-                <img src={LOGO_B64} alt="tune-in" style={{height:"72px",objectFit:"contain",marginBottom:"4px",display:"block",margin:"0 auto 4px"}}/>
-                <div style={{fontSize:"11px",color:C.muted,marginTop:"4px",textAlign:"center"}}>관리자 계정으로 로그인하세요</div>
+                <img src={LOGO_B64} alt="tune-in" style={{height:"72px",objectFit:"contain",marginBottom:"4px",display:"block",margin:"0 auto 4px",filter:"brightness(0) invert(1)"}}/>
+                <div style={{fontSize:"11px",color:"rgba(255,255,255,0.6)",marginTop:"4px",textAlign:"center"}}>관리자 계정으로 로그인하세요</div>
               </div>
               <div>
-                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>아이디</label>
+                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:"rgba(255,255,255,0.8)",marginBottom:"6px"}}>아이디</label>
                 <input type="text" value={username} onChange={e=>{setUsername(e.target.value);setErr("");}}
                   onKeyDown={e=>{if(e.key==="Enter")handleLogin();}}
                   placeholder="아이디 입력" autoFocus
-                  style={{width:"100%",background:C.bg,border:`1.5px solid ${err?C.red:C.border}`,borderRadius:"10px",padding:"11px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}
-                  onFocus={e=>e.target.style.borderColor=err?C.red:C.blueLight} onBlur={e=>e.target.style.borderColor=err?C.red:C.border}/>
+                  style={{
+                    width:"100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: `1.5px solid ${err ? C.red : "rgba(255, 255, 255, 0.15)"}`,
+                    borderRadius:"10px",
+                    padding:"11px 14px",
+                    fontSize:"14px",
+                    color: "#ffffff",
+                    outline:"none",
+                    fontFamily:"inherit",
+                    boxSizing:"border-box",
+                    transition: "border-color 0.15s"
+                  }}
+                  onFocus={e=>e.target.style.borderColor=err?C.red:"rgba(255, 255, 255, 0.45)"} onBlur={e=>e.target.style.borderColor=err?C.red:"rgba(255, 255, 255, 0.15)"}/>
               </div>
               <div>
-                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>비밀번호</label>
+                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:"rgba(255,255,255,0.8)",marginBottom:"6px"}}>비밀번호</label>
                 <input type="password" value={password} onChange={e=>{setPassword(e.target.value);setErr("");}}
                   onKeyDown={e=>{if(e.key==="Enter")handleLogin();}}
                   placeholder="비밀번호 입력"
-                  style={{width:"100%",background:C.bg,border:`1.5px solid ${err?C.red:C.border}`,borderRadius:"10px",padding:"11px 14px",fontSize:"14px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box"}}
-                  onFocus={e=>e.target.style.borderColor=err?C.red:C.blueLight} onBlur={e=>e.target.style.borderColor=err?C.red:C.border}/>
+                  style={{
+                    width:"100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: `1.5px solid ${err ? C.red : "rgba(255, 255, 255, 0.15)"}`,
+                    borderRadius:"10px",
+                    padding:"11px 14px",
+                    fontSize:"14px",
+                    color: "#ffffff",
+                    outline:"none",
+                    fontFamily:"inherit",
+                    boxSizing:"border-box",
+                    transition: "border-color 0.15s"
+                  }}
+                  onFocus={e=>e.target.style.borderColor=err?C.red:"rgba(255, 255, 255, 0.45)"} onBlur={e=>e.target.style.borderColor=err?C.red:"rgba(255, 255, 255, 0.15)"}/>
                 {err&&<div style={{fontSize:"11px",color:C.red,marginTop:"6px"}}>⚠️ {err}</div>}
               </div>
               <button className="anim-btn" onClick={handleLogin} disabled={loading}
@@ -1909,17 +1955,28 @@ export default function ApplicantManager() {
       };
 
       return(
-        <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${C.purple}11,${C.blue}06,${C.bg})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+        <div style={{
+          minHeight:"100vh",
+          backgroundImage: "linear-gradient(rgba(10, 15, 30, 0.4), rgba(10, 15, 30, 0.6)), url('/login_bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          display:"flex",
+          flexDirection:"column",
+          alignItems:"center",
+          justifyContent:"center",
+          padding:"24px"
+        }}>
           <style>{`@keyframes modalIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
           @keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}`}</style>
           {/* 이메일 발송 성공 모달 */}
           {emailToast&&(
-            <div onClick={()=>setEmailToast(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",animation:"modalIn 0.2s ease"}}>
-              <div onClick={e=>e.stopPropagation()} style={{background:C.surface,borderRadius:"20px",padding:"36px 32px",boxShadow:"0 20px 60px rgba(0,0,0,0.2)",width:"100%",maxWidth:"340px",textAlign:"center",animation:"modalIn 0.25s ease"}}>
-                <div style={{width:"60px",height:"60px",borderRadius:"50%",background:`${C.green}15`,border:`2px solid ${C.green}33`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",margin:"0 auto 16px"}}>📧</div>
-                <div style={{fontWeight:800,fontSize:"17px",color:C.text,marginBottom:"8px"}}>코드가 발송됐습니다</div>
-                <div style={{fontSize:"13px",color:C.muted,lineHeight:"1.7",marginBottom:"24px"}}>
-                  <span style={{fontWeight:600,color:C.subtle}}>{fullEmail}</span><br/>으로 직책자 코드를 전송했습니다.<br/>
+            <div onClick={()=>setEmailToast(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",animation:"modalIn 0.2s ease"}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"rgba(15, 23, 42, 0.9)",borderRadius:"20px",padding:"36px 32px",boxShadow:"0 20px 60px rgba(0,0,0,0.5)",width:"100%",maxWidth:"340px",textAlign:"center",animation:"modalIn 0.25s ease",border:"1px solid rgba(255,255,255,0.15)"}}>
+                <div style={{width:"60px",height:"60px",borderRadius:"50%",background:"rgba(74, 222, 128, 0.15)",border:"2px solid rgba(74, 222, 128, 0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"28px",margin:"0 auto 16px"}}>📧</div>
+                <div style={{fontWeight:800,fontSize:"17px",color:"#ffffff",marginBottom:"8px"}}>코드가 발송됐습니다</div>
+                <div style={{fontSize:"13px",color:"rgba(255,255,255,0.6)",lineHeight:"1.7",marginBottom:"24px"}}>
+                  <span style={{fontWeight:600,color:"#ffffff"}}>{fullEmail}</span><br/>으로 직책자 코드를 전송했습니다.<br/>
                   이메일을 확인 후 코드를 입력해 주세요.
                 </div>
                 <button onClick={()=>setEmailToast(false)}
@@ -1930,26 +1987,46 @@ export default function ApplicantManager() {
             </div>
           )}
           <div style={{textAlign:"center",marginBottom:"36px",animation:"modalIn 0.4s ease"}}>
-            <div style={{fontSize:"12px",color:C.muted,marginTop:"4px"}}>직책자 전용 로그인</div>
+            <div style={{fontSize:"12px",color:"rgba(255,255,255,0.6)",marginTop:"4px",fontWeight:700,letterSpacing:"1px"}}>OFFICER</div>
           </div>
           <div style={{width:"100%",maxWidth:"380px",animation:"modalIn 0.5s ease"}}>
-            <div style={{background:C.surface,borderRadius:"20px",padding:"32px 32px 28px",boxShadow:shadowLg,border:`1.5px solid ${C.purple}22`,display:"flex",flexDirection:"column",gap:"16px"}}>
+            <div style={{
+              background: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              borderRadius:"20px",
+              padding:"32px 32px 28px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              display:"flex",
+              flexDirection:"column",
+              gap:"16px",
+              color: "#ffffff"
+            }}>
               <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"4px"}}>
                 <div style={{width:"42px",height:"42px",borderRadius:"12px",background:`linear-gradient(135deg,${C.purple},${C.purple}cc)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"20px",flexShrink:0}}>👤</div>
                 <div>
-                  <div style={{fontWeight:900,fontSize:"16px",color:C.text}}>직책자 로그인</div>
-                  <div style={{fontSize:"11px",color:C.muted,marginTop:"2px"}}>소속 팀/본부 결과 열람</div>
+                  <div style={{fontWeight:900,fontSize:"16px",color:"#ffffff"}}>직책자 로그인</div>
+                  <div style={{fontSize:"11px",color:"rgba(255,255,255,0.6)",marginTop:"2px"}}>소속 팀/본부 결과 열람</div>
                 </div>
               </div>
 
               {/* 직책자 코드 입력 */}
-              <div style={{fontSize:"12px",color:C.subtle,lineHeight:"1.6",padding:"10px 12px",borderRadius:"9px",background:`${C.purple}08`,border:`1px solid ${C.purple}22`}}>
+              <div style={{
+                fontSize:"12px",
+                color:"rgba(255,255,255,0.75)",
+                lineHeight:"1.6",
+                padding:"10px 12px",
+                borderRadius:"9px",
+                background: "rgba(255, 255, 255, 0.04)",
+                border: "1px solid rgba(255, 255, 255, 0.08)"
+              }}>
                 이메일 아이디를 입력하고<br/>받은 직책자 코드를 입력해 주세요.
               </div>
 
               {/* 이메일 입력 + 코드 받기 */}
               <div>
-                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>
+                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:"rgba(255,255,255,0.8)",marginBottom:"6px"}}>
                   이메일 아이디
                   {otpSent&&<span style={{marginLeft:"8px",fontSize:"10px",color:C.green,fontWeight:600}}>코드 발송됨 · {fmtCountdown(countdown)} 남음</span>}
                 </label>
@@ -1957,15 +2034,15 @@ export default function ApplicantManager() {
                   <div style={{
                     display:"flex",
                     alignItems:"center",
-                    background:C.bg,
-                    border:`1.5px solid ${emailErr?C.red:otpSent?C.green:C.border}`,
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: `1.5px solid ${emailErr ? C.red : otpSent ? C.green : "rgba(255, 255, 255, 0.15)"}`,
                     borderRadius:"10px",
                     padding:"0 12px",
                     boxSizing:"border-box",
                     transition:"border-color 0.15s"
                   }}
-                    onFocusCapture={e=>{ e.currentTarget.style.borderColor = emailErr?C.red:C.purple }}
-                    onBlurCapture={e=>{ e.currentTarget.style.borderColor = emailErr?C.red:otpSent?C.green:C.border }}
+                    onFocusCapture={e=>{ e.currentTarget.style.borderColor = emailErr?C.red:"rgba(255, 255, 255, 0.45)" }}
+                    onBlurCapture={e=>{ e.currentTarget.style.borderColor = emailErr?C.red:otpSent?C.green:"rgba(255, 255, 255, 0.15)" }}
                   >
                     <input type="text" value={email} onChange={e=>{
                       const val = e.target.value.split('@')[0];
@@ -1980,12 +2057,12 @@ export default function ApplicantManager() {
                         border:"none",
                         padding:"11px 0",
                         fontSize:"13px",
-                        color:C.text,
+                        color: "#ffffff",
                         outline:"none",
                         fontFamily:"inherit"
                       }}
                     />
-                    <span style={{fontSize:"13px",color:C.muted,paddingLeft:"4px",fontWeight:600,userSelect:"none"}}>@okestro.com</span>
+                    <span style={{fontSize:"13px",color:"rgba(255,255,255,0.45)",paddingLeft:"4px",fontWeight:600,userSelect:"none"}}>@okestro.com</span>
                   </div>
                   <button className="anim-btn" onClick={async()=>{
                     await sendOtp();
@@ -1998,12 +2075,26 @@ export default function ApplicantManager() {
               </div>
 
               <div>
-                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:C.subtle,marginBottom:"6px"}}>직책자 코드</label>
+                <label style={{display:"block",fontSize:"11px",fontWeight:700,color:"rgba(255,255,255,0.8)",marginBottom:"6px"}}>직책자 코드</label>
                 <input type="text" value={officerCode} onChange={e=>{setOfficerCode(e.target.value.toUpperCase());setOfficerErr("");}}
                   onKeyDown={e=>{if(e.key==="Enter") tryLogin();}}
                   placeholder="코드 입력 (예: ABC123)"
-                  style={{width:"100%",background:C.bg,border:`1.5px solid ${officerErr?C.red:C.border}`,borderRadius:"10px",padding:"11px 14px",fontSize:"15px",color:C.text,outline:"none",fontFamily:"inherit",boxSizing:"border-box",letterSpacing:"0.12em",textTransform:"uppercase"}}
-                  onFocus={e=>e.target.style.borderColor=officerErr?C.red:C.purple} onBlur={e=>e.target.style.borderColor=officerErr?C.red:C.border}/>
+                  style={{
+                    width:"100%",
+                    background: "rgba(255, 255, 255, 0.05)",
+                    border: `1.5px solid ${officerErr ? C.red : "rgba(255, 255, 255, 0.15)"}`,
+                    borderRadius:"10px",
+                    padding:"11px 14px",
+                    fontSize:"15px",
+                    color: "#ffffff",
+                    outline:"none",
+                    fontFamily:"inherit",
+                    boxSizing:"border-box",
+                    letterSpacing:"0.12em",
+                    textTransform:"uppercase",
+                    transition: "border-color 0.15s"
+                  }}
+                  onFocus={e=>e.target.style.borderColor=officerErr?C.red:"rgba(255, 255, 255, 0.45)"} onBlur={e=>e.target.style.borderColor=officerErr?C.red:"rgba(255, 255, 255, 0.15)"}/>
                 {officerErr&&<div style={{fontSize:"11px",color:C.red,marginTop:"5px"}}>⚠️ {officerErr}</div>}
               </div>
 
