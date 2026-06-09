@@ -24,9 +24,9 @@ const fbSet = async (key, value) => {
   return true;
 };
 
-// ── SK AX 전용 디자인 토큰 ──
+// ── AIDA TUNE 전용 디자인 토큰 ──
 const C = {
-  bg: "#0c141f",         // SK AX 시그니처 딥 블루
+  bg: "#0c141f",         // AIDA TUNE 시그니처 딥 블루
   bgLight: "#162235",    // 어두운 영역 카드 배경
   surface: "#ffffff",    // 흰색 영역 배경
   border: "#20334e",     // 어두운 보더
@@ -278,14 +278,14 @@ export default function LmsManager({ viewPath, onNavigate }) {
   if (dbLoading) {
     return (
       <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.bg }}>
-        <div style={{ fontSize: "14px", color: "#64748b" }}>SK AX 시스템 로딩 중...</div>
+        <div style={{ fontSize: "14px", color: "#64748b" }}>AIDA TUNE 시스템 로딩 중...</div>
       </div>
     );
   }
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
-      {/* ── SK AX 전용 서브 GNB 네비게이션 헤더 ── */}
+      {/* ── AIDA TUNE 전용 서브 GNB 네비게이션 헤더 ── */}
       <div style={{
         background: "#0c141f",
         borderBottom: `1px solid ${C.border}`,
@@ -298,7 +298,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
       }}>
         {/* 서브 네비게이션 목록 */}
         <div style={{ display: "flex", gap: "28px" }}>
-          <button onClick={() => { setActiveTab("intro"); onNavigate("/"); }} style={{ background: "none", border: "none", fontSize: "13px", fontWeight: activeTab === "intro" ? 800 : 500, color: activeTab === "intro" ? "#ffffff" : "#8c9ba5", cursor: "pointer", transition: "color 0.2s" }}>SK AX 소개</button>
+          <button onClick={() => { setActiveTab("intro"); onNavigate("/"); }} style={{ background: "none", border: "none", fontSize: "13px", fontWeight: activeTab === "intro" ? 800 : 500, color: activeTab === "intro" ? "#ffffff" : "#8c9ba5", cursor: "pointer", transition: "color 0.2s" }}>AIDA TUNE 소개</button>
           <button onClick={() => { setActiveTab("schedule"); onNavigate("/schedule"); }} style={{ background: "none", border: "none", fontSize: "13px", fontWeight: activeTab === "schedule" ? 800 : 500, color: activeTab === "schedule" ? "#ffffff" : "#8c9ba5", cursor: "pointer", transition: "color 0.2s" }}>연간교육계획</button>
           <button onClick={() => checkAccess("classroom")} style={{ background: "none", border: "none", fontSize: "13px", fontWeight: activeTab === "classroom" ? 800 : 500, color: activeTab === "classroom" ? "#ffffff" : "#8c9ba5", cursor: "pointer", transition: "color 0.2s" }}>나의 강의실</button>
           {currentUser && (
@@ -332,7 +332,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
         {activeTab === "mypage" && currentUser && <MyPageView applications={applications} courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} />}
       </div>
 
-      {/* ── SK AX 공통 디자인 푸터 ── */}
+      {/* ── AIDA TUNE 공통 디자인 푸터 ── */}
       <div style={{
         background: "#121a24",
         borderTop: "1px solid #1c2735",
@@ -342,10 +342,10 @@ export default function LmsManager({ viewPath, onNavigate }) {
       }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "24px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <div style={{ fontSize: "18px", fontWeight: 900, color: "#fff" }}>🎻 SK AX 상생아카데미</div>
+            <div style={{ fontSize: "18px", fontWeight: 900, color: "#fff" }}>🎻 AIDA TUNE 상생아카데미</div>
             <div style={{ fontSize: "12px", color: "#718096", lineHeight: "1.8" }}>
-              회사명 : SK(주) &nbsp;|&nbsp; 경기도 성남시 분당구 판교로 255번길 38, SK AX 판교캠퍼스 B동<br />
-              Tel : 02-6400-5145 &nbsp;|&nbsp; Email : ax.academy@sk.com &nbsp;|&nbsp; 대표자 : 장용호, 최태원 &nbsp;|&nbsp; 사업자등록번호 : 783-85-00169<br />
+              회사명 : 오케스트로(주) &nbsp;|&nbsp; 경기도 성남시 분당구 판교로 255번길 38, AIDA TUNE 판교캠퍼스 B동<br />
+              Tel : 02-6400-5145 &nbsp;|&nbsp; Email : tune.academy@okestro.com &nbsp;|&nbsp; 대표자 : 김민준 &nbsp;|&nbsp; 사업자등록번호 : 783-85-00169<br />
               호스팅 제공자: 주식회사 맑은소프트
             </div>
             <div style={{ fontSize: "11px", color: "#4a5568", marginTop: "8px" }}>
@@ -354,7 +354,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
           </div>
           
           <div style={{ display: "flex", gap: "24px" }}>
-            <span style={{ fontSize: "13px", color: "#a0aec0", cursor: "pointer" }}>SK AX 소개</span>
+            <span style={{ fontSize: "13px", color: "#a0aec0", cursor: "pointer" }}>AIDA TUNE 소개</span>
             <span style={{ fontSize: "13px", color: "#a0aec0", cursor: "pointer" }}>이용약관</span>
             <span style={{ fontSize: "13px", color: "#ffffff", fontWeight: 700, cursor: "pointer" }}>개인정보처리방침</span>
             <span style={{ fontSize: "13px", color: "#a0aec0", cursor: "pointer" }}>찾아오시는길</span>
@@ -443,7 +443,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
   );
 }
 
-// ── [IntroView] SK AX 완전 연계 메인 화면 ──
+// ── [IntroView] AIDA TUNE 완전 연계 메인 화면 ──
 function IntroView({ courses, checkAccess, setSelectedCourse, applications, currentUser }) {
   const [selectedNotice, setSelectedNotice] = useState(null);
 
@@ -458,8 +458,8 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
   const notices = [
     { id: 1, title: "수료증 출력 기능 일시 중단 및 대체 증빙 안내", date: "2026.06.09", author: "교육센터", content: "시스템 보완 및 신규 라우팅 데이터 패치 작업으로 인하여 수료증 인쇄 기능이 1일간 지연됩니다. 대체 서류(수강 완료 로그 화면)로 회사 제출 증빙이 가능하오니 양해를 구합니다." },
-    { id: 2, title: "LMS 플랫폼 'Tune' 고도화 및 SK AX 테마 통합 안내", date: "2026.06.01", author: "교육센터", content: "통합 교육 플랫폼으로 고도화가 진행되었습니다. 이제 수강생분들은 깔끔한 SK AX 레이아웃을 통해 영상 시청 진도율 체크 및 학습 인정 혜택을 온전히 받으실 수 있습니다." },
-    { id: 3, title: "찾아오시는 길 및 셔틀버스 노선 안내", date: "2026.05.15", author: "운영팀", content: "SK AX 판교캠퍼스 B동 오프라인 실습장에 오시는 길 정보입니다. 판교역 1번 출구에서 정시 및 30분 간격으로 아카데미 셔틀버스가 운행됩니다." },
+    { id: 2, title: "LMS 플랫폼 'Tune' 고도화 및 AIDA TUNE 테마 통합 안내", date: "2026.06.01", author: "교육센터", content: "통합 교육 플랫폼으로 고도화가 진행되었습니다. 이제 수강생분들은 깔끔한 AIDA TUNE 레이아웃을 통해 영상 시청 진도율 체크 및 학습 인정 혜택을 온전히 받으실 수 있습니다." },
+    { id: 3, title: "찾아오시는 길 및 셔틀버스 노선 안내", date: "2026.05.15", author: "운영팀", content: "AIDA TUNE 판교캠퍼스 B동 오프라인 실습장에 오시는 길 정보입니다. 판교역 1번 출구에서 정시 및 30분 간격으로 아카데미 셔틀버스가 운행됩니다." },
     { id: 4, title: "2026년도 상반기 교육 과정개요서 다운로드", date: "2026.04.10", author: "교육센터", content: "올해 개설 예정인 가상화, 데이터 엔지니어링, 클라우드 기본, AI Agent 설계 등 핵심 전반 과정의 실무 커리큘럼 명세서를 첨부합니다." }
   ];
 
@@ -484,7 +484,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
   return (
     <div>
-      {/* ── SK AX 메인 비주얼 배너 ── */}
+      {/* ── AIDA TUNE 메인 비주얼 배너 ── */}
       <div style={{
         background: "radial-gradient(circle at top right, #1a2c42, #0c141f 70%)",
         padding: "80px 40px",
@@ -493,10 +493,10 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
       }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <div style={{ background: "rgba(37, 99, 235, 0.1)", border: "1px solid rgba(59, 130, 246, 0.3)", borderRadius: "20px", display: "inline-block", padding: "6px 14px", fontSize: "12px", color: C.blue, fontWeight: 700, marginBottom: "20px" }}>
-            🚀 SK AX 훈련센터 공식 파트너
+            🚀 AIDA TUNE 훈련센터 공식 파트너
           </div>
           <h1 style={{ fontSize: "42px", fontWeight: 900, color: "#ffffff", lineHeight: "1.2", margin: "0 0 16px 0", letterSpacing: "-0.5px" }}>
-            SK AX 맞춤 클래스
+            AIDA TUNE 맞춤 클래스
           </h1>
           <p style={{ fontSize: "16px", color: "#a0aec0", lineHeight: "1.7", margin: "0 0 32px 0", maxWidth: "680px" }}>
             AI 서비스 기획, AI 서비스 개발, 프론트엔드 개발, 백엔드 개발, 데이터 엔지니어링 프로젝트 관리 등<br />
@@ -618,19 +618,19 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "#1c2735"}>
                 <div style={{ fontWeight: 800, fontSize: "14px", color: C.blue, marginBottom: "8px" }}>💬 카카오톡 채널</div>
-                <div style={{ fontSize: "12px", color: "#a0aec0" }}>SK AX 상생아카데미 채널 추가하고 실시간 메신저 문의하기</div>
+                <div style={{ fontSize: "12px", color: "#a0aec0" }}>AIDA TUNE 상생아카데미 채널 추가하고 실시간 메신저 문의하기</div>
               </div>
             </a>
             <div style={{ background: C.bgLight, border: "1px solid #1c2735", borderRadius: "12px", padding: "20px", color: "#ffffff" }}>
               <div style={{ fontWeight: 800, fontSize: "14px", color: C.blue, marginBottom: "8px" }}>📞 교육 센터 대표번호</div>
-              <div style={{ fontSize: "12px", color: "#a0aec0" }}>02) 6400-5145 &nbsp;|&nbsp; Email : ax.academy@sk.com</div>
+              <div style={{ fontSize: "12px", color: "#a0aec0" }}>02) 6400-5145 &nbsp;|&nbsp; Email : tune.academy@okestro.com</div>
             </div>
             <a href="https://map.naver.com" target="_blank" style={{ textDecoration: "none" }}>
               <div style={{ background: C.bgLight, border: "1px solid #1c2735", borderRadius: "12px", padding: "20px", color: "#ffffff", transition: "border-color 0.15s" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "#1c2735"}>
                 <div style={{ fontWeight: 800, fontSize: "14px", color: C.blue, marginBottom: "8px" }}>📍 교육장 오시는 길</div>
-                <div style={{ fontSize: "12px", color: "#a0aec0" }}>SK AX 판교캠퍼스 B동 (성남시 분당구 판교로 255번길 38)</div>
+                <div style={{ fontSize: "12px", color: "#a0aec0" }}>AIDA TUNE 판교캠퍼스 B동 (성남시 분당구 판교로 255번길 38)</div>
               </div>
             </a>
           </div>
