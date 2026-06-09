@@ -432,7 +432,24 @@ export default function ApplicantManager() {
     if(urlRole==="officer"){
       try{ const s=sessionStorage.getItem('aida:login'); if(s){const u=JSON.parse(s);if(u?.type==="officer")setLoginUser(u);} }catch{}
     } else {
-      // 관리자 URL: 세션 복원 (없으면 로그인 화면)
+      // 관리자 URL: 세션 복원 (LMS 어드민 세션인 aida:lms_login 우선 대조)
+      try {
+        const sLms = sessionStorage.getItem('aida:lms_login');
+        if (sLms) {
+          const u = JSON.parse(sLms);
+          if (u?.role === "admin") {
+            setLoginUser({
+              type: "admin_rbac",
+              id: u.id,
+              username: u.email,
+              name: u.name,
+              role: "super_admin"
+            });
+            return;
+          }
+        }
+      } catch {}
+
       try{ const s=sessionStorage.getItem('aida:login'); if(s){const u=JSON.parse(s);if(u?.type==="admin_rbac")setLoginUser(u);} }catch{}
     }
   },[]);
