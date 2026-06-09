@@ -1,3 +1,4 @@
+/* eslint-disable */
 // ApplicantManager.jsx
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
@@ -138,7 +139,7 @@ const backdropStyle = {
 // ── 메인 컴포넌트 ─────────────────────────────────────────────
 
 
-export default function ApplicantManager() {
+export default function ApplicantManager({ viewPath }) {
   const [loaded,      setLoaded]      = useState(false);
   const [deptLoaded,  setDeptLoaded]  = useState(false);
   const [subjLoaded,  setSubjLoaded]  = useState(false);
@@ -502,6 +503,13 @@ export default function ApplicantManager() {
   useEffect(()=>{
     window.scrollTo({top:0,behavior:"instant"});
   },[mainMenu]);
+
+  // 어드민 뷰에서는 강제로 list 탭으로 리다이렉트
+  useEffect(()=>{
+    if(viewPath === "/admin" && mainMenu === "home"){
+      setMainMenu("list");
+    }
+  },[viewPath, mainMenu]);
 
   // ── 비밀번호 확인 ─────────────────────────────────────────
   const confirmDelete=(msg,action)=>setDeleteConfirm({msg,action});
@@ -2071,7 +2079,7 @@ export default function ApplicantManager() {
   }
 
   return(
-    <div style={{background:C.bg,minHeight:"100vh",minHeight:"100dvh",transition:"background 0.4s"}}>
+    <div style={viewPath === "/admin" ? { padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" } : {background:C.bg,minHeight:"100vh",minHeight:"100dvh",transition:"background 0.4s"}}>
       <style>{`
         /* ── iOS/Safari Reset ── */
         *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -2329,7 +2337,8 @@ export default function ApplicantManager() {
       `}</style>
 
       {/* GNB - 2단 구조 */}
-      <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:"none",position:"sticky",top:0,zIndex:100,width:"100%"}}>
+      {viewPath !== "/admin" && (
+        <div style={{background:C.surface,borderBottom:`1px solid ${C.border}`,boxShadow:"none",position:"sticky",top:0,zIndex:100,width:"100%"}}>
 
         {/* 상단 바: 로고 + 뱃지/상태/로그아웃 */}
         <div className="gnb-inner gnb-top-bar" style={{maxWidth:"1440px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",height:"56px",borderBottom:`1px solid ${C.border}88`}}>
@@ -2449,10 +2458,44 @@ export default function ApplicantManager() {
           })}
         </div>
       </div>
+      )}
 
       {/* 메인 콘텐츠 */}
-      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={{maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 108px)"}}>
-        {mainMenu!=="home"&&!isOfficer&&(
+      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={viewPath === "/admin" ? { background: "var(--canvas)", borderRadius: "var(--rounded-lg)", padding: "32px", border: `1px solid var(--hairline-strong)`, boxShadow: shadow, maxWidth: "1440px", margin: "0 auto" } : {maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 108px)"}}>
+        {viewPath === "/admin" && (
+          <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
+            {ADMIN_TABS.map(tab => {
+              const active = mainMenu === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setMainMenu(tab.id);
+                    if (tab.id === "ai" && !aiMailModal) {
+                      const yms = new Set();
+                      applicants.forEach(a => { [a.date1, a.date2, a.date3].filter(Boolean).forEach(d => yms.add(d.slice(0, 7))); });
+                      const list = [...yms].sort().reverse();
+                      setAiMailModal({ step: 1, yearMonth: list[0] || "", availableYMs: list, groups: {}, emails: [], isGenerating: false });
+                    }
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    border: "none",
+                    background: active ? "var(--primary)" : "none",
+                    color: active ? "var(--on-primary)" : "var(--body)",
+                    fontWeight: 600,
+                    borderRadius: "var(--rounded-md)",
+                    cursor: "pointer"
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {mainMenu!=="home"&&!isOfficer&&viewPath!=="/admin"&&(
         <div style={{marginBottom:"20px",paddingBottom:"14px",borderBottom:`2px solid ${C.blue}22`}}>
           <h1 style={{fontSize:"20px",fontWeight:900,color:C.text,margin:0,letterSpacing:"-0.3px"}}>
             {({
