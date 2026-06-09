@@ -80,7 +80,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
   const [jobTypes, setJobTypes] = useState([]);
   const [dbLoading, setDbLoading] = useState(true);
 
-  // 페이지 꾸미기 & 연간 교육 일정 상태
+  // 페이지 꾸미기 & 연간 교육 일정 상태 & 공지사항 & FAQ 상태
   const [pageConfig, setPageConfig] = useState({
     heroTitle: "AIDA TUNE",
     heroSubtitle: "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등\n실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요.",
@@ -88,6 +88,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
     heroBgPreset: "sky"
   });
   const [schedules, setSchedules] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [faqs, setFaqs] = useState([]);
 
   // 인증 제어
   const [authMode, setAuthMode] = useState(null); // 'login' | 'register' | 'findPw'
@@ -114,7 +116,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
   useEffect(() => {
     const fetchDb = async () => {
       try {
-        const [u, c, a, v, d, j, p, s] = await Promise.all([
+        const [u, c, a, v, d, j, p, s, n, f] = await Promise.all([
           fbGet("aida:lms_users_v2").catch(() => []),
           fbGet("aida:lms_courses_v2").catch(() => []),
           fbGet("aida:lms_applications_v2").catch(() => []),
@@ -122,7 +124,9 @@ export default function LmsManager({ viewPath, onNavigate }) {
           fbGet("aida:deptData_v1").catch(() => []),
           fbGet("aida:jobTypes_v1").catch(() => []),
           fbGet("aida:lms_page_config_v1").catch(() => null),
-          fbGet("aida:lms_schedules_v1").catch(() => [])
+          fbGet("aida:lms_schedules_v1").catch(() => []),
+          fbGet("aida:lms_notices_v1").catch(() => []),
+          fbGet("aida:lms_faqs_v1").catch(() => [])
         ]);
         
         setUsers(u || []);
@@ -142,6 +146,20 @@ export default function LmsManager({ viewPath, onNavigate }) {
           { id: "s-3", course: "Prompt Engineering 실무 (심화)", date: "2026-08-22", target: "사내 엔지니어 전용", description: "LLM 성능을 백퍼센트 끌어올리는 기술" }
         ];
         setSchedules(s && s.length > 0 ? s : defaultMockSchedules);
+
+        const defaultMockNotices = [
+          { id: "n-1", title: "오케스트로 아카데미 개소 및 AIDA TUNE 서비스 런칭 안내", content: "안녕하세요. 오케스트로 아카데미팀입니다. 실무 중심의 특화 강의와 실시간 평가 테스트를 지원하는 AIDA TUNE 서비스가 공식 오픈되었습니다.\n임직원 여러분의 많은 참여 바랍니다.", date: "2026-06-01", author: "관리자", hits: 45 },
+          { id: "n-2", title: "[필독] 수강신청 승인 절차 및 수료 기준 안내", content: "각 강좌는 신청 후 관리자의 승인을 거쳐 수강이 확정됩니다. 비디오 학습 진행률이 80% 이상 도달해야 수료가 인정되며 마이페이지에서 이력 확인이 가능합니다.", date: "2026-06-05", author: "관리자", hits: 28 },
+          { id: "n-3", title: "6월 정기 생성형 AI 실무 교육 일정 안내", content: "6월에 예정된 생성형 AI 실무 및 프롬프트 엔지니어링 심화 교육 일정이 연간교육계획 메뉴에 등록되었으니 확인하시어 수강신청 바랍니다.", date: "2026-06-09", author: "관리자", hits: 12 }
+        ];
+        setNotices(n && n.length > 0 ? n : defaultMockNotices);
+
+        const defaultMockFaqs = [
+          { id: "f-1", category: "학습/수강", question: "수강 승인은 얼마나 걸리나요?", answer: "수강 신청 접수 후 통상 1~2 영업일 이내에 아카데미 관리자가 확인하여 승인 처리를 완료합니다. 승인이 완료되면 강의실에 입장할 수 있습니다." },
+          { id: "f-2", category: "수료 기준", question: "비디오 시청 도중 창을 닫으면 학습이 저장되나요?", answer: "네, 플레이어의 실시간 재생률이 실시간으로 동기화되어 이전 수강 상태부터 이어서 학습하실 수 있습니다. 단, 80% 이상 시청하셔야 최종 수료 신청 버튼이 활성화됩니다." },
+          { id: "f-3", category: "기타", question: "수강 확인서나 수료증 발급이 가능한가요?", answer: "마이페이지의 수료 완료 이력을 바탕으로 아카데미 운영진 측으로 문의(academy@okestro.com)해 주시면 증명 서류 발급을 도와드립니다." }
+        ];
+        setFaqs(f && f.length > 0 ? f : defaultMockFaqs);
 
         const session = sessionStorage.getItem("aida:lms_login");
         if (session) {
@@ -197,6 +215,14 @@ export default function LmsManager({ viewPath, onNavigate }) {
   const saveSchedules = async (newSchedules) => {
     setSchedules(newSchedules);
     await fbSet("aida:lms_schedules_v1", newSchedules);
+  };
+  const saveNotices = async (newNotices) => {
+    setNotices(newNotices);
+    await fbSet("aida:lms_notices_v1", newNotices);
+  };
+  const saveFaqs = async (newFaqs) => {
+    setFaqs(newFaqs);
+    await fbSet("aida:lms_faqs_v1", newFaqs);
   };
 
   const handleLogin = () => {
@@ -344,6 +370,10 @@ export default function LmsManager({ viewPath, onNavigate }) {
           savePageConfig={savePageConfig}
           schedules={schedules}
           saveSchedules={saveSchedules}
+          notices={notices}
+          saveNotices={saveNotices}
+          faqs={faqs}
+          saveFaqs={saveFaqs}
         />
       </div>
     );
@@ -370,6 +400,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
           {[
             { id: "intro", label: "AIDA TUNE 소개", path: "/" },
             { id: "schedule", label: "연간교육계획", path: "/schedule" },
+            { id: "notice", label: "공지사항", path: "/notice" },
+            { id: "faq", label: "자주 묻는 질문 (FAQ)", path: "/faq" },
             { id: "classroom", label: "나의 강의실", path: "/classroom", secure: true },
             { id: "mypage", label: "마이페이지", path: "/mypage", secure: true, hideGuest: true }
           ].map((tab) => {
@@ -463,6 +495,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
       <div style={{ flex: 1 }}>
         {activeTab === "intro" && <IntroView courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} applications={applications} currentUser={currentUser} pageConfig={pageConfig} />}
         {activeTab === "schedule" && <ScheduleView schedules={schedules} />}
+        {activeTab === "notice" && <NoticeView notices={notices} saveNotices={saveNotices} />}
+        {activeTab === "faq" && <FaqView faqs={faqs} />}
         {activeTab === "classroom" && currentUser && <ClassroomView courses={courses} applications={applications} viewLogs={viewLogs} currentUser={currentUser} saveApplications={saveApplications} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} saveViewLogs={saveViewLogs} />}
         {activeTab === "mypage" && currentUser && <MyPageView applications={applications} courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} />}
       </div>
@@ -1451,6 +1485,204 @@ function VideoPlayer({ course, applications, viewLogs, currentUser, saveViewLogs
   );
 }
 
+// ── [NoticeView] 공지사항 게시판 ──
+function NoticeView({ notices, saveNotices }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedNotice, setSelectedNotice] = useState(null);
+
+  const filteredNotices = notices.filter(n => 
+    n.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    n.content.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleNoticeClick = async (n) => {
+    setSelectedNotice(n);
+    const updated = notices.map(item => 
+      item.id === n.id ? { ...item, hits: (item.hits || 0) + 1 } : item
+    );
+    await saveNotices(updated);
+  };
+
+  return (
+    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+      <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
+          <div>
+            <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px 0", letterSpacing: "-0.84px" }}>📢 공지사항 게시판</h3>
+            <p style={{ fontSize: "14px", color: "var(--body)", margin: 0 }}>오케스트로 아카데미의 최신 공지 및 새 소식을 전해드립니다.</p>
+          </div>
+          <div style={{ position: "relative", width: "240px" }}>
+            <input 
+              type="text" 
+              placeholder="제목, 내용 검색..." 
+              value={searchTerm} 
+              onChange={e => setSearchTerm(e.target.value)} 
+              style={inpStyle({ padding: "8px 12px", fontSize: "13px" })} 
+            />
+          </div>
+        </div>
+
+        {selectedNotice ? (
+          <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <span style={{ fontSize: "13px", color: "var(--body)" }}>작성자: {selectedNotice.author} | 작성일: {selectedNotice.date} | 조회수: {selectedNotice.hits + 1}</span>
+              <button 
+                onClick={() => setSelectedNotice(null)} 
+                style={{ padding: "4px 10px", background: "none", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-md)", cursor: "pointer", fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}
+              >
+                목록으로 돌아가기
+              </button>
+            </div>
+            <h4 style={{ fontSize: "20px", fontWeight: 600, color: "var(--ink)", margin: "0 0 16px 0" }}>{selectedNotice.title}</h4>
+            <div style={{ fontSize: "14px", color: "var(--ink)", lineHeight: "1.6", whiteSpace: "pre-line" }}>
+              {selectedNotice.content}
+            </div>
+          </div>
+        ) : (
+          <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+              <thead>
+                <tr style={{ background: "var(--canvas-soft)", borderBottom: "1.5px solid var(--hairline-strong)", textAlign: "left" }}>
+                  <th style={{ padding: "12px", width: "80px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>번호</th>
+                  <th style={{ padding: "12px", color: "var(--ink)", fontWeight: 600 }}>제목</th>
+                  <th style={{ padding: "12px", width: "120px", color: "var(--ink)", fontWeight: 600 }}>작성자</th>
+                  <th style={{ padding: "12px", width: "120px", color: "var(--ink)", fontWeight: 600 }}>작성일</th>
+                  <th style={{ padding: "12px", width: "100px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>조회수</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredNotices.map((n, idx) => (
+                  <tr key={n.id} onClick={() => handleNoticeClick(n)} style={{ borderBottom: "1px solid var(--hairline)", cursor: "pointer" }} onMouseOver={e => e.currentTarget.style.background = "var(--canvas-soft)"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+                    <td style={{ padding: "12px", textAlign: "center", color: "var(--body)" }}>{filteredNotices.length - idx}</td>
+                    <td style={{ padding: "12px", fontWeight: 600, color: "var(--ink)" }}>{n.title}</td>
+                    <td style={{ padding: "12px", color: "var(--body)" }}>{n.author}</td>
+                    <td style={{ padding: "12px", color: "var(--body)" }}>{n.date}</td>
+                    <td style={{ padding: "12px", textAlign: "center", color: "var(--body)" }}>{n.hits || 0}</td>
+                  </tr>
+                ))}
+                {filteredNotices.length === 0 && (
+                  <tr>
+                    <td colSpan="5" style={{ padding: "40px", textAlign: "center", color: "var(--muted)" }}>검색 결과가 없습니다.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── [FaqView] FAQ 게시판 ──
+function FaqView({ faqs }) {
+  const [activeCategory, setActiveCategory] = useState("전체");
+  const [openFaqId, setOpenFaqId] = useState(null);
+
+  const categories = ["전체", "학습/수강", "수료 기준", "기타"];
+
+  const filteredFaqs = activeCategory === "전체" 
+    ? faqs 
+    : faqs.filter(f => f.category === activeCategory);
+
+  const toggleFaq = (id) => {
+    setOpenFaqId(openFaqId === id ? null : id);
+  };
+
+  return (
+    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+      <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
+        <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px 0", letterSpacing: "-0.84px" }}>❓ 자주 묻는 질문 (FAQ)</h3>
+        <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "24px" }}>아카데미 수강생분들이 자주 묻는 질문과 답변을 모아두었습니다.</p>
+
+        {/* 카테고리 필터링 탭 */}
+        <div style={{ display: "flex", gap: "8px", borderBottom: "1.5px solid var(--hairline-strong)", paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => { setActiveCategory(cat); setOpenFaqId(null); }}
+              style={{
+                padding: "8px 16px",
+                border: "none",
+                background: activeCategory === cat ? "var(--primary)" : "none",
+                color: activeCategory === cat ? "var(--on-primary)" : "var(--body)",
+                fontWeight: 600,
+                borderRadius: "var(--rounded-md)",
+                cursor: "pointer",
+                transition: "all 0.15s"
+              }}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* 아코디언 FAQ 목록 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {filteredFaqs.map(faq => {
+            const isOpen = openFaqId === faq.id;
+            return (
+              <div 
+                key={faq.id} 
+                style={{ 
+                  border: "1px solid var(--hairline-strong)", 
+                  borderRadius: "var(--rounded-md)", 
+                  overflow: "hidden", 
+                  background: isOpen ? "var(--canvas-soft)" : "var(--canvas)",
+                  transition: "background 0.15s"
+                }}
+              >
+                {/* 질문 헤더 */}
+                <div 
+                  onClick={() => toggleFaq(faq.id)} 
+                  style={{ 
+                    padding: "16px 20px", 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "center", 
+                    cursor: "pointer", 
+                    userSelect: "none" 
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-link)", background: "rgba(13, 116, 206, 0.1)", padding: "2px 6px", borderRadius: "4px" }}>{faq.category}</span>
+                    <strong style={{ fontSize: "15px", color: "var(--ink)", fontWeight: 600 }}>Q. {faq.question}</strong>
+                  </div>
+                  <span style={{ fontSize: "16px", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", color: "var(--body)" }}>
+                    ▼
+                  </span>
+                </div>
+
+                {/* 답변 바디 */}
+                {isOpen && (
+                  <div 
+                    style={{ 
+                      padding: "16px 20px", 
+                      borderTop: "1px solid var(--hairline-strong)", 
+                      background: "var(--canvas)", 
+                      fontSize: "14px", 
+                      color: "var(--body)", 
+                      lineHeight: "1.6",
+                      whiteSpace: "pre-line"
+                    }}
+                  >
+                    {faq.answer}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {filteredFaqs.length === 0 && (
+            <div style={{ padding: "40px", textAlign: "center", color: "var(--muted)", border: "1px dashed var(--hairline-strong)", borderRadius: "var(--rounded-lg)" }}>
+              등록된 질문이 없습니다.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── [MyPageView] 마이페이지 트래커 ──
 function MyPageView({ applications, courses, checkAccess, setSelectedCourse }) {
   const currentUser = JSON.parse(sessionStorage.getItem("aida:lms_login") || "null");
@@ -1533,14 +1765,15 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse }) {
   );
 }
 
-// ── [BackOfficeView] 백오피스 통합 어드민 패널 ──
 function BackOfficeView({ 
   users, saveUsers, 
   courses, saveCourses, 
   applications, saveApplications, 
   viewLogs, deptData, jobTypes,
   pageConfig, savePageConfig,
-  schedules, saveSchedules
+  schedules, saveSchedules,
+  notices, saveNotices,
+  faqs, saveFaqs
 }) {
   const [backTab, setBackTab] = useState("apply");
   const [courseForm, setCourseForm] = useState({ title: "", description: "", youtubeUrl: "" });
@@ -1557,6 +1790,100 @@ function BackOfficeView({
   const [customSubtitle, setCustomSubtitle] = useState(pageConfig?.heroSubtitle || "");
   const [customBadge, setCustomBadge] = useState(pageConfig?.heroBadge || "");
   const [customBgPreset, setCustomBgPreset] = useState(pageConfig?.heroBgPreset || "sky");
+
+  // 공지사항 관리 폼 상태 및 핸들러
+  const [noticeForm, setNoticeForm] = useState({ title: "", content: "" });
+  const [editingNoticeId, setEditingNoticeId] = useState(null);
+
+  const handleSaveNotice = async () => {
+    const { title, content } = noticeForm;
+    if (!title.trim() || !content.trim()) {
+      alert("제목과 내용을 입력해주세요.");
+      return;
+    }
+    if (editingNoticeId) {
+      const updated = notices.map(n => 
+        n.id === editingNoticeId ? { ...n, title: title.trim(), content: content.trim() } : n
+      );
+      await saveNotices(updated);
+      alert("공지사항이 수정되었습니다.");
+      setEditingNoticeId(null);
+    } else {
+      const newNotice = {
+        id: uid(),
+        title: title.trim(),
+        content: content.trim(),
+        date: new Date().toISOString().slice(0, 10),
+        author: "관리자",
+        hits: 0
+      };
+      await saveNotices([newNotice, ...notices]);
+      alert("공지사항이 등록되었습니다.");
+    }
+    setNoticeForm({ title: "", content: "" });
+  };
+
+  const handleEditNotice = (n) => {
+    setNoticeForm({ title: n.title, content: n.content });
+    setEditingNoticeId(n.id);
+  };
+
+  const handleDeleteNotice = async (id) => {
+    if (!window.confirm("이 공지사항을 삭제하시겠습니까?")) return;
+    const updated = notices.filter(n => n.id !== id);
+    await saveNotices(updated);
+    alert("공지사항이 삭제되었습니다.");
+    if (editingNoticeId === id) {
+      setEditingNoticeId(null);
+      setNoticeForm({ title: "", content: "" });
+    }
+  };
+
+  // FAQ 관리 폼 상태 및 핸들러
+  const [faqForm, setFaqForm] = useState({ category: "학습/수강", question: "", answer: "" });
+  const [editingFaqId, setEditingFaqId] = useState(null);
+
+  const handleSaveFaq = async () => {
+    const { category, question, answer } = faqForm;
+    if (!question.trim() || !answer.trim()) {
+      alert("질문과 답변을 입력해주세요.");
+      return;
+    }
+    if (editingFaqId) {
+      const updated = faqs.map(f => 
+        f.id === editingFaqId ? { ...f, category, question: question.trim(), answer: answer.trim() } : f
+      );
+      await saveFaqs(updated);
+      alert("FAQ가 수정되었습니다.");
+      setEditingFaqId(null);
+    } else {
+      const newFaq = {
+        id: uid(),
+        category,
+        question: question.trim(),
+        answer: answer.trim()
+      };
+      await saveFaqs([newFaq, ...faqs]);
+      alert("FAQ가 등록되었습니다.");
+    }
+    setFaqForm({ category: "학습/수강", question: "", answer: "" });
+  };
+
+  const handleEditFaq = (f) => {
+    setFaqForm({ category: f.category, question: f.question, answer: f.answer });
+    setEditingFaqId(f.id);
+  };
+
+  const handleDeleteFaq = async (id) => {
+    if (!window.confirm("이 FAQ를 삭제하시겠습니까?")) return;
+    const updated = faqs.filter(f => f.id !== id);
+    await saveFaqs(updated);
+    alert("FAQ가 삭제되었습니다.");
+    if (editingFaqId === id) {
+      setEditingFaqId(null);
+      setFaqForm({ category: "학습/수강", question: "", answer: "" });
+    }
+  };
 
   useEffect(() => {
     if (pageConfig) {
@@ -1694,6 +2021,8 @@ function BackOfficeView({
         <button onClick={() => setBackTab("register")} style={{ padding: "8px 16px", border: "none", background: backTab === "register" ? "var(--primary)" : "none", color: backTab === "register" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입 승인</button>
         <button onClick={() => setBackTab("create")} style={{ padding: "8px 16px", border: "none", background: backTab === "create" ? "var(--primary)" : "none", color: backTab === "create" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>교육 개설</button>
         <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 관리</button>
+        <button onClick={() => setBackTab("notice")} style={{ padding: "8px 16px", border: "none", background: backTab === "notice" ? "var(--primary)" : "none", color: backTab === "notice" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>공지사항 관리</button>
+        <button onClick={() => setBackTab("faq")} style={{ padding: "8px 16px", border: "none", background: backTab === "faq" ? "var(--primary)" : "none", color: backTab === "faq" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>FAQ 관리</button>
         <button onClick={() => setBackTab("decorator")} style={{ padding: "8px 16px", border: "none", background: backTab === "decorator" ? "var(--primary)" : "none", color: backTab === "decorator" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>페이지 꾸미기</button>
       </div>
 
@@ -1913,6 +2242,150 @@ function BackOfficeView({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 공지사항 관리 탭 UI [NEW] */}
+      {backTab === "notice" && (
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* 등록/수정 폼 */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📢 {editingNoticeId ? "공지사항 수정" : "공지사항 등록"}</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>제목 *</label>
+                <input type="text" value={noticeForm.title} onChange={e => setNoticeForm({ ...noticeForm, title: e.target.value })} placeholder="공지사항 제목" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>내용 *</label>
+                <textarea value={noticeForm.content} onChange={e => setNoticeForm({ ...noticeForm, content: e.target.value })} placeholder="공지사항 상세 내용" style={inpStyle({ padding: "8px 12px", minHeight: "150px", resize: "vertical" })} />
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={handleSaveNotice} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                  {editingNoticeId ? "수정 완료" : "등록 완료"}
+                </button>
+                {editingNoticeId && (
+                  <button onClick={() => { setEditingNoticeId(null); setNoticeForm({ title: "", content: "" }); }} style={{ padding: "10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "13px", cursor: "pointer" }}>
+                    취소
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 목록 조회 */}
+          <div style={{ flex: 1.5, minWidth: "400px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📋 등록된 공지사항 목록</h4>
+            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
+                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>제목</th>
+                    <th style={{ padding: "10px", width: "90px", color: "var(--ink)", fontWeight: 600 }}>작성일</th>
+                    <th style={{ padding: "10px", width: "70px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>조회수</th>
+                    <th style={{ padding: "10px", width: "110px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notices.map(n => (
+                    <tr key={n.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{n.title}</td>
+                      <td style={{ padding: "10px", color: "var(--body)" }}>{n.date}</td>
+                      <td style={{ padding: "10px", textAlign: "center", color: "var(--body)" }}>{n.hits || 0}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                          <button onClick={() => handleEditNotice(n)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
+                          <button onClick={() => handleDeleteNotice(n.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {notices.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 공지사항이 없습니다.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FAQ 관리 탭 UI [NEW] */}
+      {backTab === "faq" && (
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* 등록/수정 폼 */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>❓ {editingFaqId ? "FAQ 수정" : "FAQ 등록"}</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>카테고리 분류 *</label>
+                <select value={faqForm.category} onChange={e => setFaqForm({ ...faqForm, category: e.target.value })} style={inpStyle({ padding: "8px 12px" })}>
+                  <option value="학습/수강">학습/수강</option>
+                  <option value="수료 기준">수료 기준</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>질문 (Question) *</label>
+                <input type="text" value={faqForm.question} onChange={e => setFaqForm({ ...faqForm, question: e.target.value })} placeholder="자주 묻는 질문 입력" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>답변 (Answer) *</label>
+                <textarea value={faqForm.answer} onChange={e => setFaqForm({ ...faqForm, answer: e.target.value })} placeholder="FAQ 상세 답변 입력" style={inpStyle({ padding: "8px 12px", minHeight: "120px", resize: "vertical" })} />
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={handleSaveFaq} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                  {editingFaqId ? "수정 완료" : "등록 완료"}
+                </button>
+                {editingFaqId && (
+                  <button onClick={() => { setEditingFaqId(null); setFaqForm({ category: "학습/수강", question: "", answer: "" }); }} style={{ padding: "10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "13px", cursor: "pointer" }}>
+                    취소
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 목록 조회 */}
+          <div style={{ flex: 1.5, minWidth: "400px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📋 등록된 FAQ 목록</h4>
+            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
+                    <th style={{ padding: "10px", width: "90px", color: "var(--ink)", fontWeight: 600 }}>분류</th>
+                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>질문</th>
+                    <th style={{ padding: "10px", width: "110px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {faqs.map(f => (
+                    <tr key={f.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                      <td style={{ padding: "10px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-link)", background: "rgba(13, 116, 206, 0.08)", padding: "2px 6px", borderRadius: "4px" }}>
+                          {f.category}
+                        </span>
+                      </td>
+                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{f.question}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                          <button onClick={() => handleEditFaq(f)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
+                          <button onClick={() => handleDeleteFaq(f.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {faqs.length === 0 && (
+                    <tr>
+                      <td colSpan="3" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 FAQ가 없습니다.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
