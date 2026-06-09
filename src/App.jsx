@@ -183,7 +183,7 @@ function App() {
           </span>
         </div>
 
-        {/* GNB 일반 수강생 메뉴: LMS 강의실 & 문제은행만 노출 */}
+        {/* GNB 일반 수강생 메뉴: LMS 강의실만 노출 */}
         <div style={{ display: 'flex', gap: '4px', background: '#152030', padding: '3px', borderRadius: '8px', border: '1px solid #20334e' }}>
           <button
             onClick={() => navigate('/')}
@@ -201,23 +201,6 @@ function App() {
             }}
           >
             🎓 LMS 강의실
-          </button>
-          <button
-            onClick={() => navigate('/questions')}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              background: isQuestionView ? '#3b82f6' : 'transparent',
-              boxShadow: isQuestionView ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              color: isQuestionView ? '#ffffff' : '#8c9ba5',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            📋 AIDA 문제은행 (NotebookLM)
           </button>
         </div>
       </div>
