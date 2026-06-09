@@ -193,7 +193,7 @@ export default function ApplicantManager() {
   const [deleteConfirm,   setDeleteConfirm]    = useState(null);
   const [mainMenu, setMainMenu] = useState(()=>{
     try{
-      const urlRole = new URLSearchParams(window.location.search).get("role");
+      const urlRole = new URLSearchParams(window.location.search).get("role") || (window.location.pathname.startsWith("/officer") ? "officer" : null);
       if(urlRole==="officer"){
         const s=sessionStorage.getItem('aida:login');
         if(s){const u=JSON.parse(s);if(u?.type==="officer")return"briefing";}
@@ -406,7 +406,7 @@ export default function ApplicantManager() {
 
   // 세션 로그인 복원
   useEffect(()=>{
-    const urlRole = new URLSearchParams(window.location.search).get("role");
+    const urlRole = new URLSearchParams(window.location.search).get("role") || (window.location.pathname.startsWith("/officer") ? "officer" : null);
     if(urlRole==="officer"){
       try{ const s=sessionStorage.getItem('aida:login'); if(s){const u=JSON.parse(s);if(u?.type==="officer")setLoginUser(u);} }catch{}
     } else {
@@ -419,6 +419,8 @@ export default function ApplicantManager() {
     try{ sessionStorage.setItem('aida:login',JSON.stringify(user)); }catch{};
     if(user.type==="officer"){
       setMainMenu("briefing");
+      window.history.pushState(null, '', "/officer");
+      window.dispatchEvent(new PopStateEvent('popstate'));
       // 직책자 로그인 기록 저장
       (async()=>{
         try{
@@ -437,12 +439,20 @@ export default function ApplicantManager() {
         }catch(e){ console.warn("로그 저장 실패",e); }
       })();
     } else {
+      window.history.pushState(null, '', "/admin");
+      window.dispatchEvent(new PopStateEvent('popstate'));
       const params=new URLSearchParams(window.location.search);
       const menuParam=params.get("menu");
       if(menuParam) setMainMenu(menuParam);
     }
   };
-  const doLogout=()=>{ setLoginUser(null); try{ sessionStorage.removeItem('aida:login'); }catch{} };
+  const doLogout=()=>{
+    setLoginUser(null);
+    try{ sessionStorage.removeItem('aida:login'); }catch{}
+    const isOff = window.location.pathname.startsWith("/officer");
+    window.history.pushState(null, '', isOff ? "/officer" : "/admin");
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
 
   // 직책자가 허용되지 않은 메뉴 접근 시 강제 브리핑으로
   useEffect(()=>{
@@ -1759,7 +1769,7 @@ export default function ApplicantManager() {
   }
 
   // ── 관리자 로그인 화면 ───────────────────────────────────────
-  const urlRole = new URLSearchParams(window.location.search).get("role");
+  const urlRole = new URLSearchParams(window.location.search).get("role") || (window.location.pathname.startsWith("/officer") ? "officer" : null);
   if(!loginUser && urlRole !== "officer"){
     const AdminLogin=()=>{
       const [username,setUsername]=useState("");
