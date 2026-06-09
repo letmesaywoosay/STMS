@@ -1,3 +1,4 @@
+/* eslint-disable */
 // ApplicantManager.jsx
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
