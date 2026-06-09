@@ -185,6 +185,10 @@ export default function LmsManager({ viewPath, onNavigate }) {
       setActiveTab("classroom");
     } else if (viewPath === "/schedule") {
       setActiveTab("schedule");
+    } else if (viewPath === "/notice") {
+      setActiveTab("notice");
+    } else if (viewPath === "/faq") {
+      setActiveTab("faq");
     } else if (viewPath === "/admin") {
       setActiveTab("backoffice");
     } else {
@@ -493,7 +497,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
 
       {/* ── 본문 화면 출력 ── */}
       <div style={{ flex: 1 }}>
-        {activeTab === "intro" && <IntroView courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} applications={applications} currentUser={currentUser} pageConfig={pageConfig} />}
+        {activeTab === "intro" && <IntroView courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} applications={applications} currentUser={currentUser} pageConfig={pageConfig} notices={notices} faqs={faqs} saveNotices={saveNotices} setActiveTab={setActiveTab} />}
         {activeTab === "schedule" && <ScheduleView schedules={schedules} />}
         {activeTab === "notice" && <NoticeView notices={notices} saveNotices={saveNotices} />}
         {activeTab === "faq" && <FaqView faqs={faqs} />}
@@ -642,7 +646,7 @@ const getBgFromPreset = (preset) => {
 };
 
 // ── [IntroView] Expo Hero & Device-Mockup 적용 메인 화면 ──
-function IntroView({ courses, checkAccess, setSelectedCourse, applications, currentUser, pageConfig }) {
+function IntroView({ courses, checkAccess, setSelectedCourse, applications, currentUser, pageConfig, notices, faqs, saveNotices, setActiveTab }) {
   const [selectedNotice, setSelectedNotice] = useState(null);
 
   const defaultMockCourses = [
@@ -653,19 +657,18 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
   const displayCourses = courses.length > 0 ? courses.slice(0, 3) : defaultMockCourses;
 
-  const notices = [
-    { id: 1, title: "수료증 출력 기능 일시 중단 및 대체 증빙 안내", date: "2026.06.09", author: "교육센터", content: "시스템 보완 및 신규 라우팅 데이터 패치 작업으로 인하여 수료증 인쇄 기능이 1일간 지연됩니다. 대체 서류(수강 완료 로그 화면)로 회사 제출 증빙이 가능하오니 양해를 구합니다." },
-    { id: 2, title: "LMS 플랫폼 'Tune' 고도화 및 AIDA TUNE 테마 통합 안내", date: "2026.06.01", author: "교육센터", content: "통합 교육 플랫폼으로 고도화가 진행되었습니다. 이제 수강생분들은 깔끔한 AIDA TUNE 레이아웃을 통해 영상 시청 진도율 체크 및 학습 인정 혜택을 온전히 받으실 수 있습니다." },
-    { id: 3, title: "찾아오시는 길 및 셔틀버스 노선 안내", date: "2026.05.15", author: "운영팀", content: "AIDA TUNE 판교캠퍼스 B동 오프라인 실습장에 오시는 길 정보입니다. 판교역 1번 출구에서 정시 및 30분 간격으로 아카데미 셔틀버스가 운행됩니다." },
-    { id: 4, title: "2026년도 상반기 교육 과정개요서 다운로드", date: "2026.04.10", author: "교육센터", content: "올해 개설 예정인 가상화, 데이터 엔지니어링, 클라우드 기본, AI Agent 설계 등 핵심 전반 과정의 실무 커리큘럼 명세서를 첨부합니다." }
-  ];
+  const displayNotices = notices ? notices.slice(0, 4) : [];
+  const displayFaqs = faqs ? faqs.slice(0, 4) : [];
 
-  const faqs = [
-    { q: "판교역에서 교육장까지 셔틀버스가 운행되나요?", a: "네, 판교역 1번 출구 버스정류장 앞에서 아카데미 정기 셔틀버스가 출퇴근 및 정규 교육 시각 전후로 운행되고 있습니다." },
-    { q: "비디오 영상 진도 체크는 몇 % 기준인가요?", a: "기획안 및 운영 지침에 따라 동영상 전체 재생 시간 대비 누적 시청 비중이 80% 이상 도달하는 즉시 '학습 완료' 버튼이 활성화되어 완료 등록이 가능합니다." },
-    { q: "점심식사가 제공되나요?", a: "오프라인 전일제 교육 과정의 경우 판교캠퍼스 지하 1층 사내 식당 식권이 100% 무료로 지급됩니다." },
-    { q: "파트너사 임직원은 가입 승인이 필요한가요?", a: "사내 임직원은 가입 즉시 메일 도메인 검증을 거쳐 자동 승인처리되나, 파트너 임직원은 관리자 전용 대시보드(/admin)의 가입 검토 단계를 통과해야 로그인이 승인됩니다." }
-  ];
+  const handleNoticeClick = async (n) => {
+    setSelectedNotice(n);
+    if (saveNotices && notices) {
+      const updated = notices.map(item => 
+        item.id === n.id ? { ...item, hits: (item.hits || 0) + 1 } : item
+      );
+      await saveNotices(updated);
+    }
+  };
 
   const handleCourseCardClick = (c) => {
     if (courses.length > 0) {
@@ -906,10 +909,13 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
               <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: 0, letterSpacing: "-0.84px" }}>📢 공지사항</h3>
-              <span style={{ fontSize: "14px", color: "var(--body)", cursor: "pointer" }}>더보기</span>
+              <span
+                onClick={() => setActiveTab("notice")}
+                style={{ fontSize: "14px", color: "var(--text-link)", cursor: "pointer", fontWeight: 500 }}
+              >더보기 →</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {notices.map(n => (
+              {displayNotices.map(n => (
                 <div key={n.id} onClick={() => setSelectedNotice(n)}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", border: "1px solid var(--hairline)", cursor: "pointer", transition: "all 0.15s" }}
                   onMouseEnter={e => e.currentTarget.style.boxShadow = shadow}
@@ -918,6 +924,9 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
                   <span style={{ fontSize: "13px", color: "var(--body)", flexShrink: 0 }}>{n.date}</span>
                 </div>
               ))}
+              {displayNotices.length === 0 && (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--body)", fontSize: "14px", background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", border: "1px solid var(--hairline)" }}>등록된 공지사항이 없습니다.</div>
+              )}
             </div>
           </div>
 
@@ -925,15 +934,21 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
               <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: 0, letterSpacing: "-0.84px" }}>❓ FAQ</h3>
-              <span style={{ fontSize: "14px", color: "var(--body)", cursor: "pointer" }}>더보기</span>
+              <span
+                onClick={() => setActiveTab("faq")}
+                style={{ fontSize: "14px", color: "var(--text-link)", cursor: "pointer", fontWeight: 500 }}
+              >더보기 →</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {faqs.map((f, idx) => (
-                <div key={idx} style={{ padding: "16px", background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", border: "1px solid var(--hairline)" }}>
-                  <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>Q. {f.q}</div>
-                  <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.5" }}>{f.a}</div>
+              {displayFaqs.map((f, idx) => (
+                <div key={f.id || idx} style={{ padding: "16px", background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", border: "1px solid var(--hairline)" }}>
+                  <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>Q. {f.question || f.q}</div>
+                  <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.5" }}>{f.answer || f.a}</div>
                 </div>
               ))}
+              {displayFaqs.length === 0 && (
+                <div style={{ padding: "24px", textAlign: "center", color: "var(--body)", fontSize: "14px", background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", border: "1px solid var(--hairline)" }}>등록된 FAQ가 없습니다.</div>
+              )}
             </div>
           </div>
         </div>
