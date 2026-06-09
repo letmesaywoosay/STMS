@@ -518,8 +518,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
             <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>🎻 AIDA TUNE 아카데미</div>
             <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.6" }}>
               회사명 : 오케스트로(주) &nbsp;|&nbsp; 서울특별시 영등포구 여의대포 108, 43층 (여의도동, 파크원타워2)<br />
-              Email : academy@okestro.com &nbsp;|&nbsp; 대표자 : 김민준 &nbsp;|&nbsp; 사업자등록번호 : 783-85-00169<br />
-              호스팅 제공자: 주식회사 맑은소프트
+              Email : academy@okestro.com &nbsp;|&nbsp; 대표자 : 김민준 &nbsp;|&nbsp; 사업자등록번호 : 783-85-00169
             </div>
             <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "8px" }}>
               COPYRIGHT© 2026 ALL RIGHT RESERVED.
