@@ -2079,7 +2079,7 @@ export default function ApplicantManager({ viewPath }) {
   }
 
   return(
-    <div style={viewPath === "/admin" ? { padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" } : {background:C.bg,minHeight:"100vh",minHeight:"100dvh",transition:"background 0.4s"}}>
+    <div className="applicant-manager-root" style={viewPath === "/admin" ? { padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" } : {background:C.bg,minHeight:"100vh",minHeight:"100dvh",transition:"background 0.4s"}}>
       <style>{`
         /* ── iOS/Safari Reset ── */
         *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -2152,17 +2152,17 @@ export default function ApplicantManager({ viewPath }) {
         }
 
         /* 인라인 스타일로 지정된 모든 부드러운 그림자를 플랫 2.0 연한 섀도우로 전환 */
-        div[style*="boxShadow"]:not([style*="none"]), div[style*="box-shadow"]:not([style*="none"]) {
+        .applicant-manager-root div[style*="boxShadow"]:not([style*="none"]), .applicant-manager-root div[style*="box-shadow"]:not([style*="none"]) {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02) !important;
         }
         
         /* 인라인 스타일로 지정된 모든 둥근 모서리(border-radius)를 12px로 강제 고정 (원형 50% 제외) */
-        div[style*="borderRadius"]:not([style*="50%"]), div[style*="border-radius"]:not([style*="50%"]) {
+        .applicant-manager-root div[style*="borderRadius"]:not([style*="50%"]), .applicant-manager-root div[style*="border-radius"]:not([style*="50%"]) {
           border-radius: 12px !important;
         }
 
         /* Flat Design 2.0 Card Override */
-        .dash-card, .kpi-card, .login-box, .modal-content, .card, .quick-tile {
+        .applicant-manager-root .dash-card, .applicant-manager-root .kpi-card, .applicant-manager-root .login-box, .applicant-manager-root .modal-content, .applicant-manager-root .card, .applicant-manager-root .quick-tile {
           background: #ffffff !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
@@ -2174,15 +2174,15 @@ export default function ApplicantManager({ viewPath }) {
         }
 
         /* 카드 hover 효과 */
-        .anim-card{transition:all 0.2s ease-in-out !important;}
-        .anim-card:hover{
+        .applicant-manager-root .anim-card{transition:all 0.2s ease-in-out !important;}
+        .applicant-manager-root .anim-card:hover{
           transform: translateY(-2px) !important;
           box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.02) !important;
           border-color: #cbd5e1 !important;
         }
 
         /* GNB header flat design 2.0 */
-        div[style*="position: sticky"][style*="top: 0"], .mobile-drawer {
+        .applicant-manager-root div[style*="position: sticky"][style*="top: 0"], .applicant-manager-root .mobile-drawer {
           background: #ffffff !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
@@ -2191,13 +2191,13 @@ export default function ApplicantManager({ viewPath }) {
         }
 
         /* 테이블 헤더/셀 스타일 */
-        table {
+        .applicant-manager-root table {
           border-collapse: collapse !important;
           border: 1px solid #e2e8f0 !important;
           border-radius: 8px !important;
           overflow: hidden;
         }
-        th {
+        .applicant-manager-root th {
           background: #f8fafc !important;
           color: #475569 !important;
           font-weight: 700 !important;
@@ -2205,7 +2205,7 @@ export default function ApplicantManager({ viewPath }) {
           font-size: 11px !important;
           text-transform: none;
         }
-        td {
+        .applicant-manager-root td {
           border: 1px solid #e2e8f0 !important;
           color: #334155 !important;
           background: #ffffff !important;
@@ -2214,12 +2214,12 @@ export default function ApplicantManager({ viewPath }) {
         }
 
         /* 테이블 행 hover */
-        .anim-row:hover td {
+        .applicant-manager-root .anim-row:hover td {
           background: #f8fafc !important;
         }
 
         /* 버튼 hover */
-        button, .anim-btn {
+        .applicant-manager-root button, .applicant-manager-root .anim-btn {
           -webkit-appearance:none;appearance:none;
           border: 1px solid #cbd5e1 !important;
           box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
@@ -2230,20 +2230,20 @@ export default function ApplicantManager({ viewPath }) {
           background: #ffffff;
           color: #334155;
         }
-        button:hover, .anim-btn:hover {
+        .applicant-manager-root button:hover, .applicant-manager-root .anim-btn:hover {
           transform: none !important;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
           background: #f8fafc !important;
           border-color: #94a3b8 !important;
           filter: none !important;
         }
-        button:active, .anim-btn:active {
+        .applicant-manager-root button:active, .applicant-manager-root .anim-btn:active {
           transform: scale(0.98) !important;
           background: #f1f5f9 !important;
         }
 
         /* 입력 필드 포커스 */
-        input[type="text"], input[type="password"], input[type="email"], input[type="search"], input[type="month"], select, textarea, .anim-input {
+        .applicant-manager-root input[type="text"], .applicant-manager-root input[type="password"], .applicant-manager-root input[type="email"], .applicant-manager-root input[type="search"], .applicant-manager-root input[type="month"], .applicant-manager-root select, .applicant-manager-root textarea, .applicant-manager-root .anim-input {
           border: 1px solid #cbd5e1 !important;
           border-radius: 8px !important;
           transition: all 0.2s ease !important;
@@ -2251,7 +2251,7 @@ export default function ApplicantManager({ viewPath }) {
           background: #ffffff !important;
           color: #0f172a !important;
         }
-        input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, input[type="search"]:focus, input[type="month"]:focus, select:focus, textarea:focus, .anim-input:focus {
+        .applicant-manager-root input[type="text"]:focus, .applicant-manager-root input[type="password"]:focus, .applicant-manager-root input[type="email"]:focus, .applicant-manager-root input[type="search"]:focus, .applicant-manager-root input[type="month"]:focus, .applicant-manager-root select:focus, .applicant-manager-root textarea:focus, .applicant-manager-root .anim-input:focus {
           border-color: #3b82f6 !important;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08) !important;
           background: #ffffff !important;
@@ -2333,7 +2333,7 @@ export default function ApplicantManager({ viewPath }) {
         .resp-table-wrap{-webkit-overflow-scrolling:touch;}
 
         /* font smoothing */
-        body,button,input,textarea,select{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-family:'Inter', -apple-system, sans-serif !important;}
+        body, .applicant-manager-root button, .applicant-manager-root input, .applicant-manager-root textarea, .applicant-manager-root select{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-family:'Inter', -apple-system, sans-serif !important;}
       `}</style>
 
       {/* GNB - 2단 구조 */}
