@@ -424,8 +424,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "600px" }}>
             <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>🎻 AIDA TUNE 아카데미</div>
             <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.6" }}>
-              회사명 : 오케스트로(주) &nbsp;|&nbsp; 경기도 성남시 분당구 판교로 255번길 38, AIDA TUNE 판교캠퍼스 B동<br />
-              Tel : 02-6400-5145 &nbsp;|&nbsp; Email : tune.academy@okestro.com &nbsp;|&nbsp; 대표자 : 김민준 &nbsp;|&nbsp; 사업자등록번호 : 783-85-00169<br />
+              회사명 : 오케스트로(주) &nbsp;|&nbsp; 서울특별시 영등포구 여의대포 108, 43층 (여의도동, 파크원타워2)<br />
+              Email : academy@okestro.com &nbsp;|&nbsp; 대표자 : 김민준 &nbsp;|&nbsp; 사업자등록번호 : 783-85-00169<br />
               호스팅 제공자: 주식회사 맑은소프트
             </div>
             <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "8px" }}>
@@ -848,24 +848,24 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", marginBottom: "32px", letterSpacing: "-0.84px" }}>고객지원 센터</h3>
           <div style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", display: "grid", gap: "24px" }}>
-            <a href="http://pf.kakao.com/_zyFxgn" target="_blank" style={{ textDecoration: "none" }}>
+            <a href="http://pf.kakao.com/_xhbxaxkxj/chat" target="_blank" style={{ textDecoration: "none" }}>
               <div style={{ background: "var(--surface-dark)", border: "1px solid var(--primary-active)", borderRadius: "var(--rounded-lg)", padding: "24px", color: "var(--on-dark)", transition: "transform 0.15s", minHeight: "120px" }}
                 onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"}
                 onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
                 <div style={{ fontWeight: 600, fontSize: "15px", color: "var(--accent-link-bright)", marginBottom: "8px" }}>💬 카카오톡 채널</div>
-                <div style={{ fontSize: "13px", color: "var(--on-dark-soft)", lineHeight: "1.5" }}>AIDA TUNE 상생아카데미 채널 추가하고 실시간 메신저 문의하기</div>
+                <div style={{ fontSize: "13px", color: "var(--on-dark-soft)", lineHeight: "1.5" }}>오케스트로 아카데미 채널 추가하고 실시간 메신저 문의하기</div>
               </div>
             </a>
             <div style={{ background: "var(--surface-dark)", border: "1px solid var(--primary-active)", borderRadius: "var(--rounded-lg)", padding: "24px", color: "var(--on-dark)", minHeight: "120px" }}>
-              <div style={{ fontWeight: 600, fontSize: "15px", color: "var(--accent-link-bright)", marginBottom: "8px" }}>📞 교육 센터 대표번호</div>
-              <div style={{ fontSize: "13px", color: "var(--on-dark-soft)", lineHeight: "1.5" }}>02) 6400-5145 &nbsp;|&nbsp; Email : tune.academy@okestro.com</div>
+              <div style={{ fontWeight: 600, fontSize: "15px", color: "var(--accent-link-bright)", marginBottom: "8px" }}>📞 오케스트로 아카데미 문의</div>
+              <div style={{ fontSize: "13px", color: "var(--on-dark-soft)", lineHeight: "1.5" }}>Email : academy@okestro.com</div>
             </div>
-            <a href="https://map.naver.com" target="_blank" style={{ textDecoration: "none" }}>
+            <a href="https://map.naver.com/v5/search/서울특별시 영등포구 여의대로 108 파크원타워2" target="_blank" style={{ textDecoration: "none" }}>
               <div style={{ background: "var(--surface-dark)", border: "1px solid var(--primary-active)", borderRadius: "var(--rounded-lg)", padding: "24px", color: "var(--on-dark)", transition: "transform 0.15s", minHeight: "120px" }}
                 onMouseEnter={e => e.currentTarget.style.transform = "translateY(-4px)"}
                 onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}>
                 <div style={{ fontWeight: 600, fontSize: "15px", color: "var(--accent-link-bright)", marginBottom: "8px" }}>📍 교육장 오시는 길</div>
-                <div style={{ fontSize: "13px", color: "var(--on-dark-soft)", lineHeight: "1.5" }}>AIDA TUNE 판교캠퍼스 B동 (성남시 분당구 판교로 255번길 38)</div>
+                <div style={{ fontSize: "13px", color: "var(--on-dark-soft)", lineHeight: "1.5" }}>서울특별시 영등포구 여의대포 108, 43층 (여의도동, 파크원타워2)</div>
               </div>
             </a>
           </div>
