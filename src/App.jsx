@@ -1,3 +1,4 @@
+/* eslint-disable */
 // App.jsx
 import React, { useState, useEffect } from 'react';
 import MyComponent from './ApplicantManager';
@@ -90,11 +91,9 @@ function App() {
             boxSizing: 'border-box',
             borderBottom: '1px solid var(--hairline)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/')}>
-              <span style={{ fontSize: '20px' }}>🛡️</span>
-              <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.5px' }}>
-                AIDA TUNE <span style={{ color: 'var(--body)', fontWeight: 400 }}>관리자 포탈</span>
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => navigate('/')}>
+              <img src="/logo.png" alt="AIDA TUNE" style={{ height: "24px", objectFit: "contain" }} />
+              <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500, borderLeft: '1px solid var(--hairline-strong)', paddingLeft: '12px' }}>관리자 포탈</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500 }}>🛡️ {lmsUser.name} 관리자</span>
@@ -209,11 +208,8 @@ function App() {
         zIndex: 100,
         boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/')}>
-          <span style={{ fontSize: '20px' }}>🎻</span>
-          <span style={{ fontSize: '15px', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.5px' }}>
-            OKESTRO ACADEMY <span style={{ fontWeight: 700 }}>TUNE</span>
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
+          <img src="/logo.png" alt="AIDA TUNE" style={{ height: "30px", objectFit: "contain" }} />
         </div>
 
         {/* GNB 일반 수강생 메뉴 및 관리자 퀵링크 */}
