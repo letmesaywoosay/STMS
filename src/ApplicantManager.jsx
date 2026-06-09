@@ -155,6 +155,11 @@ export default function ApplicantManager() {
   const [colFilters,      setColFilters]       = useState({company:"",division:"",team:""});
   const [colDropdown,     setColDropdown]      = useState(null);
   const [adminPanelOpen,  setAdminPanelOpen]   = useState(false);
+  
+  // LMS 프로필 통합용 상태변수
+  const [profilePanelUser, setProfilePanelUser] = useState(null);
+  const [lmsViewLogs, setLmsViewLogs] = useState([]);
+  const [lmsCourses, setLmsCourses] = useState([]);
   const [adminActiveTab,  setAdminActiveTab]   = useState("accounts");
   const [adminPanelWidth, setAdminPanelWidth]  = useState(()=>{
     try{
@@ -260,6 +265,23 @@ export default function ApplicantManager() {
     })();
   },[]);
   useEffect(()=>{ if(!deptLoaded) return; stSet('aida:deptData_v1', deptData); },[deptData, deptLoaded]);
+
+  // LMS 수강생 프로필 연동 데이터 로드
+  useEffect(() => {
+    if (!profilePanelUser) return;
+    (async () => {
+      try {
+        const [logs, courses] = await Promise.all([
+          stGet('aida:lms_view_logs_v2').catch(() => []),
+          stGet('aida:lms_courses_v2').catch(() => [])
+        ]);
+        setLmsViewLogs(logs || []);
+        setLmsCourses(courses || []);
+      } catch (e) {
+        console.warn("LMS 프로필 정보 동기화 에러:", e);
+      }
+    })();
+  }, [profilePanelUser]);
 
   // ── 부서/팀 직책자 이메일 & 응시자 자동 동기화 ─────────────────
   useEffect(() => {
@@ -3464,8 +3486,8 @@ export default function ApplicantManager() {
                         
                         
                         <td style={{padding:"8px 10px",fontWeight:700,color:(isAdmin&&can(userRole,"edit_applicant"))?C.blue:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",borderRight:`1px solid ${C.border}`,cursor:(isAdmin&&can(userRole,"edit_applicant"))?"pointer":"default",textDecoration:"none",textUnderlineOffset:"2px"}}
-                          onClick={(isAdmin&&can(userRole,"edit_applicant"))?()=>setApplicantModal({mode:'edit',data:{...a}}):undefined}
-                          title={(isAdmin&&can(userRole,"edit_applicant"))?"클릭하여 상세 정보 수정":""}
+                          onClick={(isAdmin&&can(userRole,"edit_applicant"))?()=>setProfilePanelUser({...a}):undefined}
+                          title={(isAdmin&&can(userRole,"edit_applicant"))?"클릭하여 통합 프로필 조회":""}
                         >{a.name}</td>
                         <td style={{padding:"8px 10px",borderRight:`1px solid ${C.border}`,overflow:"hidden",position:"relative",cursor:"pointer"}}
                           onClick={e=>{e.stopPropagation();if(a.company){const r=e.currentTarget.getBoundingClientRect();setColDropdown(d=>d?.field==="company"&&d.id===a.id?null:{field:"company",id:a.id,top:r.bottom+window.scrollY+4,left:r.left+window.scrollX});} }}
@@ -6936,6 +6958,124 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
           />
 
         </>
+      )}
+
+      {/* ── [LMS 연계] 수강생 통합 프로필 우측 슬라이드 패널 ── */}
+      {profilePanelUser && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "440px",
+          background: "#ffffff",
+          boxShadow: "-10px 0 30px rgba(15, 23, 42, 0.08)",
+          zIndex: 9999,
+          padding: "32px",
+          boxSizing: "border-box",
+          borderLeft: `1px solid ${C.border}`,
+          display: "flex",
+          flexDirection: "column",
+          gap: "24px",
+          animation: "profileSlideIn 0.25s ease",
+          overflowY: "auto"
+        }}>
+          <style>{`
+            @keyframes profileSlideIn {
+              from { transform: translateX(100%); }
+              to { transform: translateX(0); }
+            }
+          `}</style>
+          
+          {/* 헤더 */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: `1.5px solid ${C.border}`, paddingBottom: "16px" }}>
+            <div>
+              <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: 0 }}>{profilePanelUser.name} 통합 프로필</h3>
+              <div style={{ fontSize: "11px", color: C.muted, marginTop: "4px" }}>
+                {profilePanelUser.company || "소속 없음"} · {profilePanelUser.division || "본부 없음"} · {profilePanelUser.team || "팀 없음"}
+              </div>
+            </div>
+            <button onClick={() => setProfilePanelUser(null)} style={{ background: "none", border: "none", fontSize: "20px", color: C.muted, cursor: "pointer", padding: "4px" }}>✕</button>
+          </div>
+
+          {/* 파트 1: OnTest 솔루션 테스트 이력 */}
+          <div>
+            <h4 style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span>📊</span> OnTest 솔루션 테스트 결과
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {[
+                { nth: "1차", score: profilePanelUser.score1, pass: profilePanelUser.pass1, date: profilePanelUser.date1 },
+                { nth: "2차", score: profilePanelUser.score2, pass: profilePanelUser.pass2, date: profilePanelUser.date2 },
+                { nth: "3차", score: profilePanelUser.score3, pass: profilePanelUser.pass3, date: profilePanelUser.date3 }
+              ].filter(t => t.score || t.pass).map((t, idx) => (
+                <div key={idx} style={{ background: C.bg, borderRadius: "10px", padding: "12px", border: `1px solid ${C.border2}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <span style={{ fontWeight: 800, fontSize: "12px", color: C.subtle }}>{t.nth} 테스트</span>
+                    <div style={{ fontSize: "10px", color: C.muted, marginTop: "2px" }}>응시일: {t.date || "기록 없음"}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ fontWeight: 800, fontSize: "14px", color: parseFloat(t.score) >= 60 ? C.green : C.red }}>{t.score}점</span>
+                    <span style={{
+                      marginLeft: "8px",
+                      fontSize: "10px",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontWeight: 700,
+                      background: t.pass === "합격" ? "#e6fffa" : "#fff5f5",
+                      color: t.pass === "합격" ? C.green : C.red
+                    }}>{t.pass || "불합격"}</span>
+                  </div>
+                </div>
+              ))}
+              {![profilePanelUser.score1, profilePanelUser.score2, profilePanelUser.score3].some(Boolean) && (
+                <div style={{ fontSize: "11px", color: C.muted, textAlign: "center", padding: "16px", border: `1px dashed ${C.border}`, borderRadius: "10px" }}>
+                  응시한 솔루션 테스트 이력이 없습니다.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 파트 2: LMS 동영상 시청 완료 현황 */}
+          <div>
+            <h4 style={{ fontSize: "13px", fontWeight: 800, color: C.text, marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span>⏯️</span> LMS 동영상 학습 수료 이력
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {(() => {
+                const matchedLogs = lmsViewLogs.filter(log => log.email.toLowerCase() === profilePanelUser.email?.toLowerCase());
+                if (matchedLogs.length === 0) {
+                  return (
+                    <div style={{ fontSize: "11px", color: C.muted, textAlign: "center", padding: "16px", border: `1px dashed ${C.border}`, borderRadius: "10px" }}>
+                      수료 완료한 온라인 동영상 강좌가 없습니다.
+                    </div>
+                  );
+                }
+                return matchedLogs.map(log => {
+                  const courseObj = lmsCourses.find(c => c.id === log.courseId);
+                  return (
+                    <div key={log.id} style={{ background: C.bg, borderRadius: "10px", padding: "12px", border: `1px solid ${C.border2}` }}>
+                      <div style={{ fontWeight: 700, fontSize: "12px", color: C.text }}>{courseObj?.title || "삭제된 교육 과정"}</div>
+                      <div style={{ fontSize: "10px", color: C.green, fontWeight: 700, marginTop: "4px" }}>
+                        ✓ 완료 일시: {new Date(log.completedAt).toLocaleString()}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
+          {/* 정보 편집 모달 유도 버튼 */}
+          <div style={{ marginTop: "auto", borderTop: `1px solid ${C.border}`, paddingTop: "20px" }}>
+            <button onClick={() => {
+              setApplicantModal({ mode: "edit", data: { ...profilePanelUser } });
+              setProfilePanelUser(null);
+            }} style={{ width: "100%", padding: "12px", border: "none", borderRadius: "10px", background: C.blueMid, color: "#fff", fontSize: "13px", fontWeight: 800, cursor: "pointer" }}>
+              수강생 OnTest 기본 정보 수정
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
