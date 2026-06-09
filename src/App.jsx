@@ -174,7 +174,7 @@ function App() {
           {/* 본문 뷰 출력 */}
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
             {adminSubTab === 'test' ? (
-              <MyComponent />
+              <MyComponent viewPath="/admin" />
             ) : (
               <LmsManager viewPath="/admin" onNavigate={navigate} />
             )}
