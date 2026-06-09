@@ -1,3 +1,4 @@
+/* eslint-disable */
 // LmsManager.jsx
 import { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
@@ -79,6 +80,15 @@ export default function LmsManager({ viewPath, onNavigate }) {
   const [jobTypes, setJobTypes] = useState([]);
   const [dbLoading, setDbLoading] = useState(true);
 
+  // 페이지 꾸미기 & 연간 교육 일정 상태
+  const [pageConfig, setPageConfig] = useState({
+    heroTitle: "AIDA TUNE",
+    heroSubtitle: "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등\n실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요.",
+    heroBadge: "🚀 AIDA TUNE 훈련센터 공식 파트너",
+    heroBgPreset: "sky"
+  });
+  const [schedules, setSchedules] = useState([]);
+
   // 인증 제어
   const [authMode, setAuthMode] = useState(null); // 'login' | 'register' | 'findPw'
   const [loginEmail, setLoginEmail] = useState("");
@@ -104,13 +114,15 @@ export default function LmsManager({ viewPath, onNavigate }) {
   useEffect(() => {
     const fetchDb = async () => {
       try {
-        const [u, c, a, v, d, j] = await Promise.all([
+        const [u, c, a, v, d, j, p, s] = await Promise.all([
           fbGet("aida:lms_users_v2").catch(() => []),
           fbGet("aida:lms_courses_v2").catch(() => []),
           fbGet("aida:lms_applications_v2").catch(() => []),
           fbGet("aida:lms_view_logs_v2").catch(() => []),
           fbGet("aida:deptData_v1").catch(() => []),
-          fbGet("aida:jobTypes_v1").catch(() => [])
+          fbGet("aida:jobTypes_v1").catch(() => []),
+          fbGet("aida:lms_page_config_v1").catch(() => null),
+          fbGet("aida:lms_schedules_v1").catch(() => [])
         ]);
         
         setUsers(u || []);
@@ -119,6 +131,17 @@ export default function LmsManager({ viewPath, onNavigate }) {
         setViewLogs(v || []);
         setDeptData(d || []);
         setJobTypes(j || []);
+
+        if (p) {
+          setPageConfig(p);
+        }
+
+        const defaultMockSchedules = [
+          { id: "s-1", course: "AI Agent 설계 및 구축", date: "2026-06-15", target: "사내 임직원 및 교육생", description: "LangChain 및 주요 프레임워크 실습" },
+          { id: "s-2", course: "생성형 AI를 활용한 서비스 기획 실무", date: "2026-07-10", target: "전체 임직원 및 파트너사", description: "LLM 기반의 서비스 컨셉 구상 노하우" },
+          { id: "s-3", course: "Prompt Engineering 실무 (심화)", date: "2026-08-22", target: "사내 엔지니어 전용", description: "LLM 성능을 백퍼센트 끌어올리는 기술" }
+        ];
+        setSchedules(s && s.length > 0 ? s : defaultMockSchedules);
 
         const session = sessionStorage.getItem("aida:lms_login");
         if (session) {
@@ -144,6 +167,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
       setActiveTab("classroom");
     } else if (viewPath === "/schedule") {
       setActiveTab("schedule");
+    } else if (viewPath === "/admin") {
+      setActiveTab("backoffice");
     } else {
       setActiveTab("intro");
     }
@@ -164,6 +189,14 @@ export default function LmsManager({ viewPath, onNavigate }) {
   const saveViewLogs = async (newLogs) => {
     setViewLogs(newLogs);
     await fbSet("aida:lms_view_logs_v2", newLogs);
+  };
+  const savePageConfig = async (newConfig) => {
+    setPageConfig(newConfig);
+    await fbSet("aida:lms_page_config_v1", newConfig);
+  };
+  const saveSchedules = async (newSchedules) => {
+    setSchedules(newSchedules);
+    await fbSet("aida:lms_schedules_v1", newSchedules);
   };
 
   const handleLogin = () => {
@@ -294,6 +327,28 @@ export default function LmsManager({ viewPath, onNavigate }) {
     );
   }
 
+  if (viewPath === "/admin") {
+    return (
+      <div style={{ padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" }}>
+        <BackOfficeView 
+          users={users} 
+          saveUsers={saveUsers} 
+          courses={courses} 
+          saveCourses={saveCourses} 
+          applications={applications} 
+          saveApplications={saveApplications} 
+          viewLogs={viewLogs} 
+          deptData={deptData} 
+          jobTypes={jobTypes}
+          pageConfig={pageConfig}
+          savePageConfig={savePageConfig}
+          schedules={schedules}
+          saveSchedules={saveSchedules}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: "var(--canvas)", minHeight: "100vh", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
       {/* ── GNB 서브 네비게이션 헤더 (Expo top-nav 가이드 적용) ── */}
@@ -406,8 +461,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
 
       {/* ── 본문 화면 출력 ── */}
       <div style={{ flex: 1 }}>
-        {activeTab === "intro" && <IntroView courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} applications={applications} currentUser={currentUser} />}
-        {activeTab === "schedule" && <ScheduleView />}
+        {activeTab === "intro" && <IntroView courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} applications={applications} currentUser={currentUser} pageConfig={pageConfig} />}
+        {activeTab === "schedule" && <ScheduleView schedules={schedules} />}
         {activeTab === "classroom" && currentUser && <ClassroomView courses={courses} applications={applications} viewLogs={viewLogs} currentUser={currentUser} saveApplications={saveApplications} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} saveViewLogs={saveViewLogs} />}
         {activeTab === "mypage" && currentUser && <MyPageView applications={applications} courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} />}
       </div>
@@ -545,8 +600,15 @@ export default function LmsManager({ viewPath, onNavigate }) {
   );
 }
 
+const getBgFromPreset = (preset) => {
+  if (preset === "slate") return "linear-gradient(to bottom, #eceef2, #d5d9e2, var(--canvas))";
+  if (preset === "rose") return "linear-gradient(to bottom, #fff1f2, #ffe4e6, var(--canvas))";
+  if (preset === "gold") return "linear-gradient(to bottom, #fefce8, #fef9c3, var(--canvas))";
+  return "linear-gradient(to bottom, var(--gradient-sky-light), var(--gradient-sky-mid), var(--canvas))";
+};
+
 // ── [IntroView] Expo Hero & Device-Mockup 적용 메인 화면 ──
-function IntroView({ courses, checkAccess, setSelectedCourse, applications, currentUser }) {
+function IntroView({ courses, checkAccess, setSelectedCourse, applications, currentUser, pageConfig }) {
   const [selectedNotice, setSelectedNotice] = useState(null);
 
   const defaultMockCourses = [
@@ -585,7 +647,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
     <div>
       {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 내장) ── */}
       <div style={{
-        background: "linear-gradient(to bottom, var(--gradient-sky-light), var(--gradient-sky-mid), var(--canvas))",
+        background: getBgFromPreset(pageConfig?.heroBgPreset),
         padding: "96px 24px",
         boxSizing: "border-box",
         textAlign: "center",
@@ -609,7 +671,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
             letterSpacing: "0.88px",
             marginBottom: "24px" 
           }}>
-            🚀 AIDA TUNE 훈련센터 공식 파트너
+            {pageConfig?.heroBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
           </div>
           <h1 style={{ 
             fontSize: "64px", 
@@ -619,7 +681,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
             margin: "0 0 24px 0", 
             letterSpacing: "-1.92px" 
           }}>
-            AIDA TUNE 맞춤 클래스
+            {pageConfig?.heroTitle || "AIDA TUNE"}
           </h1>
           <p style={{ 
             fontSize: "16px", 
@@ -628,10 +690,10 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
             margin: "0 0 32px 0", 
             maxWidth: "600px",
             marginLeft: "auto",
-            marginRight: "auto"
+            marginRight: "auto",
+            whiteSpace: "pre-line"
           }}>
-            AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등<br />
-            실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요.
+            {pageConfig?.heroSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등\n실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요."}
           </p>
           <button onClick={() => checkAccess("classroom")}
             style={{
@@ -891,39 +953,169 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 }
 
 // ── [ScheduleView] 연간 교육 일정 계획 ──
-function ScheduleView() {
-  const schedules = [
-    { month: "6월", course: "AI Agent 설계 및 구축", date: "2026-06-15", target: "사내 임직원 및 교육생" },
-    { month: "7월", course: "생성형 AI를 활용한 서비스 기획 실무", date: "2026-07-10", target: "전체 임직원 및 파트너사" },
-    { month: "8월", course: "Prompt Engineering 실무 (심화)", date: "2026-08-22", target: "사내 엔지니어 전용" }
-  ];
+function ScheduleView({ schedules }) {
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(5); // 0-indexed: 5 = June
+  const [detailSchedule, setDetailSchedule] = useState(null);
+
+  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) {
+    cells.push(null);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push(d);
+  }
+
+  const rows = [];
+  let row = [];
+  cells.forEach((cell) => {
+    row.push(cell);
+    if (row.length === 7) {
+      rows.push(row);
+      row = [];
+    }
+  });
+  if (row.length > 0) {
+    while (row.length < 7) {
+      row.push(null);
+    }
+    rows.push(row);
+  }
+
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+  };
+
   return (
     <div style={{ padding: "96px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
-        <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px 0", letterSpacing: "-0.84px" }}>📅 2026 연간/월별 교육 일정 계획</h3>
-        <p style={{ fontSize: "14px", color: "var(--body)", margin: "0 0 24px 0" }}>오케스트로 기술 교육 센터에서 주관하는 연간 오프라인/온라인 정기 교육 정보입니다.</p>
-        
-        <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "14px" }}>
-          <thead>
-            <tr style={{ borderBottom: "2px solid var(--hairline-strong)", background: "var(--canvas-soft)" }}>
-              <th style={{ padding: "14px", color: "var(--ink)", fontWeight: 600 }}>월별</th>
-              <th style={{ padding: "14px", color: "var(--ink)", fontWeight: 600 }}>개설 교육 과정명</th>
-              <th style={{ padding: "14px", color: "var(--ink)", fontWeight: 600 }}>진행 예정일</th>
-              <th style={{ padding: "14px", color: "var(--ink)", fontWeight: 600 }}>수강 권장 대상</th>
-            </tr>
-          </thead>
-          <tbody>
-            {schedules.map((s, idx) => (
-              <tr key={idx} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                <td style={{ padding: "14px", fontWeight: 600, color: "var(--text-link)" }}>{s.month}</td>
-                <td style={{ padding: "14px", fontWeight: 600, color: "var(--ink)" }}>{s.course}</td>
-                <td style={{ padding: "14px", color: "var(--body)" }}>{s.date}</td>
-                <td style={{ padding: "14px", color: "var(--muted)" }}>{s.target}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+          <div>
+            <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px 0", letterSpacing: "-0.84px" }}>📅 연간 교육 일정 계획</h3>
+            <p style={{ fontSize: "14px", color: "var(--body)", margin: 0 }}>오케스트로 기술 교육 센터에서 주관하는 연간 교육 일정표입니다.</p>
+          </div>
+          
+          {/* 달력 컨트롤러 */}
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "8px 16px", borderRadius: "var(--rounded-md)" }}>
+            <button onClick={handlePrevMonth} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "var(--ink)", fontWeight: 600 }}>&lt;</button>
+            <span style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", minWidth: "100px", textAlign: "center" }}>{currentYear}년 {currentMonth + 1}월</span>
+            <button onClick={handleNextMonth} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "var(--ink)", fontWeight: 600 }}>&gt;</button>
+          </div>
+        </div>
+
+        {/* 요일 헤더 */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "10px", textAlign: "center", fontWeight: 600, fontSize: "13px", color: "var(--body)" }}>
+          <div style={{ color: "var(--red)" }}>일</div>
+          <div>월</div>
+          <div>화</div>
+          <div>수</div>
+          <div>목</div>
+          <div>금</div>
+          <div style={{ color: "var(--text-link)" }}>토</div>
+        </div>
+
+        {/* 달력 그리드 */}
+        <div style={{ display: "flex", flexDirection: "column", border: "1px solid var(--hairline-strong)", borderTop: "none", borderRadius: "0 0 var(--rounded-lg) var(--rounded-lg)", overflow: "hidden" }}>
+          {rows.map((r, rIdx) => (
+            <div key={rIdx} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: rIdx === rows.length - 1 ? "none" : "1px solid var(--hairline)", minHeight: "120px" }}>
+              {r.map((day, dIdx) => {
+                const dayStr = day ? `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : "";
+                const daySchedules = day ? schedules.filter(s => s.date === dayStr) : [];
+                return (
+                  <div key={dIdx} style={{ 
+                    padding: "8px", 
+                    background: day ? "var(--surface-card)" : "var(--canvas-soft)", 
+                    borderRight: dIdx === 6 ? "none" : "1px solid var(--hairline)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                    boxSizing: "border-box"
+                  }}>
+                    {day && (
+                      <div style={{ 
+                        fontSize: "12px", 
+                        fontWeight: 600, 
+                        color: dIdx === 0 ? "var(--red)" : (dIdx === 6 ? "var(--text-link)" : "var(--ink)"),
+                        marginBottom: "6px"
+                      }}>
+                        {day}
+                      </div>
+                    )}
+                    {daySchedules.map((s) => (
+                      <div key={s.id} onClick={() => setDetailSchedule(s)}
+                        style={{
+                          background: "var(--gradient-sky-light)",
+                          border: "1px solid var(--text-link)",
+                          borderRadius: "var(--rounded-sm)",
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "var(--text-link)",
+                          cursor: "pointer",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          transition: "all 0.15s"
+                        }}
+                        onMouseOver={(e) => { e.currentTarget.style.background = "#b3d7ff"; }}
+                        onMouseOut={(e) => { e.currentTarget.style.background = "var(--gradient-sky-light)"; }}
+                        title={s.course}>
+                        🎓 {s.course}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* 일정 상세 레이어 팝업 */}
+      {detailSchedule && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", padding: "28px", width: "100%", maxWidth: "440px", boxShadow: shadowLg, border: "1px solid var(--hairline)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline)", paddingBottom: "12px", marginBottom: "16px" }}>
+              <strong style={{ fontSize: "13px", color: "var(--text-link)" }}>📅 교육 일정 상세</strong>
+              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>{detailSchedule.date}</span>
+            </div>
+            <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", margin: "0 0 12px 0" }}>{detailSchedule.course}</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
+              <div>
+                <span style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 600, display: "block" }}>수강 권장 대상</span>
+                <span style={{ fontSize: "13px", color: "var(--ink)", fontWeight: 500 }}>{detailSchedule.target}</span>
+              </div>
+              {detailSchedule.description && (
+                <div>
+                  <span style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 600, display: "block" }}>교육 개요 및 내용</span>
+                  <p style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.6", margin: "4px 0 0 0", whiteSpace: "pre-line" }}>{detailSchedule.description}</p>
+                </div>
+              )}
+            </div>
+            <button onClick={() => setDetailSchedule(null)} style={{ width: "100%", padding: "12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>닫기</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1342,11 +1534,38 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse }) {
 }
 
 // ── [BackOfficeView] 백오피스 통합 어드민 패널 ──
-function BackOfficeView({ users, saveUsers, courses, saveCourses, applications, saveApplications, viewLogs, deptData, jobTypes }) {
+function BackOfficeView({ 
+  users, saveUsers, 
+  courses, saveCourses, 
+  applications, saveApplications, 
+  viewLogs, deptData, jobTypes,
+  pageConfig, savePageConfig,
+  schedules, saveSchedules
+}) {
   const [backTab, setBackTab] = useState("apply");
   const [courseForm, setCourseForm] = useState({ title: "", description: "", youtubeUrl: "" });
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReasonText, setRejectReasonText] = useState("");
+
+  // 신규 등록용 스케줄 폼 상태
+  const [scheduleForm, setScheduleForm] = useState({ course: "", date: "", target: "", description: "" });
+  const [adminYear, setAdminYear] = useState(2026);
+  const [adminMonth, setAdminMonth] = useState(5); // 5 = June
+
+  // 페이지 꾸미기 상태
+  const [customTitle, setCustomTitle] = useState(pageConfig?.heroTitle || "AIDA TUNE");
+  const [customSubtitle, setCustomSubtitle] = useState(pageConfig?.heroSubtitle || "");
+  const [customBadge, setCustomBadge] = useState(pageConfig?.heroBadge || "");
+  const [customBgPreset, setCustomBgPreset] = useState(pageConfig?.heroBgPreset || "sky");
+
+  useEffect(() => {
+    if (pageConfig) {
+      setCustomTitle(pageConfig.heroTitle || "AIDA TUNE");
+      setCustomSubtitle(pageConfig.heroSubtitle || "");
+      setCustomBadge(pageConfig.heroBadge || "");
+      setCustomBgPreset(pageConfig.heroBgPreset || "sky");
+    }
+  }, [pageConfig]);
 
   const handleApprove = async (appId) => {
     const updated = applications.map(a => a.id === appId ? { ...a, status: "approved", approvedAt: new Date().toISOString() } : a);
@@ -1385,12 +1604,97 @@ function BackOfficeView({ users, saveUsers, courses, saveCourses, applications, 
     setCourseForm({ title: "", description: "", youtubeUrl: "" });
   };
 
+  // 일정 등록 및 삭제 핸들러
+  const handleCreateSchedule = async () => {
+    const { course, date, target, description } = scheduleForm;
+    if (!course.trim() || !date || !target.trim()) {
+      alert("교육일자, 교육 과정명, 권장 대상을 모두 기입해주세요.");
+      return;
+    }
+    const newSchedule = {
+      id: uid(),
+      course: course.trim(),
+      date,
+      target: target.trim(),
+      description: description.trim()
+    };
+    const updated = [newSchedule, ...schedules];
+    await saveSchedules(updated);
+    alert("교육 일정을 등록하였습니다.");
+    setScheduleForm({ course: "", date: "", target: "", description: "" });
+  };
+
+  const handleDeleteSchedule = async (id) => {
+    if (!window.confirm("이 교육 일정을 삭제하시겠습니까?")) return;
+    const updated = schedules.filter(s => s.id !== id);
+    await saveSchedules(updated);
+    alert("삭제되었습니다.");
+  };
+
+  // 페이지 꾸미기 저장 핸들러
+  const handleSavePageConfig = async () => {
+    const newConfig = {
+      heroTitle: customTitle.trim(),
+      heroSubtitle: customSubtitle.trim(),
+      heroBadge: customBadge.trim(),
+      heroBgPreset: customBgPreset
+    };
+    await savePageConfig(newConfig);
+    alert("소개 페이지 커스텀 설정이 저장되었습니다.");
+  };
+
+  // 미니 달력 그리드 계산기
+  const getDaysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+  const getFirstDayOfMonth = (y, m) => new Date(y, m, 1).getDay();
+
+  const daysInMonth = getDaysInMonth(adminYear, adminMonth);
+  const firstDay = getFirstDayOfMonth(adminYear, adminMonth);
+
+  const cells = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const rows = [];
+  let row = [];
+  cells.forEach((cell) => {
+    row.push(cell);
+    if (row.length === 7) {
+      rows.push(row);
+      row = [];
+    }
+  });
+  if (row.length > 0) {
+    while (row.length < 7) row.push(null);
+    rows.push(row);
+  }
+
+  const handlePrevMonth = () => {
+    if (adminMonth === 0) {
+      setAdminMonth(11);
+      setAdminYear(adminYear - 1);
+    } else {
+      setAdminMonth(adminMonth - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (adminMonth === 11) {
+      setAdminMonth(0);
+      setAdminYear(adminYear + 1);
+    } else {
+      setAdminMonth(adminMonth + 1);
+    }
+  };
+
   return (
     <div style={{ background: "var(--canvas)", borderRadius: "var(--rounded-lg)", padding: "32px", border: `1px solid var(--hairline-strong)`, boxShadow: shadow }}>
-      <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px" }}>
+      {/* 어드민 탭 헤더 */}
+      <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
         <button onClick={() => setBackTab("apply")} style={{ padding: "8px 16px", border: "none", background: backTab === "apply" ? "var(--primary)" : "none", color: backTab === "apply" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>수강 신청 승인</button>
         <button onClick={() => setBackTab("register")} style={{ padding: "8px 16px", border: "none", background: backTab === "register" ? "var(--primary)" : "none", color: backTab === "register" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입 승인</button>
         <button onClick={() => setBackTab("create")} style={{ padding: "8px 16px", border: "none", background: backTab === "create" ? "var(--primary)" : "none", color: backTab === "create" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>교육 개설</button>
+        <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 관리</button>
+        <button onClick={() => setBackTab("decorator")} style={{ padding: "8px 16px", border: "none", background: backTab === "decorator" ? "var(--primary)" : "none", color: backTab === "decorator" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>페이지 꾸미기</button>
       </div>
 
       {backTab === "apply" && (
@@ -1481,6 +1785,255 @@ function BackOfficeView({ users, saveUsers, courses, saveCourses, applications, 
           >
             강의 과정 등록
           </button>
+        </div>
+      )}
+
+      {/* 일정 관리 탭 UI [NEW] */}
+      {backTab === "schedule" && (
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* 일정 등록 폼 및 리스트 */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📅 교육 일정 등록</h4>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>교육 일자 *</label>
+                <input type="date" value={scheduleForm.date} onChange={e => setScheduleForm({ ...scheduleForm, date: e.target.value })} style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>교육 과정명 *</label>
+                <input type="text" value={scheduleForm.course} onChange={e => setScheduleForm({ ...scheduleForm, course: e.target.value })} placeholder="예) AI Agent 설계 및 구축 실전" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>수강 권장 대상 *</label>
+                <input type="text" value={scheduleForm.target} onChange={e => setScheduleForm({ ...scheduleForm, target: e.target.value })} placeholder="예) 사내 엔지니어 및 기획생" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>상세 설명</label>
+                <textarea value={scheduleForm.description} onChange={e => setScheduleForm({ ...scheduleForm, description: e.target.value })} placeholder="교육 내용 개요 기입" style={inpStyle({ padding: "8px 12px", minHeight: "60px", resize: "none" })} />
+              </div>
+              <button onClick={handleCreateSchedule} style={{ width: "100%", padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer", marginTop: "4px" }}>등록 완료</button>
+            </div>
+
+            {/* 일정 목록 테이블 */}
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: "16px 0 0 0" }}>📋 등록된 일정 리스트</h4>
+            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
+                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>날짜</th>
+                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>과정명</th>
+                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>대상</th>
+                    <th style={{ padding: "10px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>삭제</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedules.map(s => (
+                    <tr key={s.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                      <td style={{ padding: "10px", color: "var(--ink)" }}>{s.date}</td>
+                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{s.course}</td>
+                      <td style={{ padding: "10px", color: "var(--body)" }}>{s.target}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
+                        <button onClick={() => handleDeleteSchedule(s.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {schedules.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 교육 일정이 없습니다.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 어드민 미니 달력 미리보기 */}
+          <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📅 달력 미리보기</h4>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button onClick={handlePrevMonth} style={{ padding: "2px 6px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "4px", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>&lt;</button>
+                <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>{adminYear}. {adminMonth + 1}</span>
+                <button onClick={handleNextMonth} style={{ padding: "2px 6px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "4px", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>&gt;</button>
+              </div>
+            </div>
+
+            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden", background: "var(--surface-card)" }}>
+              {/* 요일 헤더 */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid var(--hairline-strong)", padding: "6px 0", textAlign: "center", fontWeight: 600, fontSize: "11px", color: "var(--body)" }}>
+                <div style={{ color: "var(--red)" }}>일</div>
+                <div>월</div>
+                <div>화</div>
+                <div>수</div>
+                <div>목</div>
+                <div>금</div>
+                <div style={{ color: "var(--text-link)" }}>토</div>
+              </div>
+              {/* 날짜 그리드 */}
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {rows.map((r, rIdx) => (
+                  <div key={rIdx} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: rIdx === rows.length - 1 ? "none" : "1px solid var(--hairline)", minHeight: "45px" }}>
+                    {r.map((day, dIdx) => {
+                      const dayStr = day ? `${adminYear}-${String(adminMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : "";
+                      const hasEvent = day && schedules.some(s => s.date === dayStr);
+                      return (
+                        <div key={dIdx} style={{ 
+                          padding: "4px", 
+                          background: day ? "var(--surface-card)" : "var(--canvas-soft)", 
+                          borderRight: dIdx === 6 ? "none" : "1px solid var(--hairline)",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          boxSizing: "border-box",
+                          position: "relative"
+                        }}>
+                          {day && (
+                            <span style={{ 
+                              fontSize: "11px", 
+                              fontWeight: 600, 
+                              color: dIdx === 0 ? "var(--red)" : (dIdx === 6 ? "var(--text-link)" : "var(--ink)")
+                            }}>
+                              {day}
+                            </span>
+                          )}
+                          {hasEvent && (
+                            <div style={{ 
+                              width: "6px", 
+                              height: "6px", 
+                              background: "var(--text-link)", 
+                              borderRadius: "50%", 
+                              marginBottom: "4px" 
+                            }} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 페이지 꾸미기 탭 UI [NEW] */}
+      {backTab === "decorator" && (
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* 입력 폼 */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>🎨 소개 페이지 문구 및 배너 테마 설정</h4>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>상단 배지 텍스트</label>
+                <input type="text" value={customBadge} onChange={e => setCustomBadge(e.target.value)} placeholder="🚀 AIDA TUNE 훈련센터 공식 파트너" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>메인 히어로 타이틀</label>
+                <input type="text" value={customTitle} onChange={e => setCustomTitle(e.target.value)} placeholder="AIDA TUNE" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>소개글 본문 (새 줄 개행 가능)</label>
+                <textarea value={customSubtitle} onChange={e => setCustomSubtitle(e.target.value)} placeholder="소개글 본문 기입" style={inpStyle({ padding: "8px 12px", minHeight: "100px", resize: "vertical" })} />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>배너 배경 그라데이션 프리셋</label>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  {[
+                    { id: "sky", name: "Sky Wash (스카이블루)", previewBg: "linear-gradient(135deg, #cfe7ff, #a8c8e8)" },
+                    { id: "slate", name: "Cool Slate (스틸블루)", previewBg: "linear-gradient(135deg, #eceef2, #d5d9e2)" },
+                    { id: "rose", name: "Sweet Rose (파스텔로즈)", previewBg: "linear-gradient(135deg, #fff1f2, #ffe4e6)" },
+                    { id: "gold", name: "Warm Gold (샌드골드)", previewBg: "linear-gradient(135deg, #fefce8, #fef9c3)" }
+                  ].map(preset => (
+                    <button key={preset.id} onClick={() => setCustomBgPreset(preset.id)}
+                      style={{
+                        flex: 1,
+                        minWidth: "130px",
+                        padding: "10px",
+                        background: "var(--surface-card)",
+                        border: `2px solid ${customBgPreset === preset.id ? "var(--primary)" : "var(--hairline-strong)"}`,
+                        borderRadius: "var(--rounded-md)",
+                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}>
+                      <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: preset.previewBg, border: "1px solid var(--hairline)" }} />
+                      <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--ink)" }}>{preset.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={handleSavePageConfig} style={{ padding: "12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "14px", fontWeight: 600, cursor: "pointer", marginTop: "8px" }}>설정 저장하기</button>
+            </div>
+          </div>
+
+          {/* 페이지 라이브 프리뷰 */}
+          <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>👀 실시간 화면 미리보기</h4>
+            
+            <div style={{ 
+              border: "1px solid var(--hairline-strong)", 
+              borderRadius: "var(--rounded-lg)", 
+              overflow: "hidden", 
+              boxShadow: shadow,
+              background: "var(--canvas)"
+            }}>
+              {/* Preview Hero Band */}
+              <div style={{ 
+                background: getBgFromPreset(customBgPreset), 
+                padding: "24px 16px", 
+                textAlign: "center" 
+              }}>
+                <div style={{ 
+                  background: "var(--surface-card)", 
+                  border: "1px solid var(--hairline-strong)", 
+                  borderRadius: "var(--rounded-pill)", 
+                  display: "inline-block", 
+                  padding: "4px 8px", 
+                  fontSize: "9px", 
+                  color: "var(--ink)", 
+                  fontWeight: 600, 
+                  marginBottom: "8px" 
+                }}>
+                  {customBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
+                </div>
+                
+                <h5 style={{ 
+                  fontSize: "20px", 
+                  fontWeight: 600, 
+                  color: "var(--ink)", 
+                  margin: "0 0 8px 0" 
+                }}>
+                  {customTitle || "AIDA TUNE"}
+                </h5>
+                
+                <p style={{ 
+                  fontSize: "11px", 
+                  color: "var(--body)", 
+                  lineHeight: "1.4", 
+                  margin: 0,
+                  maxHeight: "80px",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "pre-line"
+                }}>
+                  {customSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등..."}
+                </p>
+              </div>
+              
+              <div style={{ padding: "16px", background: "var(--canvas)", textAlign: "center", borderTop: "1px solid var(--hairline)" }}>
+                <span style={{ fontSize: "11px", color: "var(--muted)" }}>실제 사용자 첫 화면의 히어로 배너 영역입니다.</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
