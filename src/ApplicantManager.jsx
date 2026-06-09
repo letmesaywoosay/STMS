@@ -32,16 +32,16 @@ const stSet = async (key, value) => {
   catch(e){ try{localStorage.setItem(key,JSON.stringify(value));}catch{} return "local:"+e.message; }
 };
 
-// ── 공통 디자인 토큰 (미니멀리즘 & 플랫 디자인 2.0 시스템) ──
+// ── 공통 디자인 토큰 (Expo 디자인 시스템) ──
 const C = {
-  bg:"#f8fafc",
-  surface:"#ffffff",
-  border:"#e2e8f0",
-  border2:"#f1f5f9",
-  blue:"#3b82f6",     blueMid:"#2563eb",  blueLight:"#eff6ff",
-  text:"#0f172a",     subtle:"#334155",   muted:"#64748b",
-  green:"#10b981",    red:"#ef4444",      amber:"#f59e0b",
-  purple:"#8b5cf6",   teal:"#14b8a6",
+  bg:"var(--canvas)",
+  surface:"var(--surface-card)",
+  border:"var(--hairline)",
+  border2:"var(--hairline-soft)",
+  blue:"var(--text-link)",     blueMid:"var(--primary)",  blueLight:"var(--gradient-sky-light)",
+  text:"var(--ink)",     subtle:"var(--body)",   muted:"var(--muted)",
+  green:"var(--semantic-success)",    red:"var(--semantic-error)",      amber:"var(--accent-warning)",
+  purple:"var(--accent-preview)",   teal:"#14b8a6",
 };
 const shadow   = "0 4px 12px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02)";
 const shadowLg = "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03)";
