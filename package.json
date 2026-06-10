@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node -e \"const fs = require('fs'); fs.rmSync('dist', { recursive: true, force: true });\" && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "powershell -ExecutionPolicy Bypass -File ./deploy.ps1",
