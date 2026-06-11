@@ -52,6 +52,18 @@ const shadow = "0 4px 12px rgba(0, 0, 0, 0.04)";
 const shadowLg = "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03)";
 const uid = () => Math.random().toString(36).slice(2, 8);
 
+const getAbsoluteUrl = (url) => {
+  if (!url) return "";
+  const trimmed = url.trim();
+  if (trimmed.toLowerCase().startsWith("http://") || trimmed.toLowerCase().startsWith("https://")) {
+    return trimmed;
+  }
+  if (trimmed.toLowerCase().includes("youtube.com") || trimmed.toLowerCase().includes("youtu.be")) {
+    return "https://" + trimmed;
+  }
+  return "https://www.youtube.com/watch?v=" + trimmed;
+};
+
 const inpStyle = (extra = {}) => ({
   width: "100%",
   background: "var(--canvas)",
@@ -1747,7 +1759,7 @@ function ClassroomView({
                       유튜브 주소가 올바르지 않거나 동영상 설정에서 외부 퍼가기(Embedding)가 차단되었을 수 있습니다. 아래 버튼으로 유튜브에서 직접 감상해 주세요.
                     </div>
                     <a
-                      href={selectedLecture?.youtubeUrl}
+                      href={getAbsoluteUrl(selectedLecture?.youtubeUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -1785,7 +1797,7 @@ function ClassroomView({
                   
                   {currentVideoId && (
                     <a
-                      href={selectedLecture.youtubeUrl}
+                      href={getAbsoluteUrl(selectedLecture.youtubeUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
@@ -3038,7 +3050,7 @@ function BackOfficeView({
                         <td style={{ padding: "12px 16px", fontWeight: 600, color: "var(--ink)" }}>{c.courseName || "기타 과정"}</td>
                         <td style={{ padding: "12px 16px", color: "var(--ink)" }}>{c.title}</td>
                         <td style={{ padding: "12px 16px" }}>
-                          <a href={c.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-link)", textDecoration: "none" }} title={c.youtubeUrl}>
+                          <a href={getAbsoluteUrl(c.youtubeUrl)} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-link)", textDecoration: "none" }} title={c.youtubeUrl}>
                             📺 이동
                           </a>
                         </td>
