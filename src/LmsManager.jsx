@@ -102,6 +102,11 @@ export default function LmsManager({ viewPath, onNavigate }) {
   const [notices, setNotices] = useState([]);
   const [faqs, setFaqs] = useState([]);
 
+  // LMS 신규 공유 DB 테이블 상태
+  const [lmsProgress, setLmsProgress] = useState([]);
+  const [lmsQAs, setLmsQAs] = useState([]);
+  const [lmsNotes, setLmsNotes] = useState([]);
+
   // 인증 제어
   const [authMode, setAuthMode] = useState(null); // 'login' | 'register' | 'findPw'
   const [loginEmail, setLoginEmail] = useState("");
@@ -127,7 +132,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
   useEffect(() => {
     const fetchDb = async () => {
       try {
-        const [u, c, a, v, d, j, p, s, n, f, ec, er, eib, eer, eco] = await Promise.all([
+        const [u, c, a, v, d, j, p, s, n, f, ec, er, eib, eer, eco, prog, qa, notes] = await Promise.all([
           fbGet("aida:lms_users_v2").catch(() => []),
           fbGet("aida:lms_courses_v2").catch(() => []),
           fbGet("aida:lms_applications_v2").catch(() => []),
@@ -142,15 +147,84 @@ export default function LmsManager({ viewPath, onNavigate }) {
           fbGet("aida:edu_registrations_v1").catch(() => []),
           fbGet("aida:edu_info_blocks_v1").catch(() => null),
           fbGet("aida:edu_email_recipients_v1").catch(() => []),
-          fbGet("aida:edu_config_v1").catch(() => null)
+          fbGet("aida:edu_config_v1").catch(() => null),
+          fbGet("aida:lms_progress_v2").catch(() => []),
+          fbGet("aida:lms_qa_v2").catch(() => []),
+          fbGet("aida:lms_notes_v2").catch(() => [])
         ]);
         
         setUsers(u || []);
-        setCourses(c || []);
         setApplications(a || []);
         setViewLogs(v || []);
         setDeptData(d || []);
         setJobTypes(j || []);
+
+        // LMS 동영상 강의 시드 데이터 및 로드
+        const defaultMockLmsCourses = [
+          {
+            id: "lms-c1",
+            courseName: "Cloud Infrastructure",
+            title: "AWS VPC 네트워킹 기본 개념 및 실습",
+            youtubeUrl: "https://www.youtube.com/watch?v=g38U-Xp_kHY",
+            description: "VPC, Subnet, Route Table, Internet Gateway 등 가상 네트워크 환경을 구성하는 필수 요소의 원리와 트래픽 흐름을 실습을 통해 학습합니다.",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: "lms-c2",
+            courseName: "Cloud Infrastructure",
+            title: "Docker 컨테이너 기초 및 이미지 빌드 가이드",
+            youtubeUrl: "https://www.youtube.com/watch?v=hP57lhIA590",
+            description: "도커 컨테이너의 기본 작동 원리를 학습하고, Dockerfile을 사용하여 실무용 웹 서비스 이미지를 직접 빌드하고 배포해 봅니다.",
+            createdAt: new Date().toISOString()
+          },
+          {
+            id: "lms-c3",
+            courseName: "Artificial Intelligence",
+            title: "LangChain을 활용한 LLM 에이전트 개발 기초",
+            youtubeUrl: "https://www.youtube.com/watch?v=aywZtUXxmEE",
+            description: "대규모 언어 모델(LLM)과 LangChain 프레임워크를 결합하여 사용자 의도에 따라 외부 도구를 실행하는 지능형 AI 에이전트를 구축합니다.",
+            createdAt: new Date().toISOString()
+          }
+        ];
+
+        let finalCourses = c || [];
+        if (!c || c.length === 0) {
+          finalCourses = defaultMockLmsCourses;
+          await fbSet("aida:lms_courses_v2", defaultMockLmsCourses);
+        }
+        setCourses(finalCourses);
+
+        // Q&A 시딩
+        const defaultMockQAs = [
+          {
+            id: "qa-1",
+            lectureId: "lms-c1",
+            authorName: "김민재",
+            authorEmail: "minjae@okestro.com",
+            content: "VPC 서브넷 대역을 설정할 때 /24 권장 이유가 무엇인가요?",
+            createdAt: "2026-06-10T09:00:00.000Z",
+            answer: "VPC의 크기와 향후 확장성을 고려했을 때 /24(256개 IP)가 관리하기 가장 쉽고 적당한 크기이기 때문입니다. 필요 시 서브넷을 더 쪼개어 가용 영역별로 분산할 수도 있습니다."
+          },
+          {
+            id: "qa-2",
+            lectureId: "lms-c3",
+            authorName: "이소연",
+            authorEmail: "soyeon@okestro.com",
+            content: "LangChain Agent에서 custom tool을 정의할 때 return 타입 제약이 있나요?",
+            createdAt: "2026-06-11T10:00:00.000Z",
+            answer: "기본적으로 LLM이 텍스트로 결과를 인지해야 하므로 String 타입의 값을 반환하는 것이 표준입니다. JSON 형식을 반환해야 하는 경우 JSON string으로 직렬화하여 반환하시는 것을 권장합니다."
+          }
+        ];
+        
+        let finalQAs = qa || [];
+        if (!qa || qa.length === 0) {
+          finalQAs = defaultMockQAs;
+          await fbSet("aida:lms_qa_v2", defaultMockQAs);
+        }
+        setLmsQAs(finalQAs);
+        
+        setLmsProgress(prog || []);
+        setLmsNotes(notes || []);
 
         if (p) {
           setPageConfig(p);
@@ -260,8 +334,47 @@ export default function LmsManager({ viewPath, onNavigate }) {
     fetchDb();
   }, []);
 
-  // 라우팅 탭 동기화
+  // GNB 세션 동적 동기화 및 커스텀 이벤트 처리
   useEffect(() => {
+    const syncSession = () => {
+      const session = sessionStorage.getItem("aida:lms_login");
+      if (session) {
+        setCurrentUser(JSON.parse(session));
+      } else {
+        setCurrentUser(null);
+      }
+    };
+    window.addEventListener("popstate", syncSession);
+    
+    const handleTriggerAuth = (e) => {
+      if (e.detail) {
+        setAuthMode(e.detail);
+        setAuthErr("");
+      }
+    };
+    const handleTriggerGuestAlert = () => {
+      setShowGuestAlert(true);
+    };
+
+    window.addEventListener('aida:trigger_auth', handleTriggerAuth);
+    window.addEventListener('aida:trigger_guest_alert', handleTriggerGuestAlert);
+
+    return () => {
+      window.removeEventListener("popstate", syncSession);
+      window.removeEventListener('aida:trigger_auth', handleTriggerAuth);
+      window.removeEventListener('aida:trigger_guest_alert', handleTriggerGuestAlert);
+    };
+  }, []);
+
+  // 라우팅 탭 동기화 및 보안 가드
+  useEffect(() => {
+    if ((viewPath === "/mypage" || viewPath === "/classroom") && !currentUser) {
+      setShowGuestAlert(true);
+      onNavigate("/");
+      setActiveTab("intro");
+      return;
+    }
+
     if (viewPath === "/mypage") {
       setActiveTab("mypage");
     } else if (viewPath === "/classroom") {
@@ -283,7 +396,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
     } else {
       setActiveTab("intro");
     }
-  }, [viewPath]);
+  }, [viewPath, currentUser]);
 
   const saveUsers = async (newUsers) => {
     setUsers(newUsers);
@@ -300,6 +413,18 @@ export default function LmsManager({ viewPath, onNavigate }) {
   const saveViewLogs = async (newLogs) => {
     setViewLogs(newLogs);
     await fbSet("aida:lms_view_logs_v2", newLogs);
+  };
+  const saveLmsProgress = async (newProgress) => {
+    setLmsProgress(newProgress);
+    await fbSet("aida:lms_progress_v2", newProgress);
+  };
+  const saveLmsQAs = async (newQAs) => {
+    setLmsQAs(newQAs);
+    await fbSet("aida:lms_qa_v2", newQAs);
+  };
+  const saveLmsNotes = async (newNotes) => {
+    setLmsNotes(newNotes);
+    await fbSet("aida:lms_notes_v2", newNotes);
   };
   const savePageConfig = async (newConfig) => {
     setPageConfig(newConfig);
@@ -504,115 +629,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
 
   return (
     <div style={{ background: "var(--canvas)", minHeight: "100vh", display: "flex", flexDirection: "column", boxSizing: "border-box" }}>
-      {/* ── GNB 서브 네비게이션 헤더 (Expo top-nav 가이드 적용) ── */}
-      <div style={{
-        background: "var(--canvas)",
-        borderBottom: `1px solid var(--hairline)`,
-        padding: "0 24px",
-        height: "50px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        boxSizing: "border-box",
-        position: "sticky",
-        top: "64px",
-        zIndex: 99
-      }}>
-        {/* 서브 네비게이션 목록 */}
-        <div style={{ display: "flex", gap: "20px" }}>
-          {[
-            { id: "course", label: "교육신청", path: "/course" },
-            { id: "schedule", label: "연간교육계획", path: "/schedule" },
-            { id: "notice", label: "공지사항", path: "/notice" },
-            { id: "faq", label: "자주 묻는 질문 (FAQ)", path: "/faq" },
-            { id: "classroom", label: "나의 강의실", path: "/classroom", secure: true },
-            { id: "mypage", label: "마이페이지", path: "/mypage", secure: true, hideGuest: true }
-          ].map((tab) => {
-            if (tab.hideGuest && !currentUser) return null;
-            const isActive = activeTab === tab.id || (tab.id === "course" && ["course", "course-detail", "course-register"].includes(activeTab));
-            return (
-              <button
-                key={tab.id}
-                onClick={() => tab.secure ? checkAccess(tab.id) : (setActiveTab(tab.id), onNavigate(tab.path))}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "14px",
-                  fontWeight: isActive ? 600 : 500,
-                  color: isActive ? "var(--ink)" : "var(--body)",
-                  cursor: "pointer",
-                  padding: "6px 0",
-                  borderBottom: isActive ? "2px solid var(--primary)" : "2px solid transparent",
-                  transition: "color 0.15s ease",
-                  fontFamily: "var(--sans)"
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* 유틸 로그인 인터페이스 */}
-        <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-          {currentUser ? (
-            <>
-              <span style={{ fontSize: "13px", color: "var(--body)" }}>
-                <strong style={{ color: "var(--ink)" }}>{currentUser.name}</strong>님 학습 중
-              </span>
-              <button 
-                onClick={handleLogout} 
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: "var(--body)", 
-                  fontSize: "13px", 
-                  cursor: "pointer", 
-                  fontWeight: 600,
-                  fontFamily: "var(--sans)"
-                }}
-                onMouseOver={(e) => e.currentTarget.style.color = "var(--ink)"}
-                onMouseOut={(e) => e.currentTarget.style.color = "var(--body)"}
-              >
-                로그아웃
-              </button>
-            </>
-          ) : (
-            <>
-              <button 
-                onClick={() => { setAuthMode("login"); setAuthErr(""); }} 
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: "var(--ink)", 
-                  fontSize: "13px", 
-                  cursor: "pointer", 
-                  fontWeight: 600,
-                  fontFamily: "var(--sans)"
-                }}
-              >
-                로그인
-              </button>
-              <button 
-                onClick={() => { setAuthMode("register"); setAuthErr(""); }} 
-                style={{ 
-                  background: "none", 
-                  border: "none", 
-                  color: "var(--body)", 
-                  fontSize: "13px", 
-                  cursor: "pointer", 
-                  fontWeight: 600,
-                  fontFamily: "var(--sans)"
-                }}
-                onMouseOver={(e) => e.currentTarget.style.color = "var(--ink)"}
-                onMouseOut={(e) => e.currentTarget.style.color = "var(--body)"}
-              >
-                회원가입
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      {/* 본문 콘텐츠 영역 */}
 
       {/* ── 본문 화면 출력 ── */}
       <div style={{ flex: 1 }}>
@@ -623,7 +640,18 @@ export default function LmsManager({ viewPath, onNavigate }) {
         {activeTab === "schedule" && <ScheduleView schedules={schedules} />}
         {activeTab === "notice" && <NoticeView notices={notices} saveNotices={saveNotices} />}
         {activeTab === "faq" && <FaqView faqs={faqs} />}
-        {activeTab === "classroom" && currentUser && <ClassroomView courses={courses} applications={applications} viewLogs={viewLogs} currentUser={currentUser} saveApplications={saveApplications} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} saveViewLogs={saveViewLogs} />}
+        {activeTab === "classroom" && currentUser && (
+          <ClassroomView 
+            courses={courses} 
+            currentUser={currentUser} 
+            lmsProgress={lmsProgress} 
+            saveLmsProgress={saveLmsProgress} 
+            lmsQAs={lmsQAs} 
+            saveLmsQAs={saveLmsQAs} 
+            lmsNotes={lmsNotes} 
+            saveLmsNotes={saveLmsNotes} 
+          />
+        )}
         {activeTab === "mypage" && currentUser && <MyPageView applications={applications} courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} />}
       </div>
 
@@ -1398,115 +1426,44 @@ function RegisterForm({ regForm, setRegForm, handleRegister, authErr, deptData, 
 }
 
 // ── [ClassroomView] 나의 강의실 ──
-function ClassroomView({ courses, applications, viewLogs, currentUser, saveApplications, selectedCourse, setSelectedCourse, saveViewLogs }) {
-  const myApps = applications.filter(a => a.email === currentUser.email);
+// ── [ClassroomView] 나의 강의실 ──
+function ClassroomView({ 
+  courses, 
+  currentUser, 
+  lmsProgress, 
+  saveLmsProgress, 
+  lmsQAs, 
+  saveLmsQAs, 
+  lmsNotes, 
+  saveLmsNotes 
+}) {
+  const [selectedLecture, setSelectedLecture] = useState(null);
+  const [activeBottomTab, setActiveBottomTab] = useState("qa");
+  const [newQuestionText, setNewQuestionText] = useState("");
+  const [notesText, setNotesText] = useState("");
+  const [adminAnswerTexts, setAdminAnswerTexts] = useState({});
 
-  const handleApplyCourse = async (courseId) => {
-    if (applications.some(a => a.email === currentUser.email && a.courseId === courseId)) {
-      alert("이미 신청한 과정입니다.");
-      return;
-    }
-    const newApp = {
-      id: uid(),
-      email: currentUser.email,
-      courseId,
-      status: currentUser.userType === "company" ? "approved" : "pending",
-      appliedAt: new Date().toISOString()
-    };
-    const updated = [newApp, ...applications];
-    await saveApplications(updated);
-    
-    if (newApp.status === "approved") {
-      alert("수강 확정되었습니다! 학습창에서 즉시 동영상 재생이 가능합니다.");
+  // 1. 초기 강의 설정
+  useEffect(() => {
+    if (courses && courses.length > 0) {
+      if (!selectedLecture) {
+        setSelectedLecture(courses[0]);
+      } else {
+        const updated = courses.find(c => c.id === selectedLecture.id);
+        if (updated) setSelectedLecture(updated);
+      }
     } else {
-      alert("수강 신청되었습니다. 관리자 승인 완료 후 동영상 학습이 가능합니다.");
+      setSelectedLecture(null);
     }
-    // GNB 동기화 발생
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  };
+  }, [courses]);
 
-  return (
-    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box", display: "flex", gap: "24px", flexWrap: "wrap" }}>
-      {/* 좌측 강좌 리스트 */}
-      <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "16px", flexShrink: 0 }}>
-        <div style={{ padding: "20px", background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", boxShadow: shadow }}>
-          <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📚 개설 교육 과정</h4>
-          <span style={{ fontSize: "12px", color: "var(--body)" }}>수강 가능하거나 신청 완료된 강좌 목록입니다.</span>
-        </div>
-        
-        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {courses.map(c => {
-            const matchedApp = myApps.find(a => a.courseId === c.id);
-            const isSelected = selectedCourse?.id === c.id;
-            return (
-              <div key={c.id} onClick={() => setSelectedCourse(c)}
-                style={{
-                  padding: "16px",
-                  background: isSelected ? "var(--canvas-soft)" : "var(--surface-card)",
-                  border: `1px solid ${isSelected ? "var(--primary)" : "var(--hairline-strong)"}`,
-                  borderRadius: "var(--rounded-lg)",
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  boxSizing: "border-box"
-                }}>
-                <h5 style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)", margin: "0 0 6px 0" }}>{c.title}</h5>
-                <p style={{ fontSize: "12px", color: "var(--body)", lineHeight: "1.4", margin: "0 0 12px 0", height: "34px", overflow: "hidden" }}>{c.description}</p>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "11px", color: "var(--muted)" }}>수강 상태</span>
-                  {matchedApp ? (
-                    <span style={{ fontSize: "11px", fontWeight: 600, color: matchedApp.status === "completed" ? "var(--green)" : (matchedApp.status === "approved" ? "var(--text-link)" : "var(--amber)") }}>
-                      {matchedApp.status === "completed" ? "✓ 완료" : (matchedApp.status === "approved" ? "▶ 학습중" : "⌛ 대기")}
-                    </span>
-                  ) : (
-                    <button onClick={(e) => { e.stopPropagation(); handleApplyCourse(c.id); }} 
-                      style={{ 
-                        padding: "4px 8px", 
-                        background: "var(--canvas)", 
-                        border: `1px solid var(--hairline-strong)`, 
-                        borderRadius: "var(--rounded-sm)", 
-                        fontSize: "11px", 
-                        color: "var(--ink)", 
-                        cursor: "pointer", 
-                        fontWeight: 600 
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.borderColor = "var(--primary)"}
-                      onMouseOut={(e) => e.currentTarget.style.borderColor = "var(--hairline-strong)"}
-                    >
-                      수강 신청
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 우측 비디오 학습 공간 */}
-      <div style={{ flex: 1, background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", boxShadow: shadow, minWidth: "400px" }}>
-        {selectedCourse ? (
-          <VideoPlayer course={selectedCourse} applications={applications} viewLogs={viewLogs} currentUser={currentUser} saveViewLogs={saveViewLogs} saveApplications={saveApplications} />
-        ) : (
-          <div style={{ height: "400px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--body)" }}>
-            <span style={{ fontSize: "40px" }}>📺</span>
-            <div style={{ fontSize: "15px", fontWeight: 600, marginTop: "12px", color: "var(--ink)" }}>수강할 교육 과정을 선택해주세요.</div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── [VideoPlayer] 영상 플레이어 ──
-function VideoPlayer({ course, applications, viewLogs, currentUser, saveViewLogs, saveApplications }) {
-  const playerRef = useRef(null);
-  const timerRef = useRef(null);
-  const [progress, setProgress] = useState(0);
-  const [btnActive, setBtnActive] = useState(false);
-
-  const matchedApp = applications.find(a => a.email === currentUser.email && a.courseId === course.id);
-  const isApproved = matchedApp?.status === "approved";
-  const isAlreadyCompleted = viewLogs.some(log => log.email === currentUser.email && log.courseId === course.id);
+  // 2. 선택 강의 변경 시 개인 강의 노트 로드
+  useEffect(() => {
+    if (selectedLecture) {
+      const myNote = lmsNotes.find(n => n.email === currentUser.email && n.lectureId === selectedLecture.id);
+      setNotesText(myNote?.content || "");
+    }
+  }, [selectedLecture, lmsNotes, currentUser]);
 
   const getYoutubeId = (url) => {
     try {
@@ -1515,131 +1472,486 @@ function VideoPlayer({ course, applications, viewLogs, currentUser, saveViewLogs
       return (match && match[2].length === 11) ? match[2] : null;
     } catch { return null; }
   };
-  const videoId = getYoutubeId(course.youtubeUrl);
 
-  useEffect(() => {
-    setBtnActive(false);
-    setProgress(0);
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (isAlreadyCompleted) {
-      setBtnActive(true);
-      setProgress(100);
-    }
-  }, [course, isAlreadyCompleted]);
-
-  useEffect(() => {
-    if (!videoId || !isApproved || isAlreadyCompleted) return;
-    let player;
-    const checkPlayProgress = () => {
-      if (player && typeof player.getCurrentTime === "function" && typeof player.getDuration === "function") {
-        const current = player.getCurrentTime();
-        const duration = player.getDuration();
-        if (duration > 0) {
-          const ratio = (current / duration) * 100;
-          setProgress(Math.min(ratio, 100));
-          if (ratio >= 80) setBtnActive(true);
-        }
-      }
-    };
-    const initPlayer = () => {
-      player = new window.YT.Player(`yt-player-${course.id}`, {
-        videoId: videoId,
-        events: {
-          onStateChange: (event) => {
-            if (event.data === window.YT.PlayerState.PLAYING) {
-              timerRef.current = setInterval(checkPlayProgress, 1000);
-            } else {
-              if (timerRef.current) clearInterval(timerRef.current);
-            }
-          }
-        }
-      });
-      playerRef.current = player;
-    };
-    if (window.YT && window.YT.Player) {
-      initPlayer();
-    } else {
-      const prevCallback = window.onYouTubeIframeAPIReady;
-      window.onYouTubeIframeAPIReady = () => {
-        if (prevCallback) prevCallback();
-        initPlayer();
-      };
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (player && typeof player.destroy === "function") {
-        try { player.destroy(); } catch {}
-      }
-    };
-  }, [course.id, videoId, isApproved, isAlreadyCompleted]);
-
-  const handleCompleteWatch = async () => {
-    const newLog = {
-      id: uid(),
-      email: currentUser.email,
-      courseId: course.id,
-      completed: true,
-      completedAt: new Date().toISOString()
-    };
-    const updatedLogs = [newLog, ...viewLogs];
-    await saveViewLogs(updatedLogs);
-
-    const updatedApps = applications.map(a => 
-      a.email === currentUser.email && a.courseId === course.id ? { ...a, status: "completed" } : a
-    );
-    await saveApplications(updatedApps);
-    alert("✓ 비디오 학습 인정 완료! 마이페이지에서 수료 내역 확인이 가능합니다.");
-    setBtnActive(true);
-    setProgress(100);
+  // 3. 진도율 시뮬레이션 관련 헬퍼
+  const getLectureProgress = (lectureId) => {
+    const item = lmsProgress.find(p => p.email === currentUser.email && p.lectureId === lectureId);
+    return item?.progress || 0;
   };
 
-  if (!isApproved && !isAlreadyCompleted) {
-    return (
-      <div style={{ textAlign: "center", padding: "40px" }}>
-        <span style={{ fontSize: "40px" }}>🔒</span>
-        <h4 style={{ fontSize: "16px", fontWeight: 600, marginTop: "12px", color: "var(--ink)" }}>수강 승인이 필요합니다</h4>
-        <p style={{ fontSize: "13px", color: "var(--body)", margin: "8px 0 20px" }}>
-          {matchedApp ? `(현재 진행 상태: ${matchedApp.status === "rejected" ? "❌ 반려됨" : "⌛ 승인 대기 중"})` : "좌측 목록에서 수강 신청을 눌러주세요."}
-        </p>
-      </div>
-    );
-  }
+  const getLectureStatus = (lectureId) => {
+    const item = lmsProgress.find(p => p.email === currentUser.email && p.lectureId === lectureId);
+    return item?.status || "before";
+  };
+
+  const updateProgressState = async (lectureId, newPct) => {
+    const status = newPct === 100 ? "completed" : (newPct > 0 ? "learning" : "before");
+    const existingIdx = lmsProgress.findIndex(p => p.email === currentUser.email && p.lectureId === lectureId);
+    let updated;
+    if (existingIdx > -1) {
+      updated = [...lmsProgress];
+      updated[existingIdx] = {
+        ...updated[existingIdx],
+        progress: newPct,
+        status,
+        updatedAt: new Date().toISOString()
+      };
+    } else {
+      updated = [
+        ...lmsProgress,
+        {
+          email: currentUser.email,
+          lectureId,
+          progress: newPct,
+          status,
+          updatedAt: new Date().toISOString()
+        }
+      ];
+    }
+    await saveLmsProgress(updated);
+  };
+
+  const handleSliderChange = (e) => {
+    if (!selectedLecture) return;
+    const val = parseInt(e.target.value);
+    updateProgressState(selectedLecture.id, val);
+  };
+
+  const handleToggleComplete = async () => {
+    if (!selectedLecture) return;
+    const currentPct = getLectureProgress(selectedLecture.id);
+    const nextPct = currentPct === 100 ? 0 : 100;
+    await updateProgressState(selectedLecture.id, nextPct);
+  };
+
+  // 4. Q&A 질문/답변 핸들러
+  const handleAddQuestion = async () => {
+    if (!selectedLecture || !newQuestionText.trim()) return;
+    const newQA = {
+      id: uid(),
+      lectureId: selectedLecture.id,
+      authorName: currentUser.name,
+      authorEmail: currentUser.email,
+      content: newQuestionText.trim(),
+      createdAt: new Date().toISOString(),
+      answer: ""
+    };
+    await saveLmsQAs([newQA, ...lmsQAs]);
+    setNewQuestionText("");
+    alert("질문이 성공적으로 등록되었습니다.");
+  };
+
+  const handleSaveAnswer = async (qaId, answerText) => {
+    const updated = lmsQAs.map(q => q.id === qaId ? { ...q, answer: answerText.trim() } : q);
+    await saveLmsQAs(updated);
+    alert("관리자 답변이 저장되었습니다.");
+  };
+
+  // 5. 강의 노트 저장 핸들러
+  const handleSaveNote = async () => {
+    if (!selectedLecture) return;
+    const existingIdx = lmsNotes.findIndex(n => n.email === currentUser.email && n.lectureId === selectedLecture.id);
+    let updated;
+    if (existingIdx > -1) {
+      updated = [...lmsNotes];
+      updated[existingIdx] = {
+        ...updated[existingIdx],
+        content: notesText,
+        updatedAt: new Date().toISOString()
+      };
+    } else {
+      updated = [
+        ...lmsNotes,
+        {
+          email: currentUser.email,
+          lectureId: selectedLecture.id,
+          content: notesText,
+          updatedAt: new Date().toISOString()
+        }
+      ];
+    }
+    await saveLmsNotes(updated);
+    alert("강의 노트가 저장되었습니다.");
+  };
+
+  // 그룹화 로직
+  const groupedLectures = courses.reduce((acc, c) => {
+    const groupName = c.courseName || "General / 기타 과정";
+    if (!acc[groupName]) {
+      acc[groupName] = [];
+    }
+    acc[groupName].push(c);
+    return acc;
+  }, {});
+
+  const activeProgress = selectedLecture ? getLectureProgress(selectedLecture.id) : 0;
+  const isCompleted = activeProgress === 100;
+
+  const currentVideoId = selectedLecture ? getYoutubeId(selectedLecture.youtubeUrl) : "dQw4w9WgXcQ";
 
   return (
-    <div>
-      <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>{course.title}</h3>
-      <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "16px" }}>{course.description}</p>
-      <div style={{ width: "100%", height: "400px", borderRadius: "var(--rounded-lg)", overflow: "hidden", background: "#000", border: `1px solid var(--hairline-strong)` }}>
-        {isAlreadyCompleted ? (
-          <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${videoId}`} title={course.title} frameBorder="0" allowFullScreen></iframe>
+    <div style={{ padding: "40px 24px", maxWidth: "1360px", margin: "0 auto", boxSizing: "border-box", display: "flex", gap: "28px", flexWrap: "wrap" }}>
+      {/* ── A. 좌측 플레이리스트 사이드바 ── */}
+      <div style={{ width: "340px", display: "flex", flexDirection: "column", gap: "16px", flexShrink: 0 }}>
+        <div style={{ 
+          padding: "20px", 
+          background: "var(--surface-card)", 
+          border: "1px solid var(--hairline-strong)", 
+          borderRadius: "var(--rounded-lg)", 
+          boxShadow: shadow 
+        }}>
+          <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: "0 0 4px 0" }}>🎓 LMS 온라인 강의실</h4>
+          <span style={{ fontSize: "12px", color: "var(--body)" }}>과정별 교육 동영상 학습 목록입니다.</span>
+        </div>
+
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "14px", 
+          padding: "20px",
+          background: "var(--surface-card)",
+          border: "1px solid var(--hairline-strong)",
+          borderRadius: "var(--rounded-lg)",
+          boxShadow: shadow,
+          maxHeight: "600px",
+          overflowY: "auto"
+        }}>
+          {Object.keys(groupedLectures).length === 0 ? (
+            <div style={{ textAlign: "center", color: "var(--body)", fontSize: "13px", padding: "24px 0" }}>
+              등록된 강의 영상이 없습니다.
+            </div>
+          ) : (
+            Object.keys(groupedLectures).map(groupName => (
+              <div key={groupName} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ 
+                  fontSize: "13px", 
+                  fontWeight: 700, 
+                  color: "#1E3A8A", 
+                  padding: "6px 12px", 
+                  background: "#EFF6FF", 
+                  borderRadius: "var(--rounded-md)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px"
+                }}>
+                  📚 {groupName}
+                </div>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px", paddingLeft: "8px" }}>
+                  {groupedLectures[groupName].map(lecture => {
+                    const pct = getLectureProgress(lecture.id);
+                    const status = getLectureStatus(lecture.id);
+                    const isSelected = selectedLecture?.id === lecture.id;
+                    
+                    let statusLabel = "⚪ 학습 전";
+                    let statusColor = "var(--body)";
+                    if (status === "completed" || pct === 100) {
+                      statusLabel = "🟢 학습 완료";
+                      statusColor = "var(--green)";
+                    } else if (status === "learning" || pct > 0) {
+                      statusLabel = `🔵 학습 중 (${pct}%)`;
+                      statusColor = "var(--primary)";
+                    }
+
+                    return (
+                      <div 
+                        key={lecture.id}
+                        onClick={() => setSelectedLecture(lecture)}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "var(--rounded-md)",
+                          background: isSelected ? "rgba(30, 58, 138, 0.08)" : "transparent",
+                          borderLeft: isSelected ? "3px solid var(--primary)" : "3px solid transparent",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "4px"
+                        }}
+                        onMouseOver={e => {
+                          if (!isSelected) e.currentTarget.style.background = "var(--canvas-soft)";
+                        }}
+                        onMouseOut={e => {
+                          if (!isSelected) e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        <div style={{ fontSize: "13px", fontWeight: isSelected ? 600 : 500, color: "var(--ink)", lineHeight: "1.3" }}>
+                          {lecture.title}
+                        </div>
+                        <div style={{ fontSize: "11px", fontWeight: 600, color: statusColor }}>
+                          {statusLabel}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── B. 우측 비디오 재생 공간 및 부가 기능 ── */}
+      <div style={{ flex: 1, minWidth: "500px", display: "flex", flexDirection: "column", gap: "24px" }}>
+        {selectedLecture ? (
+          <>
+            {/* 비디오 플레이어 본체 카드 */}
+            <div style={{ 
+              background: "var(--surface-card)", 
+              border: "1px solid var(--hairline-strong)", 
+              borderRadius: "var(--rounded-lg)", 
+              padding: "24px", 
+              boxShadow: shadow 
+            }}>
+              <div style={{ 
+                width: "100%", 
+                aspectRatio: "16/9", 
+                borderRadius: "var(--rounded-lg)", 
+                overflow: "hidden", 
+                background: "#000", 
+                border: "1px solid var(--hairline-strong)",
+                marginBottom: "20px"
+              }}>
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${currentVideoId}`}
+                  title={selectedLecture.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+
+              {/* 강좌 제목 및 메타정보 */}
+              <div style={{ borderBottom: "1px solid var(--hairline)", paddingBottom: "16px", marginBottom: "20px" }}>
+                <span style={{ fontSize: "12px", background: "var(--primary-active)", color: "var(--on-primary)", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
+                  {selectedLecture.courseName || "일반 과정"}
+                </span>
+                <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", margin: "8px 0 6px 0" }}>
+                  {selectedLecture.title}
+                </h3>
+                <p style={{ fontSize: "14px", color: "var(--body)", lineHeight: "1.5", margin: 0, whiteSpace: "pre-line" }}>
+                  {selectedLecture.description}
+                </p>
+              </div>
+
+              {/* 실시간 진도율 및 학습 완료 토글 */}
+              <div style={{ background: "var(--canvas-soft)", padding: "20px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--body)", marginBottom: "6px" }}>
+                    <span style={{ fontWeight: 600 }}>재생 진행도 시뮬레이션</span>
+                    <strong style={{ color: "var(--primary)" }}>{activeProgress}% 시청 완료</strong>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={activeProgress}
+                      onChange={handleSliderChange}
+                      style={{ flexGrow: 1, accentColor: "var(--primary)", cursor: "pointer" }}
+                    />
+                    <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>슬라이더 조정 가능</span>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleToggleComplete}
+                  style={{
+                    width: "100%",
+                    padding: "14px",
+                    border: "none",
+                    borderRadius: "var(--rounded-md)",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    background: isCompleted ? "var(--green)" : "var(--primary)",
+                    color: "var(--on-primary)",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                    transition: "background 0.2s"
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.background = isCompleted ? "#047857" : "var(--primary-active)";
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.background = isCompleted ? "var(--green)" : "var(--primary)";
+                  }}
+                >
+                  {isCompleted ? "✓ 학습 완료됨 (클릭하여 완료 취소)" : "🎓 학습 완료 처리하기"}
+                </button>
+              </div>
+            </div>
+
+            {/* Q&A / Notes Bottom Tab 카드 */}
+            <div style={{ 
+              background: "var(--surface-card)", 
+              border: "1px solid var(--hairline-strong)", 
+              borderRadius: "var(--rounded-lg)", 
+              padding: "24px", 
+              boxShadow: shadow 
+            }}>
+              {/* 탭 헤더 */}
+              <div style={{ display: "flex", gap: "12px", borderBottom: "1.5px solid var(--hairline-strong)", paddingBottom: "10px", marginBottom: "20px" }}>
+                <button
+                  onClick={() => setActiveBottomTab("qa")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: "15px",
+                    fontWeight: 600,
+                    color: activeBottomTab === "qa" ? "var(--primary)" : "var(--body)",
+                    cursor: "pointer",
+                    padding: "6px 12px",
+                    borderBottom: activeBottomTab === "qa" ? "2.5px solid var(--primary)" : "2.5px solid transparent",
+                    transition: "all 0.15s"
+                  }}
+                >
+                  질문하기 (Q&A)
+                </button>
+                <button
+                  onClick={() => setActiveBottomTab("notes")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: "15px",
+                    fontWeight: 600,
+                    color: activeBottomTab === "notes" ? "var(--primary)" : "var(--body)",
+                    cursor: "pointer",
+                    padding: "6px 12px",
+                    borderBottom: activeBottomTab === "notes" ? "2.5px solid var(--primary)" : "2.5px solid transparent",
+                    transition: "all 0.15s"
+                  }}
+                >
+                  강의 노트 (My Notes)
+                </button>
+              </div>
+
+              {/* 탭 내용 분기 */}
+              {activeBottomTab === "qa" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+                  {/* 질문 작성 폼 */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <textarea
+                      placeholder="강의 내용에 대해 궁금한 점을 질문해 보세요. 관리자 또는 튜터가 신속히 답변해 드립니다."
+                      value={newQuestionText}
+                      onChange={e => setNewQuestionText(e.target.value)}
+                      style={{ ...inpStyle(), minHeight: "80px", resize: "vertical" }}
+                    />
+                    <button 
+                      onClick={handleAddQuestion}
+                      style={{
+                        alignSelf: "flex-end",
+                        padding: "8px 16px",
+                        background: "var(--primary)",
+                        color: "var(--on-primary)",
+                        border: "none",
+                        borderRadius: "var(--rounded-md)",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        cursor: "pointer"
+                      }}
+                    >
+                      질문 등록하기
+                    </button>
+                  </div>
+
+                  {/* 질문 목록 */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    <h5 style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>💬 질문 목록 ({lmsQAs.filter(q => q.lectureId === selectedLecture.id).length}개)</h5>
+                    {lmsQAs.filter(q => q.lectureId === selectedLecture.id).length === 0 ? (
+                      <div style={{ textAlign: "center", padding: "24px", color: "var(--body)", fontSize: "13px", background: "var(--canvas-soft)", borderRadius: "var(--rounded-lg)" }}>
+                        등록된 질문이 없습니다. 첫 질문을 남겨보세요!
+                      </div>
+                    ) : (
+                      lmsQAs.filter(q => q.lectureId === selectedLecture.id).map(qa => (
+                        <div key={qa.id} style={{ border: "1px solid var(--hairline)", borderRadius: "var(--rounded-lg)", padding: "16px", background: "var(--canvas-soft)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--body)", marginBottom: "8px" }}>
+                            <strong>👤 {qa.authorName} ({qa.authorEmail})</strong>
+                            <span>{new Date(qa.createdAt).toLocaleString()}</span>
+                          </div>
+                          <p style={{ fontSize: "14px", color: "var(--ink)", margin: "0 0 12px 0", whiteSpace: "pre-line" }}>
+                            {qa.content}
+                          </p>
+
+                          {/* 답변 블록 */}
+                          {qa.answer ? (
+                            <div style={{ background: "#F0FDFA", border: "1px solid #14B8A6", borderRadius: "var(--rounded-md)", padding: "12px", fontSize: "13px" }}>
+                              <div style={{ color: "#0D9488", fontWeight: 700, marginBottom: "4px" }}>✍️ 관리자 답변</div>
+                              <p style={{ margin: 0, color: "var(--ink)", whiteSpace: "pre-line" }}>{qa.answer}</p>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: "12px", color: "var(--body)" }}>⌛ 답변 대기 중</div>
+                          )}
+
+                          {/* 관리자 전용 답변 입력창 */}
+                          {currentUser.role === "admin" && (
+                            <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px dashed var(--hairline)" }}>
+                              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>
+                                🛡️ 답변 작성/수정 (관리자 전용)
+                              </label>
+                              <div style={{ display: "flex", gap: "8px" }}>
+                                <input
+                                  type="text"
+                                  placeholder="답변 내용을 작성해 주세요."
+                                  value={adminAnswerTexts[qa.id] !== undefined ? adminAnswerTexts[qa.id] : (qa.answer || "")}
+                                  onChange={e => setAdminAnswerTexts({ ...adminAnswerTexts, [qa.id]: e.target.value })}
+                                  style={{ ...inpStyle(), flexGrow: 1, padding: "6px 12px" }}
+                                />
+                                <button
+                                  onClick={() => handleSaveAnswer(qa.id, adminAnswerTexts[qa.id] || "")}
+                                  style={{ padding: "6px 12px", background: "#14B8A6", color: "#fff", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  답변 저장
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeBottomTab === "notes" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <span style={{ fontSize: "12px", color: "var(--body)" }}>
+                    💡 작성하신 노트는 본인의 수강생 계정에 개인 보관되어 다음 학습 시 언제든지 이어서 확인하고 편집하실 수 있습니다.
+                  </span>
+                  <textarea
+                    placeholder="여기에 필기를 작성해 주세요. 핵심 코드 스니펫이나 요약 글 등을 적을 수 있습니다."
+                    value={notesText}
+                    onChange={e => setNotesText(e.target.value)}
+                    style={{ ...inpStyle(), minHeight: "150px", resize: "vertical", fontFamily: "monospace", fontSize: "13px" }}
+                  />
+                  <button 
+                    onClick={handleSaveNote}
+                    style={{
+                      alignSelf: "flex-end",
+                      padding: "10px 20px",
+                      background: "var(--primary)",
+                      color: "var(--on-primary)",
+                      border: "none",
+                      borderRadius: "var(--rounded-md)",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer"
+                    }}
+                  >
+                    강의 노트 저장하기
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         ) : (
-          <div id={`yt-player-${course.id}`} style={{ width: "100%", height: "100%" }}></div>
+          <div style={{ height: "450px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--body)", background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", boxShadow: shadow }}>
+            <span style={{ fontSize: "48px" }}>📺</span>
+            <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "12px", color: "var(--ink)" }}>학습할 교육 동영상을 선택해 주세요.</div>
+          </div>
         )}
       </div>
-      <div style={{ marginTop: "16px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--body)", marginBottom: "6px" }}>
-          <span>학습 진행도</span>
-          <strong>{Math.floor(progress)}% (수료 기준: 80%)</strong>
-        </div>
-        <div style={{ width: "100%", height: "8px", background: "var(--canvas-soft)", borderRadius: "var(--rounded-sm)", overflow: "hidden" }}>
-          <div style={{ width: `${progress}%`, height: "100%", background: progress >= 80 ? "var(--green)" : "var(--text-link)" }}></div>
-        </div>
-      </div>
-      <button onClick={handleCompleteWatch} disabled={!btnActive || isAlreadyCompleted}
-        style={{ 
-          width: "100%", 
-          padding: "14px", 
-          marginTop: "20px", 
-          border: "none", 
-          borderRadius: "var(--rounded-md)", 
-          cursor: (!btnActive || isAlreadyCompleted) ? "not-allowed" : "pointer", 
-          background: isAlreadyCompleted ? "var(--green)" : (btnActive ? "var(--primary)" : "var(--surface-strong)"), 
-          color: isAlreadyCompleted ? "#fff" : (btnActive ? "var(--on-primary)" : "var(--body)"), 
-          fontSize: "14px", 
-          fontWeight: 600 
-        }}>
-        {isAlreadyCompleted ? "✓ 교육 수료 완료" : (btnActive ? "학습 완료 및 수료 인정" : "비디오의 80% 이상을 시청해야 완료할 수 있습니다")}
-      </button>
     </div>
   );
 }
@@ -1941,6 +2253,9 @@ function BackOfficeView({
 }) {
   const [backTab, setBackTab] = useState("apply");
   const [courseForm, setCourseForm] = useState({ title: "", description: "", youtubeUrl: "" });
+  const [selectedCourseNameOption, setSelectedCourseNameOption] = useState("");
+  const [customCourseName, setCustomCourseName] = useState("");
+  const [editingCourseId, setEditingCourseId] = useState(null);
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReasonText, setRejectReasonText] = useState("");
 
@@ -2269,13 +2584,73 @@ function BackOfficeView({
     alert("삭제되었습니다.");
   };
 
-  const handleCreateCourse = async () => {
+  const uniqueCourseNames = Array.from(new Set(courses.map(c => c.courseName).filter(Boolean)));
+
+  const handleEditCourse = (c) => {
+    setEditingCourseId(c.id);
+    const hasPreset = ["Cloud Infrastructure", "Artificial Intelligence"].includes(c.courseName) || uniqueCourseNames.includes(c.courseName);
+    if (hasPreset && c.courseName) {
+      setSelectedCourseNameOption(c.courseName);
+      setCustomCourseName("");
+    } else {
+      setSelectedCourseNameOption("custom");
+      setCustomCourseName(c.courseName || "");
+    }
+    setCourseForm({
+      title: c.title || "",
+      youtubeUrl: c.youtubeUrl || "",
+      description: c.description || ""
+    });
+  };
+
+  const handleDeleteCourse = async (courseId) => {
+    if (!window.confirm("이 강의 영상을 정말 삭제하시겠습니까?")) return;
+    const updated = courses.filter(c => c.id !== courseId);
+    await saveCourses(updated);
+    alert("삭제되었습니다.");
+  };
+
+  const handleSaveCourse = async () => {
+    const finalCourseName = selectedCourseNameOption === "custom" ? customCourseName.trim() : selectedCourseNameOption;
     const { title, description, youtubeUrl } = courseForm;
-    if (!title.trim() || !description.trim() || !youtubeUrl.trim()) return;
-    const newCourse = { id: uid(), title: title.trim(), description: description.trim(), youtubeUrl: youtubeUrl.trim(), createdAt: new Date().toISOString() };
-    await saveCourses([newCourse, ...courses]);
-    alert("강좌 개설되었습니다.");
+    if (!finalCourseName) {
+      alert("교육 과정명을 선택하거나 입력해주세요.");
+      return;
+    }
+    if (!title.trim() || !description.trim() || !youtubeUrl.trim()) {
+      alert("모든 필수 입력 항목을 채워주세요.");
+      return;
+    }
+    
+    if (editingCourseId) {
+      const updated = courses.map(c => c.id === editingCourseId ? {
+        ...c,
+        courseName: finalCourseName,
+        title: title.trim(),
+        description: description.trim(),
+        youtubeUrl: youtubeUrl.trim(),
+        updatedAt: new Date().toISOString()
+      } : c);
+      await saveCourses(updated);
+      alert("강의 영상이 수정되었습니다.");
+      setEditingCourseId(null);
+    } else {
+      const newCourse = {
+        id: uid(),
+        courseName: finalCourseName,
+        title: title.trim(),
+        description: description.trim(),
+        youtubeUrl: youtubeUrl.trim(),
+        createdAt: new Date().toISOString()
+      };
+      await saveCourses([newCourse, ...courses]);
+      alert("강의 영상이 등록되었습니다.");
+    }
+    
+    // Reset Form
     setCourseForm({ title: "", description: "", youtubeUrl: "" });
+    setSelectedCourseNameOption("");
+    setCustomCourseName("");
   };
 
   // 일정 등록 및 삭제 핸들러
@@ -2366,7 +2741,7 @@ function BackOfficeView({
       <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
         <button onClick={() => setBackTab("apply")} style={{ padding: "8px 16px", border: "none", background: backTab === "apply" ? "var(--primary)" : "none", color: backTab === "apply" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>수강 신청 승인</button>
         <button onClick={() => setBackTab("register")} style={{ padding: "8px 16px", border: "none", background: backTab === "register" ? "var(--primary)" : "none", color: backTab === "register" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입 승인</button>
-        <button onClick={() => setBackTab("create")} style={{ padding: "8px 16px", border: "none", background: backTab === "create" ? "var(--primary)" : "none", color: backTab === "create" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>교육 개설</button>
+        <button onClick={() => setBackTab("create")} style={{ padding: "8px 16px", border: "none", background: backTab === "create" ? "var(--primary)" : "none", color: backTab === "create" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>LMS 강의 동영상 관리</button>
         <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 관리</button>
         <button onClick={() => setBackTab("notice")} style={{ padding: "8px 16px", border: "none", background: backTab === "notice" ? "var(--primary)" : "none", color: backTab === "notice" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>공지사항 관리</button>
         <button onClick={() => setBackTab("faq")} style={{ padding: "8px 16px", border: "none", background: backTab === "faq" ? "var(--primary)" : "none", color: backTab === "faq" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>FAQ 관리</button>
@@ -2433,35 +2808,170 @@ function BackOfficeView({
       )}
 
       {backTab === "create" && (
-        <div style={{ maxWidth: "480px", display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>제목</label>
-            <input type="text" value={courseForm.title} onChange={e => setCourseForm({ ...courseForm, title: e.target.value })} style={inpStyle()} />
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* Left Form */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>
+              📺 {editingCourseId ? "강의 영상 수정" : "신규 강의 영상 등록"}
+            </h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>교육 과정명 *</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <select 
+                    value={selectedCourseNameOption} 
+                    onChange={e => setSelectedCourseNameOption(e.target.value)} 
+                    style={inpStyle()}
+                  >
+                    <option value="">-- 교육 과정 선택 --</option>
+                    {["Cloud Infrastructure", "Artificial Intelligence"].map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                    {uniqueCourseNames.filter(name => !["Cloud Infrastructure", "Artificial Intelligence"].includes(name)).map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                    <option value="custom">+ 직접 입력 (Create New)</option>
+                  </select>
+                  {selectedCourseNameOption === "custom" && (
+                    <input 
+                      type="text" 
+                      placeholder="교육 과정명을 직접 입력하세요" 
+                      value={customCourseName} 
+                      onChange={e => setCustomCourseName(e.target.value)} 
+                      style={inpStyle()} 
+                    />
+                  )}
+                </div>
+              </div>
+              
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>강의 제목 *</label>
+                <input 
+                  type="text" 
+                  value={courseForm.title} 
+                  onChange={e => setCourseForm({ ...courseForm, title: e.target.value })} 
+                  style={inpStyle()} 
+                  placeholder="예: AWS VPC 네트워킹 기본 개념 및 실습"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>유튜브 링크 *</label>
+                <input 
+                  type="text" 
+                  value={courseForm.youtubeUrl} 
+                  onChange={e => setCourseForm({ ...courseForm, youtubeUrl: e.target.value })} 
+                  style={inpStyle()} 
+                  placeholder="예: https://www.youtube.com/watch?v=g38U-Xp_kHY"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>강의 설명 *</label>
+                <textarea 
+                  value={courseForm.description} 
+                  onChange={e => setCourseForm({ ...courseForm, description: e.target.value })} 
+                  style={{ ...inpStyle(), minHeight: "100px", resize: "vertical" }} 
+                  placeholder="강의 세부 설명 또는 핵심 학습 내용에 대해 작성해 주세요."
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                <button onClick={handleSaveCourse} 
+                  style={{ 
+                    flex: 1,
+                    padding: "12px", 
+                    background: "var(--primary)", 
+                    color: "var(--on-primary)", 
+                    border: "none", 
+                    borderRadius: "var(--rounded-md)", 
+                    cursor: "pointer", 
+                    fontWeight: 600,
+                    fontSize: "14px"
+                  }}
+                >
+                  {editingCourseId ? "수정하기" : "등록하기"}
+                </button>
+                {editingCourseId && (
+                  <button onClick={() => {
+                    setEditingCourseId(null);
+                    setCourseForm({ title: "", description: "", youtubeUrl: "" });
+                    setSelectedCourseNameOption("");
+                    setCustomCourseName("");
+                  }} 
+                    style={{ 
+                      padding: "12px 18px", 
+                      background: "var(--canvas)", 
+                      color: "var(--ink)", 
+                      border: "1px solid var(--hairline-strong)", 
+                      borderRadius: "var(--rounded-md)", 
+                      cursor: "pointer", 
+                      fontWeight: 500,
+                      fontSize: "14px"
+                    }}
+                  >
+                    취소
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>설명</label>
-            <textarea value={courseForm.description} onChange={e => setCourseForm({ ...courseForm, description: e.target.value })} style={{ ...inpStyle(), minHeight: "80px" }} />
+
+          {/* Right List Table */}
+          <div style={{ flex: 1.5, minWidth: "500px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>
+              📋 등록된 강의 영상 목록 ({courses.length}개)
+            </h4>
+            <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: "var(--surface-card)", borderBottom: "1.5px solid var(--hairline-strong)", textAlign: "left" }}>
+                    <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600, width: "50px" }}>No</th>
+                    <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600, width: "120px" }}>교육 과정명</th>
+                    <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600 }}>강의 제목</th>
+                    <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600, width: "100px" }}>유튜브 링크</th>
+                    <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600, width: "100px" }}>등록일</th>
+                    <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600, width: "100px", textAlign: "center" }}>관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {courses.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{ padding: "32px", textAlign: "center", color: "var(--body)" }}>
+                        등록된 강의 동영상이 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    courses.map((c, index) => (
+                      <tr key={c.id} style={{ borderBottom: "1px solid var(--hairline)", background: editingCourseId === c.id ? "#f0f7ff" : "transparent" }}>
+                        <td style={{ padding: "12px 16px", color: "var(--body)" }}>{courses.length - index}</td>
+                        <td style={{ padding: "12px 16px", fontWeight: 600, color: "var(--ink)" }}>{c.courseName || "기타 과정"}</td>
+                        <td style={{ padding: "12px 16px", color: "var(--ink)" }}>{c.title}</td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <a href={c.youtubeUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--text-link)", textDecoration: "none" }} title={c.youtubeUrl}>
+                            📺 이동
+                          </a>
+                        </td>
+                        <td style={{ padding: "12px 16px", color: "var(--body)", fontSize: "11px" }}>
+                          {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "-"}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                          <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                            <button onClick={() => handleEditCourse(c)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-sm)", fontSize: "11px", color: "var(--ink)", cursor: "pointer" }}>
+                              수정
+                            </button>
+                            <button onClick={() => handleDeleteCourse(c.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid #fecaca", borderRadius: "var(--rounded-sm)", fontSize: "11px", color: "#ef4444", cursor: "pointer" }}>
+                              삭제
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>유튜브 링크</label>
-            <input type="text" value={courseForm.youtubeUrl} onChange={e => setCourseForm({ ...courseForm, youtubeUrl: e.target.value })} style={inpStyle()} />
-          </div>
-          <button onClick={handleCreateCourse} 
-            style={{ 
-              padding: "12px", 
-              background: "var(--primary)", 
-              color: "var(--on-primary)", 
-              border: "none", 
-              borderRadius: "var(--rounded-md)", 
-              cursor: "pointer", 
-              fontWeight: 500,
-              fontSize: "14px"
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = "var(--primary-active)"}
-            onMouseOut={(e) => e.currentTarget.style.background = "var(--primary)"}
-          >
-            강의 과정 등록
-          </button>
         </div>
       )}
 
