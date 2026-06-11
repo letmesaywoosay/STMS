@@ -521,7 +521,6 @@ export default function LmsManager({ viewPath, onNavigate }) {
         {/* 서브 네비게이션 목록 */}
         <div style={{ display: "flex", gap: "20px" }}>
           {[
-            { id: "intro", label: "AIDA TUNE 소개", path: "/" },
             { id: "course", label: "교육신청", path: "/course" },
             { id: "schedule", label: "연간교육계획", path: "/schedule" },
             { id: "notice", label: "공지사항", path: "/notice" },
