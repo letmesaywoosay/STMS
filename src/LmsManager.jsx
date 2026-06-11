@@ -79,7 +79,7 @@ const inpStyle = (extra = {}) => ({
   ...extra
 });
 
-export default function LmsManager({ viewPath, onNavigate }) {
+export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "approval" }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("intro"); // intro, schedule, classroom, mypage, backoffice
   
@@ -660,6 +660,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
     return (
       <div style={{ padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" }}>
         <BackOfficeView 
+          adminSubTabGroup={adminSubTabGroup}
           currentUser={currentUser}
           historyLogs={historyLogs}
           saveHistoryLogs={saveHistoryLogs}
@@ -2390,6 +2391,7 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse }) {
 }
 
 function BackOfficeView({ 
+  adminSubTabGroup = "approval",
   currentUser,
   historyLogs = [],
   saveHistoryLogs,
@@ -2416,6 +2418,17 @@ function BackOfficeView({
   const [rejectReasonText, setRejectReasonText] = useState("");
   const [applyFilterStatus, setApplyFilterStatus] = useState("pending");
   const [registerFilterTab, setRegisterFilterTab] = useState("pending");
+
+  // adminSubTabGroup 변경 시 backTab 자동 싱크
+  useEffect(() => {
+    if (adminSubTabGroup === "course") {
+      setBackTab("create");
+    } else if (adminSubTabGroup === "approval") {
+      if (backTab === "create") {
+        setBackTab("apply");
+      }
+    }
+  }, [adminSubTabGroup]);
 
   // 신청 교육 CRUD 폼 상태
   const [eduCourseForm, setEduCourseForm] = useState({
@@ -2968,16 +2981,17 @@ function BackOfficeView({
   return (
     <div style={{ background: "var(--canvas)", borderRadius: "var(--rounded-lg)", padding: "32px", border: `1px solid var(--hairline-strong)`, boxShadow: shadow }}>
       {/* 어드민 탭 헤더 */}
-      <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
-        <button onClick={() => setBackTab("apply")} style={{ padding: "8px 16px", border: "none", background: backTab === "apply" ? "var(--primary)" : "none", color: backTab === "apply" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>수강 신청 승인</button>
-        <button onClick={() => setBackTab("register")} style={{ padding: "8px 16px", border: "none", background: backTab === "register" ? "var(--primary)" : "none", color: backTab === "register" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입 승인</button>
-        <button onClick={() => setBackTab("create")} style={{ padding: "8px 16px", border: "none", background: backTab === "create" ? "var(--primary)" : "none", color: backTab === "create" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>LMS 강의 동영상 관리</button>
-        <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 관리</button>
-        <button onClick={() => setBackTab("notice")} style={{ padding: "8px 16px", border: "none", background: backTab === "notice" ? "var(--primary)" : "none", color: backTab === "notice" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>공지사항 관리</button>
-        <button onClick={() => setBackTab("faq")} style={{ padding: "8px 16px", border: "none", background: backTab === "faq" ? "var(--primary)" : "none", color: backTab === "faq" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>FAQ 관리</button>
-        <button onClick={() => setBackTab("educourse")} style={{ padding: "8px 16px", border: "none", background: backTab === "educourse" ? "var(--primary)" : "none", color: backTab === "educourse" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>신청 과정 관리</button>
-        <button onClick={() => setBackTab("decorator")} style={{ padding: "8px 16px", border: "none", background: backTab === "decorator" ? "var(--primary)" : "none", color: backTab === "decorator" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>페이지 꾸미기</button>
-      </div>
+      {adminSubTabGroup === "approval" && (
+        <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
+          <button onClick={() => setBackTab("apply")} style={{ padding: "8px 16px", border: "none", background: backTab === "apply" ? "var(--primary)" : "none", color: backTab === "apply" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>수강 신청 승인</button>
+          <button onClick={() => setBackTab("register")} style={{ padding: "8px 16px", border: "none", background: backTab === "register" ? "var(--primary)" : "none", color: backTab === "register" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입 승인</button>
+          <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 관리</button>
+          <button onClick={() => setBackTab("notice")} style={{ padding: "8px 16px", border: "none", background: backTab === "notice" ? "var(--primary)" : "none", color: backTab === "notice" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>공지사항 관리</button>
+          <button onClick={() => setBackTab("faq")} style={{ padding: "8px 16px", border: "none", background: backTab === "faq" ? "var(--primary)" : "none", color: backTab === "faq" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>FAQ 관리</button>
+          <button onClick={() => setBackTab("educourse")} style={{ padding: "8px 16px", border: "none", background: backTab === "educourse" ? "var(--primary)" : "none", color: backTab === "educourse" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>신청 과정 관리</button>
+          <button onClick={() => setBackTab("decorator")} style={{ padding: "8px 16px", border: "none", background: backTab === "decorator" ? "var(--primary)" : "none", color: backTab === "decorator" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>페이지 꾸미기</button>
+        </div>
+      )}
 
       {backTab === "apply" && (
         <div style={{ display: "flex", gap: "24px", flexDirection: "row", alignItems: "stretch", flexWrap: "wrap", marginBottom: "24px" }}>
