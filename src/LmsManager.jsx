@@ -1468,11 +1468,15 @@ function ClassroomView({
   }, [selectedLecture, lmsNotes, currentUser]);
 
   const getYoutubeId = (url) => {
+    if (!url) return null;
     try {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[2].length === 11) ? match[2] : null;
-    } catch { return null; }
+      const cleanedUrl = url.trim();
+      const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i;
+      const match = cleanedUrl.match(regExp);
+      return match ? match[1] : null;
+    } catch {
+      return null;
+    }
   };
 
   // 3. 진도율 시뮬레이션 관련 헬퍼
@@ -1714,22 +1718,103 @@ function ClassroomView({
                 border: "1px solid var(--hairline-strong)",
                 marginBottom: "20px"
               }}>
-                <iframe
-                  width="100%"
-                  height="100%"
-                  src={`https://www.youtube.com/embed/${currentVideoId}`}
-                  title={selectedLecture.title}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
+                {currentVideoId ? (
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    src={`https://www.youtube.com/embed/${currentVideoId}`}
+                    title={selectedLecture.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                ) : (
+                  <div style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "100%",
+                    color: "#fff",
+                    padding: "24px",
+                    textAlign: "center",
+                    background: "var(--primary-active)",
+                    boxSizing: "border-box"
+                  }}>
+                    <span style={{ fontSize: "36px", marginBottom: "12px" }}>⚠️</span>
+                    <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px", color: "var(--on-primary)" }}>재생할 수 없는 동영상입니다</div>
+                    <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px", maxWidth: "340px", lineHeight: "1.4" }}>
+                      유튜브 주소가 올바르지 않거나 동영상 설정에서 외부 퍼가기(Embedding)가 차단되었을 수 있습니다. 아래 버튼으로 유튜브에서 직접 감상해 주세요.
+                    </div>
+                    <a
+                      href={selectedLecture?.youtubeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: "8px 16px",
+                        background: "var(--surface-card)",
+                        color: "var(--text-link)",
+                        border: "none",
+                        borderRadius: "var(--rounded-md)",
+                        fontSize: "13px",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseOver={e => {
+                        e.currentTarget.style.background = "var(--primary)";
+                        e.currentTarget.style.color = "var(--on-primary)";
+                      }}
+                      onMouseOut={e => {
+                        e.currentTarget.style.background = "var(--surface-card)";
+                        e.currentTarget.style.color = "var(--text-link)";
+                      }}
+                    >
+                      📺 YouTube에서 직접 보기
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* 강좌 제목 및 메타정보 */}
               <div style={{ borderBottom: "1px solid var(--hairline)", paddingBottom: "16px", marginBottom: "20px" }}>
-                <span style={{ fontSize: "12px", background: "var(--primary-active)", color: "var(--on-primary)", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
-                  {selectedLecture.courseName || "일반 과정"}
-                </span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "12px", background: "var(--primary-active)", color: "var(--on-primary)", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
+                    {selectedLecture.courseName || "일반 과정"}
+                  </span>
+                  
+                  {currentVideoId && (
+                    <a
+                      href={selectedLecture.youtubeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "12px",
+                        color: "var(--text-link)",
+                        fontWeight: 600,
+                        textDecoration: "none",
+                        padding: "4px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--hairline-strong)",
+                        background: "var(--canvas-soft)",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseOver={e => {
+                        e.currentTarget.style.background = "var(--primary-active)";
+                        e.currentTarget.style.color = "var(--on-primary)";
+                      }}
+                      onMouseOut={e => {
+                        e.currentTarget.style.background = "var(--canvas-soft)";
+                        e.currentTarget.style.color = "var(--text-link)";
+                      }}
+                    >
+                      📺 YouTube에서 열기 (임베드 재생 오류 발생 시)
+                    </a>
+                  )}
+                </div>
                 <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", margin: "8px 0 6px 0" }}>
                   {selectedLecture.title}
                 </h3>
@@ -2866,6 +2951,9 @@ function BackOfficeView({
                   style={inpStyle()} 
                   placeholder="예: https://www.youtube.com/watch?v=g38U-Xp_kHY"
                 />
+                <span style={{ display: "block", fontSize: "11px", color: "var(--accent-warning)", marginTop: "6px", lineHeight: "1.4" }}>
+                  ⚠️ YouTube 동영상 상세 설정에서 <strong>'퍼가기 허용(Embedding)'</strong>이 활성화되어 있어야 강의실에서 정상 재생됩니다. 저작권 제한 음원이나 비공개 영상은 임베드 플레이어에서 오류가 발생할 수 있습니다.
+                </span>
               </div>
 
               <div>
