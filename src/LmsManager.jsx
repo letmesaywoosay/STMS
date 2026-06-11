@@ -368,6 +368,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
 
   // 라우팅 탭 동기화 및 보안 가드
   useEffect(() => {
+    if (dbLoading) return; // Wait until initial data load & session recovery completes!
+
     if ((viewPath === "/mypage" || viewPath === "/classroom") && !currentUser) {
       setShowGuestAlert(true);
       onNavigate("/");
@@ -396,7 +398,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
     } else {
       setActiveTab("intro");
     }
-  }, [viewPath, currentUser]);
+  }, [viewPath, currentUser, dbLoading]);
 
   const saveUsers = async (newUsers) => {
     setUsers(newUsers);
