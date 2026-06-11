@@ -22,7 +22,7 @@ const fbGet = async (key) => {
 function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [lmsUser, setLmsUser] = useState(null);
-  const [adminSubTab, setAdminSubTab] = useState("test"); // test: OnTest관리, lms: LMS관리
+  const [adminSubTab, setAdminSubTab] = useState("test"); // test: OnTest관리, lms-course: LMS 교육과정, lms-approval: 승인관리
   
   useEffect(() => {
     const handlePopState = () => {
@@ -136,7 +136,7 @@ function App() {
           </div>
 
           {/* 서브 네비게이션 탭 */}
-          <div style={{ display: 'flex', background: 'var(--canvas)', borderBottom: '1px solid var(--hairline)', padding: '0 24px', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', background: 'var(--canvas)', borderBottom: '1px solid var(--hairline)', padding: '0 24px', boxSizing: 'border-box', flexWrap: 'wrap' }}>
             <button
               onClick={() => setAdminSubTab("test")}
               style={{
@@ -154,29 +154,49 @@ function App() {
               📊 OnTest 솔루션 테스트 관리
             </button>
             <button
-              onClick={() => setAdminSubTab("lms")}
+              onClick={() => setAdminSubTab("lms-course")}
               style={{
                 padding: '16px 20px',
                 border: 'none',
                 background: 'none',
-                borderBottom: adminSubTab === 'lms' ? '2px solid var(--primary)' : 'none',
-                color: adminSubTab === 'lms' ? 'var(--ink)' : 'var(--body)',
+                borderBottom: adminSubTab === 'lms-course' ? '2px solid var(--primary)' : 'none',
+                color: adminSubTab === 'lms-course' ? 'var(--ink)' : 'var(--body)',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s'
               }}
             >
-              🎓 LMS 교육 과정 & 승인 관리
+              📖 LMS 교육과정
+            </button>
+            <button
+              onClick={() => setAdminSubTab("lms-approval")}
+              style={{
+                padding: '16px 20px',
+                border: 'none',
+                background: 'none',
+                borderBottom: adminSubTab === 'lms-approval' ? '2px solid var(--primary)' : 'none',
+                color: adminSubTab === 'lms-approval' ? 'var(--ink)' : 'var(--body)',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+            >
+              🛡️ 승인관리
             </button>
           </div>
 
           {/* 본문 뷰 출력 */}
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            {adminSubTab === 'test' ? (
+            {adminSubTab === 'test' && (
               <MyComponent viewPath="/admin" />
-            ) : (
-              <LmsManager viewPath="/admin" onNavigate={navigate} />
+            )}
+            {adminSubTab === 'lms-course' && (
+              <LmsManager viewPath="/admin" onNavigate={navigate} adminSubTabGroup="course" />
+            )}
+            {adminSubTab === 'lms-approval' && (
+              <LmsManager viewPath="/admin" onNavigate={navigate} adminSubTabGroup="approval" />
             )}
           </div>
         </div>
