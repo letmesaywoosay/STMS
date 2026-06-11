@@ -930,17 +930,25 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
   return (
     <div>
-      {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 내장) ── */}
+      {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 제거, 1076X350 제한) ── */}
       <div style={{
         background: getBgFromPreset(pageConfig?.heroBgPreset),
-        padding: "96px 24px",
+        width: "100%",
+        maxWidth: "1076px",
+        height: "350px",
+        margin: "0 auto",
         boxSizing: "border-box",
+        padding: "36px 24px",
         textAlign: "center",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        justifyContent: "center",
         position: "relative",
-        overflow: "hidden"
+        overflow: "hidden",
+        borderRadius: "var(--rounded-lg)",
+        border: "1px solid var(--hairline-strong)",
+        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.02)"
       }}>
         <div style={{ maxWidth: "800px", margin: "0 auto", zIndex: 5 }}>
           <div style={{ 
@@ -948,31 +956,31 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
             border: "1px solid var(--hairline-strong)", 
             borderRadius: "var(--rounded-pill)", 
             display: "inline-block", 
-            padding: "6px 12px", 
+            padding: "4px 10px", 
             fontSize: "11px", 
             color: "var(--ink)", 
             fontWeight: 600, 
             textTransform: "uppercase",
             letterSpacing: "0.88px",
-            marginBottom: "24px" 
+            marginBottom: "12px" 
           }}>
             {pageConfig?.heroBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
           </div>
           <h1 style={{ 
-            fontSize: "64px", 
-            fontWeight: 600, 
+            fontSize: "36px", 
+            fontWeight: 700, 
             color: "var(--ink)", 
-            lineHeight: "1.05", 
-            margin: "0 0 24px 0", 
-            letterSpacing: "-1.92px" 
+            lineHeight: "1.2", 
+            margin: "0 0 12px 0", 
+            letterSpacing: "-1px" 
           }}>
             {pageConfig?.heroTitle || "AIDA TUNE"}
           </h1>
           <p style={{ 
-            fontSize: "16px", 
+            fontSize: "14px", 
             color: "var(--body)", 
-            lineHeight: "1.5", 
-            margin: "0 0 32px 0", 
+            lineHeight: "1.4", 
+            margin: "0 0 16px 0", 
             maxWidth: "600px",
             marginLeft: "auto",
             marginRight: "auto",
@@ -982,13 +990,13 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
           </p>
           <button onClick={() => checkAccess("classroom")}
             style={{
-              height: "40px",
-              padding: "0 24px",
+              height: "36px",
+              padding: "0 20px",
               background: "var(--primary)",
               color: "var(--on-primary)",
               border: "none",
               borderRadius: "var(--rounded-md)",
-              fontSize: "14px",
+              fontSize: "13px",
               fontWeight: 500,
               cursor: "pointer",
               transition: "background 0.15s"
@@ -998,113 +1006,8 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
             교육 신청하기 ➔
           </button>
         </div>
-
-        {/* ── Expo signature: MacBook + iPhone composite device mockup ── */}
-        <div style={{ marginTop: "64px", position: "relative", width: "100%", maxWidth: "760px", height: "420px", display: "flex", justifyContent: "center", zIndex: 10 }}>
-          {/* MacBook Mockup */}
-          <div style={{
-            width: "640px",
-            height: "380px",
-            background: "var(--surface-card)",
-            borderRadius: "var(--rounded-xl)",
-            border: "1px solid var(--hairline-strong)",
-            boxShadow: "0 20px 40px rgba(0, 0, 0, 0.06)",
-            padding: "8px",
-            boxSizing: "border-box",
-            display: "flex",
-            flexDirection: "column",
-            position: "relative"
-          }}>
-            {/* macOS Browser Header */}
-            <div style={{ height: "24px", display: "flex", alignItems: "center", gap: "6px", borderBottom: "1px solid var(--hairline)", padding: "0 8px" }}>
-              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ff5f56" }} />
-              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#ffbd2e" }} />
-              <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#27c93f" }} />
-              <div style={{ flexGrow: 1, textAlign: "center", fontSize: "10px", color: "var(--muted)", fontFamily: "var(--sans)" }}>aida-tune.okestro.academy</div>
-            </div>
-            
-            {/* Mock EAS / LMS Dashboard Content */}
-            <div style={{ flexGrow: 1, background: "var(--canvas-soft)", display: "flex", overflow: "hidden" }}>
-              {/* Sidebar mockup */}
-              <div style={{ width: "80px", borderRight: "1px solid var(--hairline)", background: "var(--canvas)", padding: "12px 6px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div style={{ height: "12px", background: "var(--hairline-strong)", borderRadius: "3px" }} />
-                <div style={{ height: "12px", background: "var(--hairline)", borderRadius: "3px" }} />
-                <div style={{ height: "12px", background: "var(--hairline)", borderRadius: "3px" }} />
-                <div style={{ height: "12px", background: "var(--hairline)", borderRadius: "3px" }} />
-              </div>
-              {/* Main content mockup */}
-              <div style={{ flexGrow: 1, padding: "16px", boxSizing: "border-box", textAlign: "left", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--ink)" }}>🎻 AIDA TUNE Dashboard</div>
-                <div style={{ height: "4px", width: "40px", background: "var(--primary)" }} />
-                <div style={{ gridTemplateColumns: "1fr 1fr", display: "grid", gap: "8px" }}>
-                  <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline)", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <span style={{ fontSize: "9px", color: "var(--muted)" }}>수강 완료 강좌</span>
-                    <span style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>3 / 5</span>
-                  </div>
-                  <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline)", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                    <span style={{ fontSize: "9px", color: "var(--muted)" }}>테스트 평점</span>
-                    <span style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>92점</span>
-                  </div>
-                </div>
-                {/* Graph chart mockup */}
-                <div style={{ flexGrow: 1, background: "var(--canvas)", border: "1px solid var(--hairline)", borderRadius: "6px", padding: "8px", display: "flex", flexDirection: "column", justifyStyle: "space-between" }}>
-                  <span style={{ fontSize: "9px", color: "var(--muted)", marginBottom: "8px" }}>학습 누적 시청 기록</span>
-                  <div style={{ display: "flex", alignItems: "flex-end", gap: "10px", flexGrow: 1, height: "80px", paddingBottom: "4px" }}>
-                    <div style={{ flexGrow: 1, height: "40px", background: "var(--hairline-strong)", borderRadius: "3px" }} />
-                    <div style={{ flexGrow: 1, height: "70px", background: "var(--primary)", borderRadius: "3px" }} />
-                    <div style={{ flexGrow: 1, height: "30px", background: "var(--hairline-strong)", borderRadius: "3px" }} />
-                    <div style={{ flexGrow: 1, height: "90px", background: "var(--primary)", borderRadius: "3px" }} />
-                    <div style={{ flexGrow: 1, height: "55px", background: "var(--hairline-strong)", borderRadius: "3px" }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* iPhone Mockup Overlay */}
-          <div style={{
-            position: "absolute",
-            right: "40px",
-            bottom: "10px",
-            width: "180px",
-            height: "330px",
-            background: "var(--surface-card)",
-            borderRadius: "24px",
-            border: "4px solid var(--ink)",
-            boxShadow: "0 20px 40px rgba(0, 0, 0, 0.15)",
-            padding: "6px",
-            boxSizing: "border-box",
-            display: "flex",
-            flexDirection: "column",
-            zIndex: 15
-          }}>
-            {/* iOS Status Bar */}
-            <div style={{ height: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 6px", fontSize: "8px", color: "var(--ink)", fontWeight: 600 }}>
-              <span>9:41</span>
-              {/* Notch */}
-              <div style={{ width: "50px", height: "10px", background: "var(--ink)", borderRadius: "0 0 6px 6px", position: "absolute", left: "65px", top: "4px" }} />
-              <span>5G</span>
-            </div>
-            
-            {/* iPhone Mobile Content */}
-            <div style={{ flexGrow: 1, background: "var(--canvas-soft)", borderRadius: "16px", padding: "10px", display: "flex", flexDirection: "column", gap: "8px", overflow: "hidden", textAlign: "left" }}>
-              <div style={{ fontSize: "10px", fontWeight: 600, color: "var(--ink)" }}>🎨 Mobile Learning</div>
-              {/* Mobile video player screen */}
-              <div style={{ height: "80px", background: "#000", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "16px" }}>▶</div>
-              <div style={{ fontSize: "8px", color: "var(--body)" }}>1차시: 클라우드 가상화 아키텍처 개론</div>
-              {/* Mobile Chatbot mockup */}
-              <div style={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: "4px", justifyContent: "flex-end" }}>
-                <div style={{ alignSelf: "flex-end", background: "var(--primary)", color: "#fff", padding: "4px 8px", borderRadius: "8px 8px 0 8px", fontSize: "7px", maxWidth: "80%" }}>
-                  QCOW2 가 무엇인가요?
-                </div>
-                <div style={{ alignSelf: "flex-start", background: "var(--surface-card)", border: "1px solid var(--hairline)", color: "var(--ink)", padding: "4px 8px", borderRadius: "8px 8px 8px 0", fontSize: "7px", maxWidth: "85%" }}>
-                  QCOW2는 QEMU Copy On Write 2의 약칭으로, 콘트라베이스 하이퍼바이저에서 사용하는 디스크 포맷입니다.
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
+
 
       {/* ── 인기 과정 & 이달의 교육 과정 (96px 리듬 패딩) ── */}
       <div style={{ padding: "96px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
