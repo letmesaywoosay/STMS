@@ -90,6 +90,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
   const [viewLogs, setViewLogs] = useState([]);
   const [deptData, setDeptData] = useState([]);
   const [jobTypes, setJobTypes] = useState([]);
+  const [historyLogs, setHistoryLogs] = useState([]);
   const [dbLoading, setDbLoading] = useState(true);
 
   // 교육신청 추가 데이터
@@ -144,7 +145,7 @@ export default function LmsManager({ viewPath, onNavigate }) {
   useEffect(() => {
     const fetchDb = async () => {
       try {
-        const [u, c, a, v, d, j, p, s, n, f, ec, er, eib, eer, eco, prog, qa, notes] = await Promise.all([
+        const [u, c, a, v, d, j, p, s, n, f, ec, er, eib, eer, eco, prog, qa, notes, hLogs] = await Promise.all([
           fbGet("aida:lms_users_v2").catch(() => []),
           fbGet("aida:lms_courses_v2").catch(() => []),
           fbGet("aida:lms_applications_v2").catch(() => []),
@@ -162,7 +163,8 @@ export default function LmsManager({ viewPath, onNavigate }) {
           fbGet("aida:edu_config_v1").catch(() => null),
           fbGet("aida:lms_progress_v2").catch(() => []),
           fbGet("aida:lms_qa_v2").catch(() => []),
-          fbGet("aida:lms_notes_v2").catch(() => [])
+          fbGet("aida:lms_notes_v2").catch(() => []),
+          fbGet("aida:lms_history_logs_v1").catch(() => [])
         ]);
         
         setUsers(u || []);
@@ -170,6 +172,51 @@ export default function LmsManager({ viewPath, onNavigate }) {
         setViewLogs(v || []);
         setDeptData(d || []);
         setJobTypes(j || []);
+
+        // 시딩 처리 로그 가상 데이터
+        const defaultMockHistoryLogs = [
+          {
+            id: "hlog-1",
+            type: "course_approved",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+            adminEmail: "academy@okestro.com",
+            details: {
+              email: "woosay@naver.com",
+              courseTitle: "AWS VPC 네트워킹 기본 개념 및 실습",
+              status: "approved"
+            }
+          },
+          {
+            id: "hlog-2",
+            type: "signup_approved",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+            adminEmail: "academy@okestro.com",
+            details: {
+              name: "최우성",
+              email: "ws.choi@okestro.com",
+              company: "오케스트로",
+              division: "아카데미팀"
+            }
+          },
+          {
+            id: "hlog-3",
+            type: "course_rejected",
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+            adminEmail: "academy@okestro.com",
+            details: {
+              email: "guest.user@gmail.com",
+              courseTitle: "LangChain을 활용한 LLM 에이전트 개발 기초",
+              status: "rejected",
+              rejectReason: "소속 정보 불일치 및 재직증명 확인 필요"
+            }
+          }
+        ];
+        let finalHistoryLogs = hLogs || [];
+        if (!hLogs || hLogs.length === 0) {
+          finalHistoryLogs = defaultMockHistoryLogs;
+          await fbSet("aida:lms_history_logs_v1", defaultMockHistoryLogs);
+        }
+        setHistoryLogs(finalHistoryLogs);
 
         // LMS 동영상 강의 시드 데이터 및 로드
         const defaultMockLmsCourses = [
@@ -428,6 +475,10 @@ export default function LmsManager({ viewPath, onNavigate }) {
     setViewLogs(newLogs);
     await fbSet("aida:lms_view_logs_v2", newLogs);
   };
+  const saveHistoryLogs = async (newLogs) => {
+    setHistoryLogs(newLogs);
+    await fbSet("aida:lms_history_logs_v1", newLogs);
+  };
   const saveLmsProgress = async (newProgress) => {
     setLmsProgress(newProgress);
     await fbSet("aida:lms_progress_v2", newProgress);
@@ -609,6 +660,9 @@ export default function LmsManager({ viewPath, onNavigate }) {
     return (
       <div style={{ padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" }}>
         <BackOfficeView 
+          currentUser={currentUser}
+          historyLogs={historyLogs}
+          saveHistoryLogs={saveHistoryLogs}
           users={users} 
           saveUsers={saveUsers} 
           courses={courses} 
@@ -2336,6 +2390,9 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse }) {
 }
 
 function BackOfficeView({ 
+  currentUser,
+  historyLogs = [],
+  saveHistoryLogs,
   users, saveUsers, 
   courses, saveCourses, 
   applications, saveApplications, 
@@ -2357,6 +2414,8 @@ function BackOfficeView({
   const [editingCourseId, setEditingCourseId] = useState(null);
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReasonText, setRejectReasonText] = useState("");
+  const [applyFilterStatus, setApplyFilterStatus] = useState("pending");
+  const [registerFilterTab, setRegisterFilterTab] = useState("pending");
 
   // 신청 교육 CRUD 폼 상태
   const [eduCourseForm, setEduCourseForm] = useState({
@@ -2656,30 +2715,102 @@ function BackOfficeView({
   }, [pageConfig]);
 
   const handleApprove = async (appId) => {
+    const app = applications.find(a => a.id === appId);
+    if (!app) return;
+    const courseTitle = courses.find(c => c.id === app.courseId)?.title || "알 수 없는 과정";
     const updated = applications.map(a => a.id === appId ? { ...a, status: "approved", approvedAt: new Date().toISOString() } : a);
     await saveApplications(updated);
+    
+    // Add to history log
+    const newLog = {
+      id: uid(),
+      type: "course_approved",
+      timestamp: new Date().toISOString(),
+      adminEmail: currentUser?.email || "admin@okestro.com",
+      details: {
+        email: app.email,
+        courseTitle: courseTitle,
+        status: "approved"
+      }
+    };
+    await saveHistoryLogs([newLog, ...historyLogs]);
+    
     alert("수강 신청을 승인했습니다.");
   };
 
   const handleRejectSubmit = async () => {
     if (!rejectReasonText.trim()) return;
-    const updated = applications.map(a => a.id === rejectModal.id ? { ...a, status: "rejected", rejectReason: rejectReasonText.trim() } : a);
+    const app = rejectModal;
+    const courseTitle = courses.find(c => c.id === app.id || c.id === app.courseId)?.title || "알 수 없는 과정";
+    const updated = applications.map(a => a.id === app.id ? { ...a, status: "rejected", rejectReason: rejectReasonText.trim() } : a);
     await saveApplications(updated);
+    
+    // Add to history log
+    const newLog = {
+      id: uid(),
+      type: "course_rejected",
+      timestamp: new Date().toISOString(),
+      adminEmail: currentUser?.email || "admin@okestro.com",
+      details: {
+        email: app.email,
+        courseTitle: courseTitle,
+        status: "rejected",
+        rejectReason: rejectReasonText.trim()
+      }
+    };
+    await saveHistoryLogs([newLog, ...historyLogs]);
+    
     alert("반려 처리되었습니다.");
     setRejectModal(null);
     setRejectReasonText("");
   };
 
   const handleRegisterApprove = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
     const updated = users.map(u => u.id === userId ? { ...u, approved: true } : u);
     await saveUsers(updated);
+    
+    // Add to history log
+    const newLog = {
+      id: uid(),
+      type: "signup_approved",
+      timestamp: new Date().toISOString(),
+      adminEmail: currentUser?.email || "admin@okestro.com",
+      details: {
+        name: user.name,
+        email: user.email,
+        company: user.company,
+        division: user.division
+      }
+    };
+    await saveHistoryLogs([newLog, ...historyLogs]);
+    
     alert("가입 승인했습니다.");
   };
 
   const handleRegisterDelete = async (userId) => {
-    if (!window.confirm("삭제하시겠습니까?")) return;
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    if (!window.confirm(`${user.name}님의 가입 신청을 정말 반려/삭제하시겠습니까?`)) return;
     const updated = users.filter(u => u.id !== userId);
     await saveUsers(updated);
+    
+    // Add to history log
+    const newLog = {
+      id: uid(),
+      type: "signup_deleted",
+      timestamp: new Date().toISOString(),
+      adminEmail: currentUser?.email || "admin@okestro.com",
+      details: {
+        name: user.name,
+        email: user.email,
+        company: user.company,
+        division: user.division
+      }
+    };
+    await saveHistoryLogs([newLog, ...historyLogs]);
+    
     alert("삭제되었습니다.");
   };
 
@@ -2849,61 +2980,435 @@ function BackOfficeView({
       </div>
 
       {backTab === "apply" && (
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-          <thead>
-            <tr style={{ background: "var(--canvas-soft)", borderBottom: "2px solid var(--hairline-strong)", textAlign: "left" }}>
-              <th style={{ padding: "12px", color: "var(--ink)", fontWeight: 600 }}>이메일</th>
-              <th style={{ padding: "12px", color: "var(--ink)", fontWeight: 600 }}>과정명</th>
-              <th style={{ padding: "12px", color: "var(--ink)", fontWeight: 600 }}>진행</th>
-              <th style={{ padding: "12px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
-            </tr>
-          </thead>
-          <tbody>
-            {applications.map(app => (
-              <tr key={app.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                <td style={{ padding: "12px" }}>{app.email}</td>
-                <td style={{ padding: "12px" }}>{courses.find(c => c.id === app.courseId)?.title}</td>
-                <td style={{ padding: "12px" }}>{app.status}</td>
-                <td style={{ padding: "12px", textAlign: "center" }}>
-                  {app.status === "pending" && (
-                    <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                      <button onClick={() => handleApprove(app.id)} style={{ padding: "6px 12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", cursor: "pointer" }}>승인</button>
-                      <button onClick={() => setRejectModal(app)} style={{ padding: "6px 12px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "12px", cursor: "pointer" }}>반려</button>
+        <div style={{ display: "flex", gap: "24px", flexDirection: "row", alignItems: "stretch", flexWrap: "wrap", marginBottom: "24px" }}>
+          {/* Left Panel: 수강 신청 목록 */}
+          <div style={{ flex: "1 1 58%", minWidth: "320px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "20px", boxShadow: shadow }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+                <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                  📋 수강 신청 및 대기 내역
+                </h4>
+                
+                {/* Status Filter Tabs */}
+                <div style={{ display: "flex", background: "var(--canvas-soft)", padding: "2px", borderRadius: "var(--rounded-md)", border: "1px solid var(--hairline)" }}>
+                  {[
+                    { val: "all", label: "전체" },
+                    { val: "pending", label: "대기중" },
+                    { val: "approved", label: "승인완료" },
+                    { val: "rejected", label: "반려됨" }
+                  ].map(tab => (
+                    <button
+                      key={tab.val}
+                      onClick={() => setApplyFilterStatus(tab.val)}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        border: "none",
+                        borderRadius: "var(--rounded-sm)",
+                        background: applyFilterStatus === tab.val ? "var(--canvas)" : "transparent",
+                        color: applyFilterStatus === tab.val ? "var(--ink)" : "var(--body)",
+                        boxShadow: applyFilterStatus === tab.val ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s"
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                  <thead>
+                    <tr style={{ background: "var(--canvas-soft)", borderBottom: "1.5px solid var(--hairline-strong)", textAlign: "left" }}>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이메일</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>과정명</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>상태</th>
+                      <th style={{ padding: "10px 12px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const filteredApps = applications.filter(app => {
+                        if (applyFilterStatus === "all") return true;
+                        return app.status === applyFilterStatus;
+                      });
+
+                      if (filteredApps.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={4} style={{ padding: "32px", textAlign: "center", color: "var(--muted)" }}>
+                              해당 내역이 없습니다.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filteredApps.map(app => (
+                        <tr key={app.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                          <td style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 500 }}>{app.email}</td>
+                          <td style={{ padding: "10px 12px", color: "var(--body)" }}>
+                            {courses.find(c => c.id === app.courseId)?.title || "삭제된 과정"}
+                          </td>
+                          <td style={{ padding: "10px 12px" }}>
+                            {app.status === "pending" && (
+                              <span style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(245, 158, 11, 0.1)", color: "var(--accent-warning)", borderRadius: "var(--rounded-pill)" }}>
+                                대기중
+                              </span>
+                            )}
+                            {app.status === "approved" && (
+                              <span style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(22, 163, 74, 0.1)", color: "var(--semantic-success)", borderRadius: "var(--rounded-pill)" }}>
+                                승인완료
+                              </span>
+                            )}
+                            {app.status === "rejected" && (
+                              <span 
+                                title={`반려 사유: ${app.rejectReason || "없음"}`}
+                                style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(239, 68, 68, 0.1)", color: "var(--red)", borderRadius: "var(--rounded-pill)", cursor: "help" }}
+                              >
+                                반려됨
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                            {app.status === "pending" ? (
+                              <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                <button 
+                                  onClick={() => handleApprove(app.id)} 
+                                  style={{ padding: "5px 10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "opacity 0.15s" }}
+                                  onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+                                  onMouseOut={e => e.currentTarget.style.opacity = 1}
+                                >
+                                  승인
+                                </button>
+                                <button 
+                                  onClick={() => setRejectModal(app)} 
+                                  style={{ padding: "5px 10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "background 0.15s" }}
+                                  onMouseOver={e => e.currentTarget.style.background = "var(--canvas-soft)"}
+                                  onMouseOut={e => e.currentTarget.style.background = "var(--canvas)"}
+                                >
+                                  반려
+                                </button>
+                              </div>
+                            ) : (
+                              <span style={{ color: "var(--muted)", fontSize: "12px" }}>-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: 처리 로그 */}
+          <div style={{ flex: "1 1 38%", minWidth: "300px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "20px", boxShadow: shadow, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                  📜 수강 승인 처리 로그
+                </h4>
+                <button
+                  onClick={async () => {
+                    if (window.confirm("수강 신청 로그를 모두 비우시겠습니까?")) {
+                      const signupLogs = historyLogs.filter(l => l.type === "signup_approved" || l.type === "signup_deleted");
+                      await saveHistoryLogs(signupLogs);
+                    }
+                  }}
+                  style={{ background: "none", border: "none", color: "var(--body)", fontSize: "11px", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  로그 지우기
+                </button>
+              </div>
+
+              {/* Timeline list */}
+              <div style={{ maxHeight: "450px", overflowY: "auto", paddingRight: "4px" }}>
+                {(() => {
+                  const courseLogs = historyLogs.filter(l => l.type === "course_approved" || l.type === "course_rejected");
+                  if (courseLogs.length === 0) {
+                    return (
+                      <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted)", fontSize: "13px" }}>
+                        기록된 이력이 없습니다.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", position: "relative", borderLeft: "1.5px dashed var(--hairline-strong)", paddingLeft: "16px", marginLeft: "8px" }}>
+                      {courseLogs.map(log => {
+                        const isApprove = log.type === "course_approved";
+                        return (
+                          <div key={log.id} style={{ position: "relative", fontSize: "12px" }}>
+                            {/* timeline marker */}
+                            <div style={{
+                              position: "absolute",
+                              left: "-23px",
+                              top: "4px",
+                              width: "12px",
+                              height: "12px",
+                              borderRadius: "50%",
+                              background: isApprove ? "var(--semantic-success)" : "var(--red)",
+                              border: "3px solid var(--canvas)"
+                            }} />
+
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                              <span style={{ fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "6px" }}>
+                                {isApprove ? "✓ 수강 승인 완료" : "✗ 수강 반려 완료"}
+                                <span style={{ fontSize: "10px", padding: "1px 4px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "3px", fontWeight: "normal", color: "var(--body)" }}>
+                                  {log.adminEmail?.split("@")[0] || "admin"}
+                                </span>
+                              </span>
+                              <span style={{ fontSize: "10px", color: "var(--muted)" }}>
+                                {new Date(log.timestamp).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+
+                            <div style={{ background: "var(--canvas-soft)", borderRadius: "var(--rounded-md)", padding: "8px 12px", border: "1px solid var(--hairline)" }}>
+                              <div style={{ color: "var(--ink)", fontWeight: 500, marginBottom: "2px" }}>
+                                {log.details.email}
+                              </div>
+                              <div style={{ color: "var(--body)", fontSize: "11px" }}>
+                                {log.details.courseTitle}
+                              </div>
+                              {!isApprove && log.details.rejectReason && (
+                                <div style={{ color: "var(--red)", fontSize: "11px", marginTop: "4px", borderTop: "1px dashed var(--hairline-strong)", paddingTop: "4px" }}>
+                                  반려 사유: {log.details.rejectReason}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {backTab === "register" && (
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
-          <thead>
-            <tr style={{ background: "var(--canvas-soft)", borderBottom: "2px solid var(--hairline-strong)", textAlign: "left" }}>
-              <th style={{ padding: "12px", color: "var(--ink)", fontWeight: 600 }}>이름</th>
-              <th style={{ padding: "12px", color: "var(--ink)", fontWeight: 600 }}>이메일</th>
-              <th style={{ padding: "12px", color: "var(--ink)", fontWeight: 600 }}>소속</th>
-              <th style={{ padding: "12px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.filter(u => !u.approved).map(u => (
-              <tr key={u.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                <td style={{ padding: "12px" }}>{u.name}</td>
-                <td style={{ padding: "12px" }}>{u.email}</td>
-                <td style={{ padding: "12px" }}>{u.company} / {u.division}</td>
-                <td style={{ padding: "12px", textAlign: "center" }}>
-                  <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                    <button onClick={() => handleRegisterApprove(u.id)} style={{ padding: "6px 12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", cursor: "pointer" }}>승인</button>
-                    <button onClick={() => handleRegisterDelete(u.id)} style={{ padding: "6px 12px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "12px", cursor: "pointer" }}>삭제</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div style={{ display: "flex", gap: "24px", flexDirection: "row", alignItems: "stretch", flexWrap: "wrap", marginBottom: "24px" }}>
+          {/* Left Panel: 가입 신청 / 회원 목록 */}
+          <div style={{ flex: "1 1 58%", minWidth: "320px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "20px", boxShadow: shadow }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
+                <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                  📋 가입 승인 대기 및 회원 목록
+                </h4>
+                
+                {/* Filter Tab bar */}
+                <div style={{ display: "flex", background: "var(--canvas-soft)", padding: "2px", borderRadius: "var(--rounded-md)", border: "1px solid var(--hairline)" }}>
+                  {[
+                    { val: "pending", label: "승인 대기" },
+                    { val: "approved", label: "가입 회원" }
+                  ].map(tab => (
+                    <button
+                      key={tab.val}
+                      onClick={() => setRegisterFilterTab(tab.val)}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        border: "none",
+                        borderRadius: "var(--rounded-sm)",
+                        background: registerFilterTab === tab.val ? "var(--canvas)" : "transparent",
+                        color: registerFilterTab === tab.val ? "var(--ink)" : "var(--body)",
+                        boxShadow: registerFilterTab === tab.val ? "0 1px 3px rgba(0,0,0,0.08)" : "none",
+                        cursor: "pointer",
+                        transition: "all 0.15s"
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: "auto" }}>
+                {registerFilterTab === "pending" ? (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                    <thead>
+                      <tr style={{ background: "var(--canvas-soft)", borderBottom: "1.5px solid var(--hairline-strong)", textAlign: "left" }}>
+                        <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이름</th>
+                        <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이메일</th>
+                        <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>소속</th>
+                        <th style={{ padding: "10px 12px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const pendingUsers = users.filter(u => !u.approved);
+                        if (pendingUsers.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={4} style={{ padding: "32px", textAlign: "center", color: "var(--muted)" }}>
+                                가입 대기 중인 사용자가 없습니다.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return pendingUsers.map(u => (
+                          <tr key={u.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                            <td style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>{u.name}</td>
+                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>{u.email}</td>
+                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>{u.company} / {u.division}</td>
+                            <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                              <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                <button 
+                                  onClick={() => handleRegisterApprove(u.id)} 
+                                  style={{ padding: "5px 10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "opacity 0.15s" }}
+                                  onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+                                  onMouseOut={e => e.currentTarget.style.opacity = 1}
+                                >
+                                  승인
+                                </button>
+                                <button 
+                                  onClick={() => handleRegisterDelete(u.id)} 
+                                  style={{ padding: "5px 10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "background 0.15s" }}
+                                  onMouseOver={e => e.currentTarget.style.background = "var(--canvas-soft)"}
+                                  onMouseOut={e => e.currentTarget.style.background = "var(--canvas)"}
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                    <thead>
+                      <tr style={{ background: "var(--canvas-soft)", borderBottom: "1.5px solid var(--hairline-strong)", textAlign: "left" }}>
+                        <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이름</th>
+                        <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이메일</th>
+                        <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>소속</th>
+                        <th style={{ padding: "10px 12px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>상태</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(() => {
+                        const approvedUsers = users.filter(u => u.approved);
+                        if (approvedUsers.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={4} style={{ padding: "32px", textAlign: "center", color: "var(--muted)" }}>
+                                가입된 사용자가 없습니다.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return approvedUsers.map(u => (
+                          <tr key={u.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                            <td style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>{u.name}</td>
+                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>{u.email}</td>
+                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>{u.company} / {u.division}</td>
+                            <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                              <span style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(22, 163, 74, 0.1)", color: "var(--semantic-success)", borderRadius: "var(--rounded-pill)" }}>
+                                가입완료
+                              </span>
+                            </td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: 가입 처리 로그 */}
+          <div style={{ flex: "1 1 38%", minWidth: "300px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "20px", boxShadow: shadow, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                  📜 가입 승인 처리 로그
+                </h4>
+                <button
+                  onClick={async () => {
+                    if (window.confirm("가입 승인 로그를 모두 비우시겠습니까?")) {
+                      const courseLogs = historyLogs.filter(l => l.type === "course_approved" || l.type === "course_rejected");
+                      await saveHistoryLogs(courseLogs);
+                    }
+                  }}
+                  style={{ background: "none", border: "none", color: "var(--body)", fontSize: "11px", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  로그 지우기
+                </button>
+              </div>
+
+              {/* Timeline list */}
+              <div style={{ maxHeight: "450px", overflowY: "auto", paddingRight: "4px" }}>
+                {(() => {
+                  const signupLogs = historyLogs.filter(l => l.type === "signup_approved" || l.type === "signup_deleted");
+                  if (signupLogs.length === 0) {
+                    return (
+                      <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted)", fontSize: "13px" }}>
+                        기록된 이력이 없습니다.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", position: "relative", borderLeft: "1.5px dashed var(--hairline-strong)", paddingLeft: "16px", marginLeft: "8px" }}>
+                      {signupLogs.map(log => {
+                        const isApprove = log.type === "signup_approved";
+                        return (
+                          <div key={log.id} style={{ position: "relative", fontSize: "12px" }}>
+                            {/* timeline marker */}
+                            <div style={{
+                              position: "absolute",
+                              left: "-23px",
+                              top: "4px",
+                              width: "12px",
+                              height: "12px",
+                              borderRadius: "50%",
+                              background: isApprove ? "var(--semantic-success)" : "var(--red)",
+                              border: "3px solid var(--canvas)"
+                            }} />
+
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                              <span style={{ fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "6px" }}>
+                                {isApprove ? "✓ 가입 승인 완료" : "✗ 신청 삭제 완료"}
+                                <span style={{ fontSize: "10px", padding: "1px 4px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "3px", fontWeight: "normal", color: "var(--body)" }}>
+                                  {log.adminEmail?.split("@")[0] || "admin"}
+                                </span>
+                              </span>
+                              <span style={{ fontSize: "10px", color: "var(--muted)" }}>
+                                {new Date(log.timestamp).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+
+                            <div style={{ background: "var(--canvas-soft)", borderRadius: "var(--rounded-md)", padding: "8px 12px", border: "1px solid var(--hairline)" }}>
+                              <div style={{ color: "var(--ink)", fontWeight: 500, marginBottom: "2px" }}>
+                                {log.details.name} ({log.details.email})
+                              </div>
+                              <div style={{ color: "var(--body)", fontSize: "11px" }}>
+                                소속: {log.details.company} / {log.details.division}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {backTab === "create" && (
