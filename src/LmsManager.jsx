@@ -739,7 +739,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
         boxSizing: "border-box",
         marginTop: "auto"
       }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "32px" }}>
+        <div style={{ maxWidth: "1320px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "32px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "600px" }}>
             <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>🎻 AIDA TUNE 아카데미</div>
             <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.6" }}>
@@ -930,13 +930,11 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
   return (
     <div>
-      {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 제거, 1076X350 제한) ── */}
+      {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 제거, 1920px 기준 Full-width 및 여백 최적화) ── */}
       <div style={{
         background: getBgFromPreset(pageConfig?.heroBgPreset),
         width: "100%",
-        maxWidth: "1076px",
         height: "350px",
-        margin: "0 auto",
         boxSizing: "border-box",
         padding: "36px 24px",
         textAlign: "center",
@@ -946,9 +944,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
         justifyContent: "center",
         position: "relative",
         overflow: "hidden",
-        borderRadius: "var(--rounded-lg)",
-        border: "1px solid var(--hairline-strong)",
-        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.02)"
+        borderBottom: "1px solid var(--hairline-strong)"
       }}>
         <div style={{ maxWidth: "800px", margin: "0 auto", zIndex: 5 }}>
           <div style={{ 
@@ -1010,7 +1006,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
 
       {/* ── 인기 과정 & 이달의 교육 과정 (96px 리듬 패딩) ── */}
-      <div style={{ padding: "96px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+      <div style={{ padding: "96px 24px", maxWidth: "1320px", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px" }}>
           <div>
             <h2 style={{ fontSize: "36px", fontWeight: 600, color: "var(--ink)", margin: 0, letterSpacing: "-1.08px" }}>🔥 실시간 인기 클래스</h2>
@@ -1055,7 +1051,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
       {/* ── 공지사항 & FAQ (96px 리듬 패딩) ── */}
       <div style={{ borderTop: "1px solid var(--hairline)", padding: "96px 24px", boxSizing: "border-box", background: "var(--canvas-soft)" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", display: "grid", gap: "48px" }}>
+        <div style={{ maxWidth: "1320px", margin: "0 auto", gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))", display: "grid", gap: "48px" }}>
           {/* 공지사항 */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -1107,7 +1103,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
       {/* ── 하단 고객지원 센터 (Expo Surface Dark 활용 반전 카드) ── */}
       <div style={{ borderTop: "1px solid var(--hairline)", background: "var(--canvas)", padding: "96px 24px", boxSizing: "border-box" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1320px", margin: "0 auto" }}>
           <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", marginBottom: "32px", letterSpacing: "-0.84px" }}>고객지원 센터</h3>
           <div style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", display: "grid", gap: "24px" }}>
             <a href="http://pf.kakao.com/_xhbxaxkxj/chat" target="_blank" style={{ textDecoration: "none" }}>
@@ -1207,7 +1203,7 @@ function ScheduleView({ schedules }) {
   };
 
   return (
-    <div style={{ padding: "96px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+    <div style={{ padding: "96px 24px", maxWidth: "1320px", margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
           <div>
@@ -1533,7 +1529,7 @@ function ClassroomView({
   const currentVideoId = selectedLecture ? getYoutubeId(selectedLecture.youtubeUrl) : "dQw4w9WgXcQ";
 
   return (
-    <div style={{ padding: "40px 24px", maxWidth: "1360px", margin: "0 auto", boxSizing: "border-box", display: "flex", gap: "28px", flexWrap: "wrap" }}>
+    <div style={{ padding: "40px 24px", maxWidth: "1320px", margin: "0 auto", boxSizing: "border-box", display: "flex", gap: "28px", flexWrap: "wrap" }}>
       {/* ── A. 좌측 플레이리스트 사이드바 ── */}
       <div style={{ width: "340px", display: "flex", flexDirection: "column", gap: "16px", flexShrink: 0 }}>
         <div style={{ 
@@ -1999,7 +1995,7 @@ function NoticeView({ notices, saveNotices }) {
   };
 
   return (
-    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+    <div style={{ padding: "40px 24px", maxWidth: "1320px", margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
           <div>
@@ -2085,7 +2081,7 @@ function FaqView({ faqs }) {
   };
 
   return (
-    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+    <div style={{ padding: "40px 24px", maxWidth: "1320px", margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
         <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px 0", letterSpacing: "-0.84px" }}>❓ 자주 묻는 질문 (FAQ)</h3>
         <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "24px" }}>아카데미 수강생분들이 자주 묻는 질문과 답변을 모아두었습니다.</p>
@@ -2184,7 +2180,7 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse }) {
   const myApps = applications.filter(a => a.email === currentUser?.email);
 
   return (
-    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+    <div style={{ padding: "40px 24px", maxWidth: "1320px", margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
         <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px", letterSpacing: "-0.84px" }}>👤 나의 학습 마이페이지</h3>
         <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "24px" }}>수강 신청하신 강좌들의 상태 및 진도 이력을 관리합니다.</p>
@@ -4767,7 +4763,7 @@ function CourseListPage({ eduCourses, infoBlocks, onNavigate }) {
   ];
 
   return (
-    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+    <div style={{ padding: "40px 24px", maxWidth: "1320px", margin: "0 auto", boxSizing: "border-box" }}>
       <h2 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px", letterSpacing: "-0.5px" }}>🎓 교육과정 신청</h2>
       <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "32px" }}>오케스트로 아카데미의 다양한 오프라인 및 실시간 라이브 교육과정을 확인하고 간편하게 수강 신청을 해보세요.</p>
 
