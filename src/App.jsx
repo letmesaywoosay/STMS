@@ -194,12 +194,12 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--canvas)', fontFamily: 'var(--sans)' }}>
-      {/* ── 일반 사용자 GNB 헤더 (Expo top-nav 스타일 적용) ── */}
+      {/* ── 일반 사용자 GNB 헤더 (단일 행 프리미엄 다크 네이비 테마 적용) ── */}
       <div style={{
-        background: 'var(--canvas)',
-        borderBottom: '1px solid var(--hairline)',
+        background: '#0A192F',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         padding: '0 24px',
-        height: '64px',
+        height: '72px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -208,77 +208,180 @@ function App() {
         zIndex: 100,
         boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
-          <img src="/logo.png" alt="AIDA TUNE" style={{ height: "30px", objectFit: "contain" }} />
+        {/* Left Side: Logo & Main Navigation Menus */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
+            <img src="/logo.png" alt="AIDA TUNE" style={{ height: "26px", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {[
+              { id: "course", label: "교육신청", path: "/course" },
+              { id: "schedule", label: "연간교육계획", path: "/schedule" },
+              { id: "notice", label: "공지사항", path: "/notice" },
+              { id: "faq", label: "자주 묻는 질문 (FAQ)", path: "/faq" },
+              { id: "classroom", label: "나의 강의실", path: "/classroom", secure: true }
+            ].map((item) => {
+              const isActive = path === item.path || (item.id === "course" && path.startsWith("/course"));
+              return (
+                <span
+                  key={item.id}
+                  onClick={() => {
+                    if (item.secure && !lmsUser) {
+                      navigate('/');
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('aida:trigger_guest_alert'));
+                      }, 50);
+                    } else {
+                      navigate(item.path);
+                    }
+                  }}
+                  style={{
+                    color: isActive ? '#38BDF8' : '#94A3B8',
+                    fontSize: '14px',
+                    fontWeight: isActive ? '600' : '500',
+                    cursor: 'pointer',
+                    transition: 'color 0.15s ease',
+                    padding: '6px 4px',
+                    borderBottom: isActive ? '2px solid #38BDF8' : '2px solid transparent'
+                  }}
+                  onMouseOver={e => {
+                    if (!isActive) e.currentTarget.style.color = '#F8FAFC';
+                  }}
+                  onMouseOut={e => {
+                    if (!isActive) e.currentTarget.style.color = '#94A3B8';
+                  }}
+                >
+                  {item.label}
+                </span>
+              );
+            })}
+          </div>
         </div>
 
-        {/* GNB 일반 수강생 메뉴 및 관리자 퀵링크 */}
+        {/* Right Side: Authentication Links & Prominent LMS Classroom Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {!lmsUser ? (
+            <>
+              <span
+                onClick={() => {
+                  navigate('/');
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('aida:trigger_auth', { detail: "login" }));
+                  }, 50);
+                }}
+                style={{ fontSize: '13px', color: '#94A3B8', cursor: 'pointer', fontWeight: 500, transition: 'color 0.15s' }}
+                onMouseOver={e => e.currentTarget.style.color = '#F8FAFC'}
+                onMouseOut={e => e.currentTarget.style.color = '#94A3B8'}
+              >
+                로그인
+              </span>
+              <span
+                onClick={() => {
+                  navigate('/');
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('aida:trigger_auth', { detail: "register" }));
+                  }, 50);
+                }}
+                style={{ fontSize: '13px', color: '#94A3B8', cursor: 'pointer', fontWeight: 500, transition: 'color 0.15s' }}
+                onMouseOver={e => e.currentTarget.style.color = '#F8FAFC'}
+                onMouseOut={e => e.currentTarget.style.color = '#94A3B8'}
+              >
+                회원가입
+              </span>
+            </>
+          ) : (
+            <>
+              {lmsUser.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/admin')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: 'transparent',
+                    color: '#F8FAFC',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  ⚙️ 관리자 포탈
+                </button>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '16px' }}>
+                <span style={{ fontSize: '13px', color: '#E2E8F0' }}>👤 {lmsUser.name}님</span>
+                <button
+                  onClick={handleAdminLogout}
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: 'transparent',
+                    color: '#94A3B8',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.color = '#F8FAFC';
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.color = '#94A3B8';
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  로그아웃
+                </button>
+              </div>
+            </>
+          )}
+
           <button
-            onClick={() => navigate('/')}
+            onClick={() => {
+              if (!lmsUser) {
+                navigate('/');
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('aida:trigger_guest_alert'));
+                }, 50);
+              } else {
+                navigate('/classroom');
+              }
+            }}
             style={{
-              padding: '8px 16px',
-              borderRadius: 'var(--rounded-md)',
-              border: 'none',
-              background: isLmsView ? 'var(--primary)' : 'transparent',
-              color: isLmsView ? 'var(--on-primary)' : 'var(--body)',
-              fontSize: '14px',
-              fontWeight: 500,
+              background: '#000000',
+              color: '#ffffff',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '24px',
+              padding: '8px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
               cursor: 'pointer',
-              transition: 'all 0.15s ease'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s'
             }}
-            onMouseOver={(e) => {
-              if(!isLmsView) e.currentTarget.style.color = 'var(--ink)';
+            onMouseOver={e => {
+              e.currentTarget.style.background = '#1E293B';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
             }}
-            onMouseOut={(e) => {
-              if(!isLmsView) e.currentTarget.style.color = 'var(--body)';
+            onMouseOut={e => {
+              e.currentTarget.style.background = '#000000';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
             }}
           >
             🎓 LMS 강의실
           </button>
-
-          {/* 관리자 계정 로그인되어 있을 시 관리자 포탈 이동 퀵링크 노출 */}
-          {lmsUser && lmsUser.role === 'admin' && (
-            <button
-              onClick={() => navigate('/admin')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 'var(--rounded-md)',
-                border: '1px solid var(--hairline-strong)',
-                background: 'var(--canvas)',
-                color: 'var(--ink)',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              ⚙️ 관리자 포탈
-            </button>
-          )}
-
-          {lmsUser && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: '1px solid var(--hairline)', paddingLeft: '16px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--body)' }}>👤 {lmsUser.name}</span>
-              <button
-                onClick={handleAdminLogout}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 'var(--rounded-sm)',
-                  border: '1px solid var(--hairline-strong)',
-                  background: 'var(--canvas)',
-                  color: 'var(--body)',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  cursor: 'pointer'
-                }}
-              >
-                로그아웃
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
