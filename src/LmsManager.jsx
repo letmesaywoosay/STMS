@@ -135,8 +135,9 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
 
   // 회원가입 폼
   const [regForm, setRegForm] = useState({
-    email: "", password: "", name: "", userType: "company", company: "", division: "", team: "", jobType: ""
+    email: "", password: "", name: ""
   });
+
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showGuestAlert, setShowGuestAlert] = useState(false);
@@ -565,8 +566,8 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
   };
 
   const handleRegister = async () => {
-    const { email, password, name, userType, company, division, team, jobType } = regForm;
-    if (!email.trim() || !password.trim() || !name.trim() || !company || !division || !team || !jobType) {
+    const { email, password, name } = regForm;
+    if (!email.trim() || !password.trim() || !name.trim()) {
       setAuthErr("모든 필수 입력 항목을 채워주세요.");
       return;
     }
@@ -576,18 +577,23 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
       return;
     }
 
+    const isOkestro = email.trim().toLowerCase().endsWith("@okestro.com");
+    const userType = isOkestro ? "company" : "partner";
+    const role = isOkestro ? "admin" : "user";
+    const approved = isOkestro;
+
     const newUser = {
       id: uid(),
       email: email.trim(),
       password: password.trim(),
       name: name.trim(),
       userType,
-      company,
-      division,
-      team,
-      jobType,
-      role: email.trim().endsWith("@okestro.com") ? "admin" : "user",
-      approved: userType === "company",
+      company: "",
+      division: "",
+      team: "",
+      jobType: "",
+      role,
+      approved,
       registeredAt: new Date().toISOString()
     };
 
@@ -603,6 +609,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
     setAuthMode("login");
     setAuthErr("");
   };
+
 
   const handleFindPassword = () => {
     if (findStep === 1) {
@@ -794,7 +801,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
               </div>
             )}
             {authMode === "register" && (
-              <RegisterForm regForm={regForm} setRegForm={setRegForm} handleRegister={handleRegister} authErr={authErr} deptData={deptData} jobTypes={jobTypes} />
+              <RegisterForm regForm={regForm} setRegForm={setRegForm} handleRegister={handleRegister} authErr={authErr} />
             )}
             {authMode === "findPw" && (
               <div>
@@ -1411,13 +1418,7 @@ function ScheduleView({ schedules }) {
 }
 
 // ── [RegisterForm] 회원가입 컴포넌트 ──
-function RegisterForm({ regForm, setRegForm, handleRegister, authErr, deptData, jobTypes }) {
-  const companyOptions = deptData.map(c => c.company);
-  const selectedCompObj = deptData.find(c => c.company === regForm.company);
-  const divisionOptions = selectedCompObj ? selectedCompObj.divisions.map(d => d.name) : [];
-  const selectedDivObj = selectedCompObj ? selectedCompObj.divisions.find(d => d.name === regForm.division) : null;
-  const teamOptions = selectedDivObj ? selectedDivObj.teams.map(t => t.name) : [];
-
+function RegisterForm({ regForm, setRegForm, handleRegister, authErr }) {
   return (
     <div>
       <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", marginBottom: "20px", textAlign: "center", letterSpacing: "-0.5px" }}>TUNE 회원가입</h3>
@@ -1434,42 +1435,8 @@ function RegisterForm({ regForm, setRegForm, handleRegister, authErr, deptData, 
           <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>비밀번호 *</label>
           <input type="password" value={regForm.password} onChange={e => setRegForm({ ...regForm, password: e.target.value })} placeholder="비밀번호 설정" style={inpStyle({ padding: "8px 12px" })} />
         </div>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>임직원 구분 *</label>
-          <select value={regForm.userType} onChange={e => setRegForm({ ...regForm, userType: e.target.value })} style={inpStyle({ padding: "8px 12px" })}>
-            <option value="company">사내 임직원 (가입 즉시 자동 승인)</option>
-            <option value="partner">파트너사 임직원 (어드민 가입 승인 대기)</option>
-          </select>
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>소속 회사 *</label>
-          <select value={regForm.company} onChange={e => setRegForm({ ...regForm, company: e.target.value, division: "", team: "" })} style={inpStyle({ padding: "8px 12px" })}>
-            <option value="">선택하세요</option>
-            {companyOptions.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>소속 본부/부서 *</label>
-          <select value={regForm.division} onChange={e => setRegForm({ ...regForm, division: e.target.value, team: "" })} style={inpStyle({ padding: "8px 12px" })} disabled={!regForm.company}>
-            <option value="">선택하세요</option>
-            {divisionOptions.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>소속 팀 *</label>
-          <select value={regForm.team} onChange={e => setRegForm({ ...regForm, team: e.target.value })} style={inpStyle({ padding: "8px 12px" })} disabled={!regForm.division}>
-            <option value="">선택하세요</option>
-            {teamOptions.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>직군 *</label>
-          <select value={regForm.jobType} onChange={e => setRegForm({ ...regForm, jobType: e.target.value })} style={inpStyle({ padding: "8px 12px" })}>
-            <option value="">선택하세요</option>
-            {jobTypes.map(j => <option key={j} value={j}>{j}</option>)}
-          </select>
-        </div>
       </div>
+
       {authErr && <div style={{ fontSize: "13px", color: "var(--semantic-error)", fontWeight: 500, margin: "8px 0" }}>⚠️ {authErr}</div>}
       <button onClick={handleRegister}
         style={{ 
@@ -2418,6 +2385,10 @@ function BackOfficeView({
   const [rejectReasonText, setRejectReasonText] = useState("");
   const [applyFilterStatus, setApplyFilterStatus] = useState("pending");
   const [registerFilterTab, setRegisterFilterTab] = useState("pending");
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [memberFilterRole, setMemberFilterRole] = useState("all");
+  const [memberFilterStatus, setMemberFilterStatus] = useState("all");
+
 
   // adminSubTabGroup 변경 시 backTab 자동 싱크
   useEffect(() => {
@@ -2827,6 +2798,78 @@ function BackOfficeView({
     alert("삭제되었습니다.");
   };
 
+  const handleToggleMemberApproval = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const newApproved = !user.approved;
+    const updated = users.map(u => u.id === userId ? { ...u, approved: newApproved } : u);
+    await saveUsers(updated);
+
+    const logType = newApproved ? "signup_approved" : "signup_revoked";
+    const newLog = {
+      id: uid(),
+      type: logType,
+      timestamp: new Date().toISOString(),
+      adminEmail: currentUser?.email || "admin@okestro.com",
+      details: {
+        name: user.name,
+        email: user.email,
+        company: user.company || "",
+        division: user.division || ""
+      }
+    };
+    await saveHistoryLogs([newLog, ...historyLogs]);
+    alert(newApproved ? "가입을 승인했습니다." : "가입 승인을 취소했습니다.");
+  };
+
+  const handleToggleMemberRole = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const newRole = user.role === "admin" ? "user" : "admin";
+    const updated = users.map(u => u.id === userId ? { ...u, role: newRole } : u);
+    await saveUsers(updated);
+    
+    const newLog = {
+      id: uid(),
+      type: "role_changed",
+      timestamp: new Date().toISOString(),
+      adminEmail: currentUser?.email || "admin@okestro.com",
+      details: {
+        name: user.name,
+        email: user.email,
+        role: newRole,
+        company: user.company || "",
+        division: user.division || ""
+      }
+    };
+    await saveHistoryLogs([newLog, ...historyLogs]);
+    alert(`권한을 ${newRole === "admin" ? "관리자" : "일반회원"}로 변경했습니다.`);
+  };
+
+  const handleDeleteMember = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    if (!window.confirm(`${user.name} 회원을 정말 삭제하시겠습니까?`)) return;
+    const updated = users.filter(u => u.id !== userId);
+    await saveUsers(updated);
+
+    const newLog = {
+      id: uid(),
+      type: "signup_deleted",
+      timestamp: new Date().toISOString(),
+      adminEmail: currentUser?.email || "admin@okestro.com",
+      details: {
+        name: user.name,
+        email: user.email,
+        company: user.company || "",
+        division: user.division || ""
+      }
+    };
+    await saveHistoryLogs([newLog, ...historyLogs]);
+    alert("삭제되었습니다.");
+  };
+
+
   const uniqueCourseNames = Array.from(new Set(courses.map(c => c.courseName).filter(Boolean)));
 
   const handleEditCourse = (c) => {
@@ -2985,6 +3028,7 @@ function BackOfficeView({
         <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
           <button onClick={() => setBackTab("apply")} style={{ padding: "8px 16px", border: "none", background: backTab === "apply" ? "var(--primary)" : "none", color: backTab === "apply" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>수강 신청 승인</button>
           <button onClick={() => setBackTab("register")} style={{ padding: "8px 16px", border: "none", background: backTab === "register" ? "var(--primary)" : "none", color: backTab === "register" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입 승인</button>
+          <button onClick={() => setBackTab("member")} style={{ padding: "8px 16px", border: "none", background: backTab === "member" ? "var(--primary)" : "none", color: backTab === "member" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입자 관리</button>
           <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 관리</button>
           <button onClick={() => setBackTab("notice")} style={{ padding: "8px 16px", border: "none", background: backTab === "notice" ? "var(--primary)" : "none", color: backTab === "notice" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>공지사항 관리</button>
           <button onClick={() => setBackTab("faq")} style={{ padding: "8px 16px", border: "none", background: backTab === "faq" ? "var(--primary)" : "none", color: backTab === "faq" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>FAQ 관리</button>
@@ -3366,7 +3410,7 @@ function BackOfficeView({
               {/* Timeline list */}
               <div style={{ maxHeight: "450px", overflowY: "auto", paddingRight: "4px" }}>
                 {(() => {
-                  const signupLogs = historyLogs.filter(l => l.type === "signup_approved" || l.type === "signup_deleted");
+                  const signupLogs = historyLogs.filter(l => l.type === "signup_approved" || l.type === "signup_deleted" || l.type === "signup_revoked" || l.type === "role_changed");
                   if (signupLogs.length === 0) {
                     return (
                       <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted)", fontSize: "13px" }}>
@@ -3378,7 +3422,24 @@ function BackOfficeView({
                   return (
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px", position: "relative", borderLeft: "1.5px dashed var(--hairline-strong)", paddingLeft: "16px", marginLeft: "8px" }}>
                       {signupLogs.map(log => {
-                        const isApprove = log.type === "signup_approved";
+                        let isApprove = log.type === "signup_approved";
+                        let markerBg = "var(--red)";
+                        let logLabel = "";
+                        
+                        if (log.type === "signup_approved") {
+                          logLabel = "✓ 가입 승인 완료";
+                          markerBg = "var(--semantic-success)";
+                        } else if (log.type === "signup_deleted") {
+                          logLabel = "✗ 신청 삭제 완료";
+                          markerBg = "var(--red)";
+                        } else if (log.type === "signup_revoked") {
+                          logLabel = "✗ 가입 승인 취소";
+                          markerBg = "var(--orange, #f97316)";
+                        } else if (log.type === "role_changed") {
+                          logLabel = `⚙ 권한 변경 (${log.details?.role === "admin" ? "관리자" : "일반"})`;
+                          markerBg = "#9333ea";
+                        }
+
                         return (
                           <div key={log.id} style={{ position: "relative", fontSize: "12px" }}>
                             {/* timeline marker */}
@@ -3389,13 +3450,13 @@ function BackOfficeView({
                               width: "12px",
                               height: "12px",
                               borderRadius: "50%",
-                              background: isApprove ? "var(--semantic-success)" : "var(--red)",
+                              background: markerBg,
                               border: "3px solid var(--canvas)"
                             }} />
 
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
                               <span style={{ fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "6px" }}>
-                                {isApprove ? "✓ 가입 승인 완료" : "✗ 신청 삭제 완료"}
+                                {logLabel}
                                 <span style={{ fontSize: "10px", padding: "1px 4px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "3px", fontWeight: "normal", color: "var(--body)" }}>
                                   {log.adminEmail?.split("@")[0] || "admin"}
                                 </span>
@@ -3407,11 +3468,298 @@ function BackOfficeView({
 
                             <div style={{ background: "var(--canvas-soft)", borderRadius: "var(--rounded-md)", padding: "8px 12px", border: "1px solid var(--hairline)" }}>
                               <div style={{ color: "var(--ink)", fontWeight: 500, marginBottom: "2px" }}>
-                                {log.details.name} ({log.details.email})
+                                {log.details?.name} ({log.details?.email})
                               </div>
-                              <div style={{ color: "var(--body)", fontSize: "11px" }}>
-                                소속: {log.details.company} / {log.details.division}
+                              {log.details?.company && (
+                                <div style={{ color: "var(--body)", fontSize: "11px" }}>
+                                  소속: {log.details.company} / {log.details.division}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {backTab === "member" && (
+        <div style={{ display: "flex", gap: "24px", flexDirection: "row", alignItems: "stretch", flexWrap: "wrap", marginBottom: "24px" }}>
+          {/* Left Panel: 가입자 목록 및 검색/필터 */}
+          <div style={{ flex: "1 1 58%", minWidth: "320px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "20px", boxShadow: shadow }}>
+              
+              {/* Header and Filters */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                  <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                    👥 전체 가입자 관리 ({users.filter(u => {
+                      const query = memberSearchQuery.trim().toLowerCase();
+                      const matchesQuery = !query || 
+                        (u.name && u.name.toLowerCase().includes(query)) || 
+                        (u.email && u.email.toLowerCase().includes(query));
+                      
+                      const matchesRole = memberFilterRole === "all" || u.role === memberFilterRole;
+                      
+                      let matchesStatus = true;
+                      if (memberFilterStatus === "approved") {
+                        matchesStatus = u.approved;
+                      } else if (memberFilterStatus === "pending") {
+                        matchesStatus = !u.approved;
+                      }
+                      
+                      return matchesQuery && matchesRole && matchesStatus;
+                    }).length}명)
+                  </h4>
+                </div>
+                
+                {/* Search & Filters Row */}
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                  <input
+                    type="text"
+                    placeholder="이름 또는 이메일 검색..."
+                    value={memberSearchQuery}
+                    onChange={e => setMemberSearchQuery(e.target.value)}
+                    style={inpStyle({ padding: "6px 12px", fontSize: "13px", flex: "1 1 200px" })}
+                  />
+                  
+                  {/* Status Filter */}
+                  <select
+                    value={memberFilterStatus}
+                    onChange={e => setMemberFilterStatus(e.target.value)}
+                    style={inpStyle({ padding: "6px 12px", fontSize: "13px", width: "120px" })}
+                  >
+                    <option value="all">가입상태: 전체</option>
+                    <option value="approved">승인 완료</option>
+                    <option value="pending">승인 대기</option>
+                  </select>
+
+                  {/* Role Filter */}
+                  <select
+                    value={memberFilterRole}
+                    onChange={e => setMemberFilterRole(e.target.value)}
+                    style={inpStyle({ padding: "6px 12px", fontSize: "13px", width: "120px" })}
+                  >
+                    <option value="all">권한: 전체</option>
+                    <option value="admin">관리자</option>
+                    <option value="user">일반회원</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                  <thead>
+                    <tr style={{ background: "var(--canvas-soft)", borderBottom: "1.5px solid var(--hairline-strong)", textAlign: "left" }}>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이름</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이메일</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>구분</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>상태</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>권한</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>가입일</th>
+                      <th style={{ padding: "10px 12px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const filteredMembers = users.filter(u => {
+                        const query = memberSearchQuery.trim().toLowerCase();
+                        const matchesQuery = !query || 
+                          (u.name && u.name.toLowerCase().includes(query)) || 
+                          (u.email && u.email.toLowerCase().includes(query));
+                        
+                        const matchesRole = memberFilterRole === "all" || u.role === memberFilterRole;
+                        
+                        let matchesStatus = true;
+                        if (memberFilterStatus === "approved") {
+                          matchesStatus = u.approved;
+                        } else if (memberFilterStatus === "pending") {
+                          matchesStatus = !u.approved;
+                        }
+                        
+                        return matchesQuery && matchesRole && matchesStatus;
+                      });
+
+                      if (filteredMembers.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "var(--muted)" }}>
+                              검색 조건에 맞는 가입자가 없습니다.
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filteredMembers.map(u => {
+                        const isOkestro = u.email?.toLowerCase().endsWith("@okestro.com");
+                        return (
+                          <tr key={u.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                            <td style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>{u.name}</td>
+                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>{u.email}</td>
+                            <td style={{ padding: "10px 12px" }}>
+                              <span style={{
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                background: isOkestro ? "rgba(37, 99, 235, 0.1)" : "rgba(249, 115, 22, 0.1)",
+                                color: isOkestro ? "var(--primary)" : "var(--orange, #f97316)"
+                              }}>
+                                {isOkestro ? "사내 임직원" : "파트너사"}
+                              </span>
+                            </td>
+                            <td style={{ padding: "10px 12px" }}>
+                              <span style={{
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                color: u.approved ? "var(--semantic-success)" : "var(--orange, #f97316)"
+                              }}>
+                                {u.approved ? "● 승인 완료" : "○ 승인 대기"}
+                              </span>
+                            </td>
+                            <td style={{ padding: "10px 12px" }}>
+                              <span style={{
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                background: u.role === "admin" ? "rgba(147, 51, 234, 0.1)" : "rgba(107, 114, 128, 0.1)",
+                                color: u.role === "admin" ? "#9333ea" : "#6b7280"
+                              }}>
+                                {u.role === "admin" ? "관리자" : "일반"}
+                              </span>
+                            </td>
+                            <td style={{ padding: "10px 12px", color: "var(--muted)" }}>
+                              {u.registeredAt ? new Date(u.registeredAt).toLocaleDateString() : "-"}
+                            </td>
+                            <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                              <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                <button 
+                                  onClick={() => handleToggleMemberApproval(u.id)} 
+                                  style={{ padding: "4px 8px", background: u.approved ? "var(--canvas)" : "var(--primary)", border: u.approved ? "1px solid var(--hairline-strong)" : "none", color: u.approved ? "var(--ink)" : "var(--on-primary)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  {u.approved ? "승인 취소" : "승인"}
+                                </button>
+                                <button 
+                                  onClick={() => handleToggleMemberRole(u.id)} 
+                                  style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  권한 변경
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteMember(u.id)} 
+                                  style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  삭제
+                                </button>
                               </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: 가입자 관리 처리 로그 */}
+          <div style={{ flex: "1 1 38%", minWidth: "300px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "20px", boxShadow: shadow, display: "flex", flexDirection: "column" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "8px" }}>
+                  📜 가입자 관리 처리 로그
+                </h4>
+                <button
+                  onClick={async () => {
+                    if (window.confirm("가입자 관리 로그를 모두 비우시겠습니까?")) {
+                      const otherLogs = historyLogs.filter(l => l.type !== "signup_approved" && l.type !== "signup_deleted" && l.type !== "signup_revoked" && l.type !== "role_changed");
+                      await saveHistoryLogs(otherLogs);
+                    }
+                  }}
+                  style={{ background: "none", border: "none", color: "var(--body)", fontSize: "11px", textDecoration: "underline", cursor: "pointer" }}
+                >
+                  로그 지우기
+                </button>
+              </div>
+
+              {/* Timeline list */}
+              <div style={{ maxHeight: "450px", overflowY: "auto", paddingRight: "4px" }}>
+                {(() => {
+                  const signupLogs = historyLogs.filter(l => l.type === "signup_approved" || l.type === "signup_deleted" || l.type === "signup_revoked" || l.type === "role_changed");
+                  if (signupLogs.length === 0) {
+                    return (
+                      <div style={{ padding: "32px 16px", textAlign: "center", color: "var(--muted)", fontSize: "13px" }}>
+                        기록된 이력이 없습니다.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", position: "relative", borderLeft: "1.5px dashed var(--hairline-strong)", paddingLeft: "16px", marginLeft: "8px" }}>
+                      {signupLogs.map(log => {
+                        let isApprove = log.type === "signup_approved";
+                        let isRoleChange = log.type === "role_changed";
+                        let isRevoke = log.type === "signup_revoked";
+                        
+                        let logLabel = "";
+                        let markerBg = "var(--red)";
+                        if (log.type === "signup_approved") {
+                          logLabel = "✓ 가입 승인 완료";
+                          markerBg = "var(--semantic-success)";
+                        } else if (log.type === "signup_deleted") {
+                          logLabel = "✗ 회원 계정 삭제";
+                          markerBg = "var(--red)";
+                        } else if (log.type === "signup_revoked") {
+                          logLabel = "✗ 가입 승인 취소";
+                          markerBg = "var(--orange, #f97316)";
+                        } else if (log.type === "role_changed") {
+                          logLabel = `⚙ 권한 변경 (${log.details?.role === "admin" ? "관리자" : "일반"})`;
+                          markerBg = "#9333ea";
+                        }
+
+                        return (
+                          <div key={log.id} style={{ position: "relative", fontSize: "12px" }}>
+                            {/* timeline marker */}
+                            <div style={{
+                              position: "absolute",
+                              left: "-23px",
+                              top: "4px",
+                              width: "12px",
+                              height: "12px",
+                              borderRadius: "50%",
+                              background: markerBg,
+                              border: "3px solid var(--canvas)"
+                            }} />
+
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}>
+                              <span style={{ fontWeight: 600, color: "var(--ink)", display: "flex", alignItems: "center", gap: "6px" }}>
+                                {logLabel}
+                                <span style={{ fontSize: "10px", padding: "1px 4px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "3px", fontWeight: "normal", color: "var(--body)" }}>
+                                  {log.adminEmail?.split("@")[0] || "admin"}
+                                </span>
+                              </span>
+                              <span style={{ fontSize: "10px", color: "var(--muted)" }}>
+                                {new Date(log.timestamp).toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+
+                            <div style={{ background: "var(--canvas-soft)", borderRadius: "var(--rounded-md)", padding: "8px 12px", border: "1px solid var(--hairline)" }}>
+                              <div style={{ color: "var(--ink)", fontWeight: 500, marginBottom: "2px" }}>
+                                {log.details?.name} ({log.details?.email})
+                              </div>
+                              {log.details?.company && (
+                                <div style={{ color: "var(--body)", fontSize: "11px" }}>
+                                  소속: {log.details.company} / {log.details.division}
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
