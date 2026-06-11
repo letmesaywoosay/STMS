@@ -743,8 +743,31 @@ export default function LmsManager({ viewPath, onNavigate }) {
             width: "100%", 
             maxWidth: "360px", 
             textAlign: "center",
-            border: "1px solid var(--hairline)"
+            border: "1px solid var(--hairline)",
+            position: "relative"
           }}>
+            <button 
+              onClick={() => setShowGuestAlert(false)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                background: "none",
+                border: "none",
+                fontSize: "18px",
+                color: "var(--muted)",
+                cursor: "pointer",
+                padding: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1
+              }}
+              onMouseOver={e => e.currentTarget.style.color = "var(--ink)"}
+              onMouseOut={e => e.currentTarget.style.color = "var(--muted)"}
+            >
+              ✕
+            </button>
             <div style={{ width: "60px", height: "60px", borderRadius: "50%", background: "#fef3c7", color: "var(--accent-warning)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", margin: "0 auto 16px" }}>🔑</div>
             <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>로그인이 필요한 서비스입니다</h4>
             <p style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.6", marginBottom: "24px" }}>나의 강의실 수강 신청 및 학습 영상 시청은 로그인 후 가능합니다.</p>
