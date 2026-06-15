@@ -229,7 +229,7 @@ function App() {
       }}>
         <div style={{
           width: '100%',
-          maxWidth: '1320px',
+          maxWidth: '1200px',
           margin: '0 auto',
           display: 'flex',
           alignItems: 'center',
