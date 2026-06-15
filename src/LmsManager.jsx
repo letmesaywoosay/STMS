@@ -932,11 +932,14 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
     <div>
       {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 제거, 1920px 기준 Full-width 및 여백 최적화) ── */}
       <div style={{
-        background: getBgFromPreset(pageConfig?.heroBgPreset),
+        background: pageConfig?.heroBannerImage 
+          ? `url(${pageConfig.heroBannerImage}) no-repeat center/${pageConfig.heroBannerFit || "cover"}` 
+          : getBgFromPreset(pageConfig?.heroBgPreset),
+        backgroundColor: pageConfig?.heroBannerImage ? "transparent" : undefined,
         width: "100%",
-        height: "350px",
+        height: "550px",
         boxSizing: "border-box",
-        padding: "36px 24px",
+        padding: pageConfig?.heroBannerImage && pageConfig?.heroShowOverlay === false ? "0" : "36px 24px",
         textAlign: "center",
         display: "flex",
         flexDirection: "column",
@@ -946,62 +949,64 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
         overflow: "hidden",
         borderBottom: "1px solid var(--hairline-strong)"
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto", zIndex: 5 }}>
-          <div style={{ 
-            background: "var(--surface-card)", 
-            border: "1px solid var(--hairline-strong)", 
-            borderRadius: "var(--rounded-pill)", 
-            display: "inline-block", 
-            padding: "4px 10px", 
-            fontSize: "11px", 
-            color: "var(--ink)", 
-            fontWeight: 600, 
-            textTransform: "uppercase",
-            letterSpacing: "0.88px",
-            marginBottom: "12px" 
-          }}>
-            {pageConfig?.heroBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
+        {(!pageConfig?.heroBannerImage || pageConfig?.heroShowOverlay !== false) && (
+          <div style={{ maxWidth: "800px", margin: "0 auto", zIndex: 5 }}>
+            <div style={{ 
+              background: "var(--surface-card)", 
+              border: "1px solid var(--hairline-strong)", 
+              borderRadius: "var(--rounded-pill)", 
+              display: "inline-block", 
+              padding: "4px 10px", 
+              fontSize: "11px", 
+              color: "var(--ink)", 
+              fontWeight: 600, 
+              textTransform: "uppercase",
+              letterSpacing: "0.88px",
+              marginBottom: "12px" 
+            }}>
+              {pageConfig?.heroBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
+            </div>
+            <h1 style={{ 
+              fontSize: "36px", 
+              fontWeight: 700, 
+              color: "var(--ink)", 
+              lineHeight: "1.2", 
+              margin: "0 0 12px 0", 
+              letterSpacing: "-1px" 
+            }}>
+              {pageConfig?.heroTitle || "AIDA TUNE"}
+            </h1>
+            <p style={{ 
+              fontSize: "14px", 
+              color: "var(--body)", 
+              lineHeight: "1.4", 
+              margin: "0 0 16px 0", 
+              maxWidth: "600px",
+              marginLeft: "auto",
+              marginRight: "auto",
+              whiteSpace: "pre-line"
+            }}>
+              {pageConfig?.heroSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등\n실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요."}
+            </p>
+            <button onClick={() => checkAccess("classroom")}
+              style={{
+                height: "36px",
+                padding: "0 20px",
+                background: "var(--primary)",
+                color: "var(--on-primary)",
+                border: "none",
+                borderRadius: "var(--rounded-md)",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: "pointer",
+                transition: "background 0.15s"
+              }}
+              onMouseOver={e => e.currentTarget.style.background = "var(--primary-active)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--primary)"}>
+              교육 신청하기 ➔
+            </button>
           </div>
-          <h1 style={{ 
-            fontSize: "36px", 
-            fontWeight: 700, 
-            color: "var(--ink)", 
-            lineHeight: "1.2", 
-            margin: "0 0 12px 0", 
-            letterSpacing: "-1px" 
-          }}>
-            {pageConfig?.heroTitle || "AIDA TUNE"}
-          </h1>
-          <p style={{ 
-            fontSize: "14px", 
-            color: "var(--body)", 
-            lineHeight: "1.4", 
-            margin: "0 0 16px 0", 
-            maxWidth: "600px",
-            marginLeft: "auto",
-            marginRight: "auto",
-            whiteSpace: "pre-line"
-          }}>
-            {pageConfig?.heroSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등\n실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요."}
-          </p>
-          <button onClick={() => checkAccess("classroom")}
-            style={{
-              height: "36px",
-              padding: "0 20px",
-              background: "var(--primary)",
-              color: "var(--on-primary)",
-              border: "none",
-              borderRadius: "var(--rounded-md)",
-              fontSize: "13px",
-              fontWeight: 500,
-              cursor: "pointer",
-              transition: "background 0.15s"
-            }}
-            onMouseOver={e => e.currentTarget.style.background = "var(--primary-active)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--primary)"}>
-            교육 신청하기 ➔
-          </button>
-        </div>
+        )}
       </div>
 
 
@@ -2494,6 +2499,52 @@ function BackOfficeView({
   const [customSubtitle, setCustomSubtitle] = useState(pageConfig?.heroSubtitle || "");
   const [customBadge, setCustomBadge] = useState(pageConfig?.heroBadge || "");
   const [customBgPreset, setCustomBgPreset] = useState(pageConfig?.heroBgPreset || "sky");
+  const [customBannerImage, setCustomBannerImage] = useState(pageConfig?.heroBannerImage || "");
+  const [customShowOverlay, setCustomShowOverlay] = useState(pageConfig?.heroShowOverlay !== false);
+  const [customBannerFit, setCustomBannerFit] = useState(pageConfig?.heroBannerFit || "cover");
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.includes("png")) {
+      alert("PNG 형식의 이미지 파일만 업로드할 수 있습니다.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxW = 1920;
+
+        if (width > maxW) {
+          height = Math.round((height * maxW) / width);
+          width = maxW;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = canvas.toDataURL("image/png");
+        const sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        
+        if (sizeInKb > 900) {
+          alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 화질을 낮추거나 더 작은 이미지로 업로드해주세요. (Firestore 저장 제한으로 인해 최대 900KB까지만 가능합니다)`);
+          return;
+        }
+
+        setCustomBannerImage(compressedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // 공지사항 관리 폼 상태 및 핸들러
   const [noticeForm, setNoticeForm] = useState({ title: "", content: "" });
@@ -2595,6 +2646,9 @@ function BackOfficeView({
       setCustomSubtitle(pageConfig.heroSubtitle || "");
       setCustomBadge(pageConfig.heroBadge || "");
       setCustomBgPreset(pageConfig.heroBgPreset || "sky");
+      setCustomBannerImage(pageConfig.heroBannerImage || "");
+      setCustomShowOverlay(pageConfig.heroShowOverlay !== false);
+      setCustomBannerFit(pageConfig.heroBannerFit || "cover");
     }
   }, [pageConfig]);
 
@@ -2872,7 +2926,10 @@ function BackOfficeView({
       heroTitle: customTitle.trim(),
       heroSubtitle: customSubtitle.trim(),
       heroBadge: customBadge.trim(),
-      heroBgPreset: customBgPreset
+      heroBgPreset: customBgPreset,
+      heroBannerImage: customBannerImage,
+      heroShowOverlay: customShowOverlay,
+      heroBannerFit: customBannerFit
     };
     await savePageConfig(newConfig);
     alert("소개 페이지 커스텀 설정이 저장되었습니다.");
@@ -4181,6 +4238,63 @@ function BackOfficeView({
                 </div>
               </div>
 
+              {/* 상단배너 관리 (PNG 등록) 메뉴 */}
+              <div style={{ borderTop: "1px solid var(--hairline-strong)", paddingTop: "16px", marginTop: "8px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>🏞️ 상단배너 관리 (PNG 등록)</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px dashed var(--hairline-strong)", padding: "16px", borderRadius: "var(--rounded-md)" }}>
+                  <div>
+                    <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "6px" }}>배너로 등록할 PNG 파일을 업로드하세요. (권장 해상도: 1920x550)</span>
+                    <input 
+                      type="file" 
+                      accept="image/png" 
+                      onChange={handleImageUpload} 
+                      style={{ fontSize: "13px", color: "var(--body)" }} 
+                    />
+                  </div>
+                  
+                  {customBannerImage && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "100px", height: "40px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas)" }}>
+                          <img src={customBannerImage} alt="Banner Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => setCustomBannerImage("")} 
+                          style={{ padding: "6px 10px", background: "var(--canvas)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}
+                        >
+                          이미지 제거
+                        </button>
+                      </div>
+                      
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid var(--hairline)", paddingTop: "8px", marginTop: "4px" }}>
+                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: 600, color: "var(--ink)", cursor: "pointer" }}>
+                          <input 
+                            type="checkbox" 
+                            checked={customShowOverlay} 
+                            onChange={e => setCustomShowOverlay(e.target.checked)} 
+                          />
+                          배너 이미지 위에 텍스트 및 버튼 오버레이 표시
+                        </label>
+                        
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <span style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 600 }}>이미지 채우기 방식:</span>
+                          <select 
+                            value={customBannerFit} 
+                            onChange={e => setCustomBannerFit(e.target.value)} 
+                            style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
+                          >
+                            <option value="cover">꽉 차게 자르기 (Cover)</option>
+                            <option value="contain">전체 비율 보존 (Contain)</option>
+                            <option value="100% 100%">공간에 강제 맞춤 (Fill)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <button onClick={handleSavePageConfig} style={{ padding: "12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "14px", fontWeight: 600, cursor: "pointer", marginTop: "8px" }}>설정 저장하기</button>
             </div>
           </div>
@@ -4198,47 +4312,59 @@ function BackOfficeView({
             }}>
               {/* Preview Hero Band */}
               <div style={{ 
-                background: getBgFromPreset(customBgPreset), 
-                padding: "24px 16px", 
-                textAlign: "center" 
+                background: customBannerImage 
+                  ? `url(${customBannerImage}) no-repeat center/${customBannerFit || "cover"}` 
+                  : getBgFromPreset(customBgPreset),
+                backgroundColor: customBannerImage ? "transparent" : undefined,
+                padding: customBannerImage && customShowOverlay === false ? "0" : "24px 16px", 
+                height: "180px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                position: "relative"
               }}>
-                <div style={{ 
-                  background: "var(--surface-card)", 
-                  border: "1px solid var(--hairline-strong)", 
-                  borderRadius: "var(--rounded-pill)", 
-                  display: "inline-block", 
-                  padding: "4px 8px", 
-                  fontSize: "9px", 
-                  color: "var(--ink)", 
-                  fontWeight: 600, 
-                  marginBottom: "8px" 
-                }}>
-                  {customBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
-                </div>
-                
-                <h5 style={{ 
-                  fontSize: "20px", 
-                  fontWeight: 600, 
-                  color: "var(--ink)", 
-                  margin: "0 0 8px 0" 
-                }}>
-                  {customTitle || "AIDA TUNE"}
-                </h5>
-                
-                <p style={{ 
-                  fontSize: "11px", 
-                  color: "var(--body)", 
-                  lineHeight: "1.4", 
-                  margin: 0,
-                  maxHeight: "80px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "pre-line"
-                }}>
-                  {customSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등..."}
-                </p>
+                {(!customBannerImage || customShowOverlay) && (
+                  <div style={{ zIndex: 2 }}>
+                    <div style={{ 
+                      background: "var(--surface-card)", 
+                      border: "1px solid var(--hairline-strong)", 
+                      borderRadius: "var(--rounded-pill)", 
+                      display: "inline-block", 
+                      padding: "4px 8px", 
+                      fontSize: "9px", 
+                      color: "var(--ink)", 
+                      fontWeight: 600, 
+                      marginBottom: "8px" 
+                    }}>
+                      {customBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
+                    </div>
+                    
+                    <h5 style={{ 
+                      fontSize: "16px", 
+                      fontWeight: 600, 
+                      color: "var(--ink)", 
+                      margin: "0 0 6px 0" 
+                    }}>
+                      {customTitle || "AIDA TUNE"}
+                    </h5>
+                    
+                    <p style={{ 
+                      fontSize: "10px", 
+                      color: "var(--body)", 
+                      lineHeight: "1.3", 
+                      margin: 0,
+                      maxHeight: "50px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "pre-line"
+                    }}>
+                      {customSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등..."}
+                    </p>
+                  </div>
+                )}
               </div>
-              
             </div>
           </div>
         </div>
