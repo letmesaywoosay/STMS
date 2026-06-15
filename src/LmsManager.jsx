@@ -939,7 +939,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
         width: "100%",
         height: "550px",
         boxSizing: "border-box",
-        padding: pageConfig?.heroBannerImage && pageConfig?.heroShowOverlay === false ? "0" : "36px 24px",
+        padding: "0",
         textAlign: "center",
         display: "flex",
         flexDirection: "column",
@@ -949,64 +949,6 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
         overflow: "hidden",
         borderBottom: "1px solid var(--hairline-strong)"
       }}>
-        {(!pageConfig?.heroBannerImage || pageConfig?.heroShowOverlay !== false) && (
-          <div style={{ maxWidth: "800px", margin: "0 auto", zIndex: 5 }}>
-            <div style={{ 
-              background: "var(--surface-card)", 
-              border: "1px solid var(--hairline-strong)", 
-              borderRadius: "var(--rounded-pill)", 
-              display: "inline-block", 
-              padding: "4px 10px", 
-              fontSize: "11px", 
-              color: "var(--ink)", 
-              fontWeight: 600, 
-              textTransform: "uppercase",
-              letterSpacing: "0.88px",
-              marginBottom: "12px" 
-            }}>
-              {pageConfig?.heroBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
-            </div>
-            <h1 style={{ 
-              fontSize: "36px", 
-              fontWeight: 700, 
-              color: "var(--ink)", 
-              lineHeight: "1.2", 
-              margin: "0 0 12px 0", 
-              letterSpacing: "-1px" 
-            }}>
-              {pageConfig?.heroTitle || "AIDA TUNE"}
-            </h1>
-            <p style={{ 
-              fontSize: "14px", 
-              color: "var(--body)", 
-              lineHeight: "1.4", 
-              margin: "0 0 16px 0", 
-              maxWidth: "600px",
-              marginLeft: "auto",
-              marginRight: "auto",
-              whiteSpace: "pre-line"
-            }}>
-              {pageConfig?.heroSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등\n실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요."}
-            </p>
-            <button onClick={() => checkAccess("classroom")}
-              style={{
-                height: "36px",
-                padding: "0 20px",
-                background: "var(--primary)",
-                color: "var(--on-primary)",
-                border: "none",
-                borderRadius: "var(--rounded-md)",
-                fontSize: "13px",
-                fontWeight: 500,
-                cursor: "pointer",
-                transition: "background 0.15s"
-              }}
-              onMouseOver={e => e.currentTarget.style.background = "var(--primary-active)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--primary)"}>
-              교육 신청하기 ➔
-            </button>
-          </div>
-        )}
       </div>
 
 
@@ -2495,12 +2437,8 @@ function BackOfficeView({
   const [adminMonth, setAdminMonth] = useState(5); // 5 = June
 
   // 페이지 꾸미기 상태
-  const [customTitle, setCustomTitle] = useState(pageConfig?.heroTitle || "AIDA TUNE");
-  const [customSubtitle, setCustomSubtitle] = useState(pageConfig?.heroSubtitle || "");
-  const [customBadge, setCustomBadge] = useState(pageConfig?.heroBadge || "");
   const [customBgPreset, setCustomBgPreset] = useState(pageConfig?.heroBgPreset || "sky");
   const [customBannerImage, setCustomBannerImage] = useState(pageConfig?.heroBannerImage || "");
-  const [customShowOverlay, setCustomShowOverlay] = useState(pageConfig?.heroShowOverlay !== false);
   const [customBannerFit, setCustomBannerFit] = useState(pageConfig?.heroBannerFit || "cover");
 
   const handleImageUpload = (e) => {
@@ -2642,12 +2580,8 @@ function BackOfficeView({
 
   useEffect(() => {
     if (pageConfig) {
-      setCustomTitle(pageConfig.heroTitle || "AIDA TUNE");
-      setCustomSubtitle(pageConfig.heroSubtitle || "");
-      setCustomBadge(pageConfig.heroBadge || "");
       setCustomBgPreset(pageConfig.heroBgPreset || "sky");
       setCustomBannerImage(pageConfig.heroBannerImage || "");
-      setCustomShowOverlay(pageConfig.heroShowOverlay !== false);
       setCustomBannerFit(pageConfig.heroBannerFit || "cover");
     }
   }, [pageConfig]);
@@ -2923,12 +2857,8 @@ function BackOfficeView({
   // 페이지 꾸미기 저장 핸들러
   const handleSavePageConfig = async () => {
     const newConfig = {
-      heroTitle: customTitle.trim(),
-      heroSubtitle: customSubtitle.trim(),
-      heroBadge: customBadge.trim(),
       heroBgPreset: customBgPreset,
       heroBannerImage: customBannerImage,
-      heroShowOverlay: customShowOverlay,
       heroBannerFit: customBannerFit
     };
     await savePageConfig(newConfig);
@@ -4190,108 +4120,80 @@ function BackOfficeView({
         <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
           {/* 입력 폼 */}
           <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>🎨 소개 페이지 문구 및 배너 테마 설정</h4>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>🎨 상단배너 관리 및 배경 테마 설정</h4>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>상단 배지 텍스트</label>
-                <input type="text" value={customBadge} onChange={e => setCustomBadge(e.target.value)} placeholder="🚀 AIDA TUNE 훈련센터 공식 파트너" style={inpStyle({ padding: "8px 12px" })} />
-              </div>
-              
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>메인 히어로 타이틀</label>
-                <input type="text" value={customTitle} onChange={e => setCustomTitle(e.target.value)} placeholder="AIDA TUNE" style={inpStyle({ padding: "8px 12px" })} />
-              </div>
-              
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>소개글 본문 (새 줄 개행 가능)</label>
-                <textarea value={customSubtitle} onChange={e => setCustomSubtitle(e.target.value)} placeholder="소개글 본문 기입" style={inpStyle({ padding: "8px 12px", minHeight: "100px", resize: "vertical" })} />
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>배너 배경 그라데이션 프리셋</label>
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  {[
-                    { id: "sky", name: "Sky Wash (스카이블루)", previewBg: "linear-gradient(135deg, #cfe7ff, #a8c8e8)" },
-                    { id: "slate", name: "Cool Slate (스틸블루)", previewBg: "linear-gradient(135deg, #eceef2, #d5d9e2)" },
-                    { id: "rose", name: "Sweet Rose (파스텔로즈)", previewBg: "linear-gradient(135deg, #fff1f2, #ffe4e6)" },
-                    { id: "gold", name: "Warm Gold (샌드골드)", previewBg: "linear-gradient(135deg, #fefce8, #fef9c3)" }
-                  ].map(preset => (
-                    <button key={preset.id} onClick={() => setCustomBgPreset(preset.id)}
-                      style={{
-                        flex: 1,
-                        minWidth: "130px",
-                        padding: "10px",
-                        background: "var(--surface-card)",
-                        border: `2px solid ${customBgPreset === preset.id ? "var(--primary)" : "var(--hairline-strong)"}`,
-                        borderRadius: "var(--rounded-md)",
-                        cursor: "pointer",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "6px"
-                      }}>
-                      <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: preset.previewBg, border: "1px solid var(--hairline)" }} />
-                      <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--ink)" }}>{preset.name}</span>
-                    </button>
-                  ))}
+              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "20px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>🏞️ 상단배너 이미지 등록 (PNG)</label>
+                  <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "8px" }}>배너로 등록할 PNG 파일을 업로드하세요. (권장 해상도: 1920x550)</span>
+                  <input 
+                    type="file" 
+                    accept="image/png" 
+                    onChange={handleImageUpload} 
+                    style={{ fontSize: "13px", color: "var(--body)" }} 
+                  />
                 </div>
-              </div>
-
-              {/* 상단배너 관리 (PNG 등록) 메뉴 */}
-              <div style={{ borderTop: "1px solid var(--hairline-strong)", paddingTop: "16px", marginTop: "8px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>🏞️ 상단배너 관리 (PNG 등록)</label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px dashed var(--hairline-strong)", padding: "16px", borderRadius: "var(--rounded-md)" }}>
-                  <div>
-                    <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "6px" }}>배너로 등록할 PNG 파일을 업로드하세요. (권장 해상도: 1920x550)</span>
-                    <input 
-                      type="file" 
-                      accept="image/png" 
-                      onChange={handleImageUpload} 
-                      style={{ fontSize: "13px", color: "var(--body)" }} 
-                    />
-                  </div>
-                  
-                  {customBannerImage && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <div style={{ width: "100px", height: "40px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas)" }}>
-                          <img src={customBannerImage} alt="Banner Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                        </div>
-                        <button 
-                          type="button"
-                          onClick={() => setCustomBannerImage("")} 
-                          style={{ padding: "6px 10px", background: "var(--canvas)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}
-                        >
-                          이미지 제거
-                        </button>
+                
+                {customBannerImage && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px", borderTop: "1px solid var(--hairline)", paddingTop: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div style={{ width: "100px", height: "40px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas)" }}>
+                        <img src={customBannerImage} alt="Banner Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                       </div>
-                      
-                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", borderTop: "1px solid var(--hairline)", paddingTop: "8px", marginTop: "4px" }}>
-                        <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: 600, color: "var(--ink)", cursor: "pointer" }}>
-                          <input 
-                            type="checkbox" 
-                            checked={customShowOverlay} 
-                            onChange={e => setCustomShowOverlay(e.target.checked)} 
-                          />
-                          배너 이미지 위에 텍스트 및 버튼 오버레이 표시
-                        </label>
-                        
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 600 }}>이미지 채우기 방식:</span>
-                          <select 
-                            value={customBannerFit} 
-                            onChange={e => setCustomBannerFit(e.target.value)} 
-                            style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
-                          >
-                            <option value="cover">꽉 차게 자르기 (Cover)</option>
-                            <option value="contain">전체 비율 보존 (Contain)</option>
-                            <option value="100% 100%">공간에 강제 맞춤 (Fill)</option>
-                          </select>
-                        </div>
-                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setCustomBannerImage("")} 
+                        style={{ padding: "6px 10px", background: "var(--canvas)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}
+                      >
+                        이미지 제거
+                      </button>
                     </div>
-                  )}
+                    
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 600 }}>이미지 채우기 방식:</span>
+                      <select 
+                        value={customBannerFit} 
+                        onChange={e => setCustomBannerFit(e.target.value)} 
+                        style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
+                      >
+                        <option value="cover">꽉 차게 자르기 (Cover)</option>
+                        <option value="contain">전체 비율 보존 (Contain)</option>
+                        <option value="100% 100%">공간에 강제 맞춤 (Fill)</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ borderTop: "1px solid var(--hairline-strong)", paddingTop: "16px" }}>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>🎨 배너 배경 그라데이션 프리셋</label>
+                  <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "8px" }}>배너 이미지를 미등록하거나 투명 영역이 있는 경우 적용되는 테마 색상입니다.</span>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {[
+                      { id: "sky", name: "Sky Wash (스카이블루)", previewBg: "linear-gradient(135deg, #cfe7ff, #a8c8e8)" },
+                      { id: "slate", name: "Cool Slate (스틸블루)", previewBg: "linear-gradient(135deg, #eceef2, #d5d9e2)" },
+                      { id: "rose", name: "Sweet Rose (파스텔로즈)", previewBg: "linear-gradient(135deg, #fff1f2, #ffe4e6)" },
+                      { id: "gold", name: "Warm Gold (샌드골드)", previewBg: "linear-gradient(135deg, #fefce8, #fef9c3)" }
+                    ].map(preset => (
+                      <button key={preset.id} onClick={() => setCustomBgPreset(preset.id)}
+                        style={{
+                          flex: 1,
+                          minWidth: "130px",
+                          padding: "10px",
+                          background: "var(--surface-card)",
+                          border: `2px solid ${customBgPreset === preset.id ? "var(--primary)" : "var(--hairline-strong)"}`,
+                          borderRadius: "var(--rounded-md)",
+                          cursor: "pointer",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: "6px"
+                        }}>
+                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: preset.previewBg, border: "1px solid var(--hairline)" }} />
+                        <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--ink)" }}>{preset.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -4316,7 +4218,7 @@ function BackOfficeView({
                   ? `url(${customBannerImage}) no-repeat center/${customBannerFit || "cover"}` 
                   : getBgFromPreset(customBgPreset),
                 backgroundColor: customBannerImage ? "transparent" : undefined,
-                padding: customBannerImage && customShowOverlay === false ? "0" : "24px 16px", 
+                padding: "0", 
                 height: "180px",
                 display: "flex",
                 flexDirection: "column",
@@ -4325,45 +4227,6 @@ function BackOfficeView({
                 textAlign: "center",
                 position: "relative"
               }}>
-                {(!customBannerImage || customShowOverlay) && (
-                  <div style={{ zIndex: 2 }}>
-                    <div style={{ 
-                      background: "var(--surface-card)", 
-                      border: "1px solid var(--hairline-strong)", 
-                      borderRadius: "var(--rounded-pill)", 
-                      display: "inline-block", 
-                      padding: "4px 8px", 
-                      fontSize: "9px", 
-                      color: "var(--ink)", 
-                      fontWeight: 600, 
-                      marginBottom: "8px" 
-                    }}>
-                      {customBadge || "🚀 AIDA TUNE 훈련센터 공식 파트너"}
-                    </div>
-                    
-                    <h5 style={{ 
-                      fontSize: "16px", 
-                      fontWeight: 600, 
-                      color: "var(--ink)", 
-                      margin: "0 0 6px 0" 
-                    }}>
-                      {customTitle || "AIDA TUNE"}
-                    </h5>
-                    
-                    <p style={{ 
-                      fontSize: "10px", 
-                      color: "var(--body)", 
-                      lineHeight: "1.3", 
-                      margin: 0,
-                      maxHeight: "50px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "pre-line"
-                    }}>
-                      {customSubtitle || "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등..."}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
