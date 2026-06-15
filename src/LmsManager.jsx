@@ -1087,10 +1087,10 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
               >더보기 →</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {displayFaqs.map((f, idx) => (
+               {displayFaqs.map((f, idx) => (
                 <div key={f.id || idx} style={{ padding: "16px", background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", border: "1px solid var(--hairline)" }}>
                   <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>Q. {f.question || f.q}</div>
-                  <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.5" }}>{f.answer || f.a}</div>
+                  <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.5" }}>{renderHtmlOrText(f.answer || f.a)}</div>
                 </div>
               ))}
               {displayFaqs.length === 0 && (
@@ -1139,7 +1139,9 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
               <span style={{ fontSize: "11px", color: "var(--muted)" }}>작성일: {selectedNotice.date}</span>
             </div>
             <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", margin: "0 0 12px 0" }}>{selectedNotice.title}</h4>
-            <p style={{ fontSize: "14px", color: "var(--body)", lineHeight: "1.7", margin: "0 0 24px 0", whiteSpace: "pre-line" }}>{selectedNotice.content}</p>
+            <div style={{ fontSize: "14px", color: "var(--body)", lineHeight: "1.7", margin: "0 0 24px 0" }}>
+              {renderHtmlOrText(selectedNotice.content)}
+            </div>
             <button onClick={() => setSelectedNotice(null)} style={{ width: "100%", padding: "12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 500, cursor: "pointer" }}>닫기</button>
           </div>
         </div>
@@ -2025,8 +2027,8 @@ function NoticeView({ notices, saveNotices }) {
               </button>
             </div>
             <h4 style={{ fontSize: "20px", fontWeight: 600, color: "var(--ink)", margin: "0 0 16px 0" }}>{selectedNotice.title}</h4>
-            <div style={{ fontSize: "14px", color: "var(--ink)", lineHeight: "1.6", whiteSpace: "pre-line" }}>
-              {selectedNotice.content}
+            <div style={{ fontSize: "14px", color: "var(--ink)", lineHeight: "1.6" }}>
+              {renderHtmlOrText(selectedNotice.content)}
             </div>
           </div>
         ) : (
@@ -2153,11 +2155,10 @@ function FaqView({ faqs }) {
                       background: "var(--canvas)", 
                       fontSize: "14px", 
                       color: "var(--body)", 
-                      lineHeight: "1.6",
-                      whiteSpace: "pre-line"
+                      lineHeight: "1.6"
                     }}
                   >
-                    {faq.answer}
+                    {renderHtmlOrText(faq.answer)}
                   </div>
                 )}
               </div>
@@ -3986,7 +3987,12 @@ function BackOfficeView({
               </div>
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>내용 *</label>
-                <textarea value={noticeForm.content} onChange={e => setNoticeForm({ ...noticeForm, content: e.target.value })} placeholder="공지사항 상세 내용" style={inpStyle({ padding: "8px 12px", minHeight: "150px", resize: "vertical" })} />
+                <HtmlEditor 
+                  value={noticeForm.content} 
+                  onChange={html => setNoticeForm({ ...noticeForm, content: html })} 
+                  placeholder="공지사항 상세 내용을 작성하세요." 
+                  minHeight="220px" 
+                />
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
                 <button onClick={handleSaveNotice} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
@@ -4061,7 +4067,12 @@ function BackOfficeView({
               </div>
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>답변 (Answer) *</label>
-                <textarea value={faqForm.answer} onChange={e => setFaqForm({ ...faqForm, answer: e.target.value })} placeholder="FAQ 상세 답변 입력" style={inpStyle({ padding: "8px 12px", minHeight: "120px", resize: "vertical" })} />
+                <HtmlEditor 
+                  value={faqForm.answer} 
+                  onChange={html => setFaqForm({ ...faqForm, answer: html })} 
+                  placeholder="FAQ 상세 답변을 작성하세요." 
+                  minHeight="180px" 
+                />
               </div>
               <div style={{ display: "flex", gap: "8px" }}>
                 <button onClick={handleSaveFaq} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
@@ -5612,3 +5623,173 @@ function CourseRegistrationPage({
     </div>
   );
 }
+
+// ── HTML Editor & Renderer Helpers ──
+function HtmlEditor({ value, onChange, placeholder, minHeight = "180px" }) {
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
+  const editorRef = useRef(null);
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value || "";
+    }
+  }, [value]);
+
+  const handleEditorChange = () => {
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML);
+    }
+  };
+
+  const executeCommand = (command, arg = null) => {
+    document.execCommand(command, false, arg);
+    handleEditorChange();
+  };
+
+  const handleColorChange = (e) => {
+    executeCommand("foreColor", e.target.value);
+  };
+
+  const handleBgColorChange = (e) => {
+    executeCommand("backColor", e.target.value);
+  };
+
+  const btnStyle = {
+    background: "none",
+    border: "1px solid var(--hairline-strong)",
+    borderRadius: "var(--rounded-sm)",
+    padding: "4px 8px",
+    fontSize: "12px",
+    cursor: "pointer",
+    color: "var(--ink)",
+    fontWeight: "500",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "4px",
+    transition: "background 0.1s"
+  };
+
+  return (
+    <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-md)", overflow: "hidden", background: "var(--canvas)", display: "flex", flexDirection: "column" }}>
+      {/* Toolbar */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", padding: "8px 12px", alignItems: "center" }}>
+        <button type="button" onClick={() => executeCommand("bold")} style={btnStyle} title="굵게"><b>B</b></button>
+        <button type="button" onClick={() => executeCommand("italic")} style={btnStyle} title="기울임"><i>I</i></button>
+        <button type="button" onClick={() => executeCommand("underline")} style={btnStyle} title="밑줄"><u>U</u></button>
+        <button type="button" onClick={() => executeCommand("strikeThrough")} style={btnStyle} title="취소선"><s>S</s></button>
+        
+        <div style={{ width: "1px", height: "18px", background: "var(--hairline-strong)", margin: "0 4px" }} />
+        
+        <button type="button" onClick={() => executeCommand("formatBlock", "<h2>")} style={btnStyle} title="제목 2">H2</button>
+        <button type="button" onClick={() => executeCommand("formatBlock", "<h3>")} style={btnStyle} title="제목 3">H3</button>
+        <button type="button" onClick={() => executeCommand("formatBlock", "<p>")} style={btnStyle} title="본문">P</button>
+        
+        <div style={{ width: "1px", height: "18px", background: "var(--hairline-strong)", margin: "0 4px" }} />
+
+        <button type="button" onClick={() => executeCommand("insertUnorderedList")} style={btnStyle} title="글머리 기호">• List</button>
+        <button type="button" onClick={() => executeCommand("insertOrderedList")} style={btnStyle} title="번호 매기기">1. List</button>
+        
+        <div style={{ width: "1px", height: "18px", background: "var(--hairline-strong)", margin: "0 4px" }} />
+
+        {/* Text color picker */}
+        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "11px", color: "var(--ink)", fontWeight: 600 }} title="글자 색상">
+          🎨 색상
+          <input type="color" onChange={handleColorChange} style={{ width: "20px", height: "20px", padding: 0, border: "1px solid var(--hairline-strong)", borderRadius: "2px", background: "none", cursor: "pointer" }} />
+        </label>
+        
+        {/* Background color picker */}
+        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "11px", color: "var(--ink)", fontWeight: 600, marginLeft: "6px" }} title="배경 색상">
+          🖌️ 배경
+          <input type="color" onChange={handleBgColorChange} style={{ width: "20px", height: "20px", padding: 0, border: "1px solid var(--hairline-strong)", borderRadius: "2px", background: "none", cursor: "pointer" }} defaultValue="#ffffff" />
+        </label>
+        
+        <div style={{ width: "1px", height: "18px", background: "var(--hairline-strong)", margin: "0 4px" }} />
+
+        <button type="button" onClick={() => {
+          const url = prompt("링크 주소를 입력하세요 (예: https://example.com):");
+          if (url) executeCommand("createLink", url);
+        }} style={btnStyle} title="링크 삽입">🔗 링크</button>
+        
+        <button type="button" onClick={() => {
+          const url = prompt("이미지 주소(URL)를 입력하세요:");
+          if (url) executeCommand("insertImage", url);
+        }} style={btnStyle} title="이미지 삽입">🖼️ 이미지</button>
+
+        <button type="button" onClick={() => executeCommand("removeFormat")} style={btnStyle} title="서식 지우기">🧹 지우기</button>
+        
+        <div style={{ flex: 1 }} />
+        
+        {/* HTML Mode Toggle */}
+        <button 
+          type="button" 
+          onClick={() => setIsHtmlMode(!isHtmlMode)} 
+          style={{ 
+            ...btnStyle, 
+            background: isHtmlMode ? "var(--primary)" : "none", 
+            color: isHtmlMode ? "var(--on-primary)" : "var(--ink)",
+            fontWeight: 600,
+            border: isHtmlMode ? "none" : "1px solid var(--hairline-strong)"
+          }}
+        >
+          {isHtmlMode ? "✨ 에디터" : "💻 HTML 코드"}
+        </button>
+      </div>
+
+      {/* Editor Body */}
+      {isHtmlMode ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            width: "100%",
+            height: minHeight,
+            minHeight: minHeight,
+            border: "none",
+            outline: "none",
+            padding: "12px",
+            fontSize: "13px",
+            fontFamily: "var(--mono)",
+            color: "var(--ink)",
+            background: "var(--canvas-soft)",
+            resize: "vertical",
+            boxSizing: "border-box"
+          }}
+          placeholder="HTML 코드를 직접 입력하세요."
+        />
+      ) : (
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleEditorChange}
+          style={{
+            width: "100%",
+            height: minHeight,
+            minHeight: minHeight,
+            border: "none",
+            outline: "none",
+            padding: "12px",
+            fontSize: "14px",
+            lineHeight: "1.6",
+            color: "var(--ink)",
+            background: "var(--canvas)",
+            overflowY: "auto",
+            boxSizing: "border-box"
+          }}
+          placeholder={placeholder}
+        />
+      )}
+    </div>
+  );
+}
+
+function renderHtmlOrText(text) {
+  if (!text) return "";
+  const hasHtml = /<[a-z][\s\S]*>/i.test(text);
+  if (hasHtml) {
+    return <span dangerouslySetInnerHTML={{ __html: text }} />;
+  }
+  return <span style={{ whiteSpace: "pre-line" }}>{text}</span>;
+}
+
