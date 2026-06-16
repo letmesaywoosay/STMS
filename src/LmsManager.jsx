@@ -5824,16 +5824,10 @@ function CourseRegistrationPage({
     const newErrors = {};
 
     // Missing Required Fields
-    if (!coupon.trim()) newErrors.coupon = "*이 필드는 필수입니다.";
     if (!fullName.trim()) newErrors.fullName = "*이 필드는 필수입니다.";
     if (!email.trim()) newErrors.email = "*이 필드는 필수입니다.";
     if (!phone.trim()) newErrors.phone = "*이 필드는 필수입니다.";
     if (!company.trim()) newErrors.company = "*이 필드는 필수입니다.";
-
-    // Invalid Coupon Number
-    if (coupon.trim() && !/^\d{7}$/.test(coupon.trim())) {
-      newErrors.coupon = "*쿠폰 번호는 7자리 숫자여야 합니다.";
-    }
 
     // Invalid Name
     if (fullName.trim() && fullName.trim().length <= 1) {
@@ -5995,18 +5989,6 @@ function CourseRegistrationPage({
 
       {/* 입력 폼 */}
       <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginBottom: "32px" }}>
-        {/* 쿠폰 번호 */}
-        <div>
-          <label style={labelStyle}>쿠폰 번호 *</label>
-          <input
-            type="text"
-            value={coupon}
-            onChange={e => setCoupon(e.target.value)}
-            placeholder="7자리 숫자를 입력하세요"
-            style={inpStyle({ borderColor: errors.coupon ? "var(--semantic-error)" : "var(--hairline-strong)" })}
-          />
-          {errors.coupon && <div style={errTextStyle}>{errors.coupon}</div>}
-        </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           {/* 성함 */}
