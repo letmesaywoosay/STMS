@@ -22,7 +22,7 @@ const fbGet = async (key) => {
 function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [lmsUser, setLmsUser] = useState(null);
-  const [adminSubTab, setAdminSubTab] = useState("test"); // test: 솔루션 테스트 관리, lms-course: 영상 관리, lms-approval: 관리
+  const [adminSubTab, setAdminSubTab] = useState("lms-approval"); // test: 솔루션 테스트 관리, lms-course: 영상 관리, lms-approval: 관리
   
   useEffect(() => {
     const handlePopState = () => {
@@ -65,7 +65,7 @@ function App() {
   const handleAdminLoginSuccess = (user) => {
     sessionStorage.setItem('aida:lms_login', JSON.stringify(user));
     setLmsUser(user);
-    setAdminSubTab("test");
+    setAdminSubTab("lms-approval");
     navigate('/admin');
   };
 
@@ -138,20 +138,20 @@ function App() {
           {/* 서브 네비게이션 탭 */}
           <div style={{ display: 'flex', background: 'var(--canvas)', borderBottom: '1px solid var(--hairline)', padding: '0 24px', boxSizing: 'border-box', flexWrap: 'wrap' }}>
             <button
-              onClick={() => setAdminSubTab("test")}
+              onClick={() => setAdminSubTab("lms-approval")}
               style={{
                 padding: '16px 20px',
                 border: 'none',
                 background: 'none',
-                borderBottom: adminSubTab === 'test' ? '2px solid var(--primary)' : 'none',
-                color: adminSubTab === 'test' ? 'var(--ink)' : 'var(--body)',
+                borderBottom: adminSubTab === 'lms-approval' ? '2px solid var(--primary)' : 'none',
+                color: adminSubTab === 'lms-approval' ? 'var(--ink)' : 'var(--body)',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s'
               }}
             >
-              📊 솔루션 테스트 관리
+              🛡️ 관리
             </button>
             <button
               onClick={() => setAdminSubTab("lms-course")}
@@ -170,20 +170,20 @@ function App() {
               📖 영상 관리
             </button>
             <button
-              onClick={() => setAdminSubTab("lms-approval")}
+              onClick={() => setAdminSubTab("test")}
               style={{
                 padding: '16px 20px',
                 border: 'none',
                 background: 'none',
-                borderBottom: adminSubTab === 'lms-approval' ? '2px solid var(--primary)' : 'none',
-                color: adminSubTab === 'lms-approval' ? 'var(--ink)' : 'var(--body)',
+                borderBottom: adminSubTab === 'test' ? '2px solid var(--primary)' : 'none',
+                color: adminSubTab === 'test' ? 'var(--ink)' : 'var(--body)',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s'
               }}
             >
-              🛡️ 관리
+              📊 솔루션 테스트 관리
             </button>
           </div>
 
