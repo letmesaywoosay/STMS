@@ -762,7 +762,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
 
       {/* 로그인/회원가입 모달 (Expo 라이트 카드 테마) */}
       {authMode && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div onClick={e => e.target === e.currentTarget && setAuthMode(null)} style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ 
             background: "var(--surface-card)", 
             borderRadius: "var(--rounded-lg)", 
@@ -839,7 +839,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
 
       {/* Guest Alert 모달 (Expo 라이트 카드 테마) */}
       {showGuestAlert && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div onClick={e => e.target === e.currentTarget && setShowGuestAlert(false)} style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ 
             background: "var(--surface-card)", 
             borderRadius: "var(--rounded-lg)", 
@@ -1249,7 +1249,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
 
       {/* ── 공지사항 팝업 상세 모달 (Expo 라이트 카드 테마) ── */}
       {selectedNotice && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div onClick={e => e.target === e.currentTarget && setSelectedNotice(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", padding: "28px", width: "100%", maxWidth: "480px", boxShadow: shadowLg, border: "1px solid var(--hairline)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline)", paddingBottom: "12px", marginBottom: "16px" }}>
               <strong style={{ fontSize: "13px", color: "var(--text-link)" }}>📢 공지사항</strong>
@@ -1408,7 +1408,7 @@ function ScheduleView({ schedules }) {
 
       {/* 일정 상세 레이어 팝업 */}
       {detailSchedule && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div onClick={e => e.target === e.currentTarget && setDetailSchedule(null)} style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ background: "var(--surface-card)", borderRadius: "var(--rounded-lg)", padding: "28px", width: "100%", maxWidth: "440px", boxShadow: shadowLg, border: "1px solid var(--hairline)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline)", paddingBottom: "12px", marginBottom: "16px" }}>
               <strong style={{ fontSize: "13px", color: "var(--text-link)" }}>📅 교육 일정 상세</strong>
@@ -4261,7 +4261,7 @@ function BackOfficeView({
 
           {/* 일정 관리 팝업 모달 */}
           {selectedCalendarDate && (
-            <div style={{ 
+            <div onClick={e => e.target === e.currentTarget && setSelectedCalendarDate(null)} style={{ 
               position: "fixed", 
               top: 0, 
               left: 0, 
