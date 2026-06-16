@@ -2603,6 +2603,7 @@ function BackOfficeView({
 
   // 신규 등록용 스케줄 폼 상태
   const [scheduleForm, setScheduleForm] = useState({ course: "", date: "", target: "", description: "" });
+  const [editingScheduleId, setEditingScheduleId] = useState(null);
   const [adminYear, setAdminYear] = useState(2026);
   const [adminMonth, setAdminMonth] = useState(5); // 5 = June
 
@@ -3097,16 +3098,27 @@ function BackOfficeView({
       alert("교육일자, 교육 과정명, 권장 대상을 모두 기입해주세요.");
       return;
     }
-    const newSchedule = {
-      id: uid(),
-      course: course.trim(),
-      date,
-      target: target.trim(),
-      description: description.trim()
-    };
-    const updated = [newSchedule, ...schedules];
-    await saveSchedules(updated);
-    alert("교육 일정을 등록하였습니다.");
+    if (editingScheduleId) {
+      const updated = schedules.map(s => 
+        s.id === editingScheduleId 
+          ? { ...s, course: course.trim(), date, target: target.trim(), description: description.trim() } 
+          : s
+      );
+      await saveSchedules(updated);
+      alert("교육 일정을 수정하였습니다.");
+      setEditingScheduleId(null);
+    } else {
+      const newSchedule = {
+        id: uid(),
+        course: course.trim(),
+        date,
+        target: target.trim(),
+        description: description.trim()
+      };
+      const updated = [newSchedule, ...schedules];
+      await saveSchedules(updated);
+      alert("교육 일정을 등록하였습니다.");
+    }
     setScheduleForm({ course: "", date: "", target: "", description: "" });
   };
 
@@ -3115,6 +3127,20 @@ function BackOfficeView({
     const updated = schedules.filter(s => s.id !== id);
     await saveSchedules(updated);
     alert("삭제되었습니다.");
+    if (editingScheduleId === id) {
+      setEditingScheduleId(null);
+      setScheduleForm({ course: "", date: "", target: "", description: "" });
+    }
+  };
+
+  const handleEditSchedule = (s) => {
+    setScheduleForm({
+      course: s.course,
+      date: s.date,
+      target: s.target,
+      description: s.description || ""
+    });
+    setEditingScheduleId(s.id);
   };
 
   // 페이지 꾸미기 저장 핸들러
@@ -4127,7 +4153,25 @@ function BackOfficeView({
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>상세 설명</label>
                 <textarea value={scheduleForm.description} onChange={e => setScheduleForm({ ...scheduleForm, description: e.target.value })} placeholder="교육 내용 개요 기입" style={inpStyle({ padding: "8px 12px", minHeight: "60px", resize: "none" })} />
               </div>
-              <button onClick={handleCreateSchedule} style={{ width: "100%", padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer", marginTop: "4px" }}>등록 완료</button>
+              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                <button 
+                  onClick={handleCreateSchedule} 
+                  style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+                >
+                  {editingScheduleId ? "수정 완료" : "등록 완료"}
+                </button>
+                {editingScheduleId && (
+                  <button 
+                    onClick={() => {
+                      setEditingScheduleId(null);
+                      setScheduleForm({ course: "", date: "", target: "", description: "" });
+                    }} 
+                    style={{ padding: "10px 14px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--body)", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    취소
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* 일정 목록 테이블 */}
@@ -4139,7 +4183,7 @@ function BackOfficeView({
                     <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>날짜</th>
                     <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>과정명</th>
                     <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>대상</th>
-                    <th style={{ padding: "10px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>삭제</th>
+                    <th style={{ padding: "10px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>관리</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4148,7 +4192,8 @@ function BackOfficeView({
                       <td style={{ padding: "10px", color: "var(--ink)" }}>{s.date}</td>
                       <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{s.course}</td>
                       <td style={{ padding: "10px", color: "var(--body)" }}>{s.target}</td>
-                      <td style={{ padding: "10px", textAlign: "center" }}>
+                      <td style={{ padding: "10px", textAlign: "center", display: "flex", gap: "6px", justifyContent: "center" }}>
+                        <button onClick={() => handleEditSchedule(s)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--primary)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
                         <button onClick={() => handleDeleteSchedule(s.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
                       </td>
                     </tr>
