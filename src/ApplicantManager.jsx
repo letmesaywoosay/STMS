@@ -2396,12 +2396,16 @@ export default function ApplicantManager({ viewPath }) {
                           const active=curMenu===tab.id;
                           return(
                             <button key={tab.id} onClick={()=>{
-                              setMainMenu(tab.id);
-                              if(tab.id==="ai"&&!aiMailModal){
-                                const yms=new Set();
-                                applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>yms.add(d.slice(0,7)));});
-                                const list=[...yms].sort().reverse();
-                                setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
+                              if(tab.id==="admin"){
+                                setAdminPanelOpen(true);
+                              } else {
+                                setMainMenu(tab.id);
+                                if(tab.id==="ai"&&!aiMailModal){
+                                  const yms=new Set();
+                                  applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>yms.add(d.slice(0,7)));});
+                                  const list=[...yms].sort().reverse();
+                                  setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
+                                }
                               }
                               setOpen(false);
                             }} style={{width:"100%",padding:tab.indent?"10px 20px 10px 40px":"13px 20px",border:"none",background:active?`${C.blue}08`:"transparent",color:active?C.blue:tab.indent?C.subtle:C.text,fontSize:tab.indent?"13px":"14px",fontWeight:active?700:400,fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",cursor:"pointer",borderLeft:active?`3px solid ${C.blue}`:"3px solid transparent"}}>
@@ -2453,6 +2457,14 @@ export default function ApplicantManager({ viewPath }) {
               </button>
             );
           })}
+          {isAdmin&&isSuperAdmin&&(
+            <button onClick={()=>setAdminPanelOpen(o=>!o)} title="관리 설정"
+              style={{padding:"0 18px",height:"52px",border:"none",cursor:"pointer",background:"transparent",color:adminPanelOpen?C.blue:C.muted,fontSize:"16px",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",marginLeft:"4px"}}
+              onMouseEnter={e=>e.currentTarget.style.color=C.blue}
+              onMouseLeave={e=>{if(!adminPanelOpen) e.currentTarget.style.color=C.muted}}>
+              ⚙️
+            </button>
+          )}
         </div>
       </div>
       )}
