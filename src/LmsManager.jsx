@@ -5998,7 +5998,7 @@ function CourseRegistrationPage({
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
-              placeholder="홍길동"
+              placeholder="예) 홍길동"
               style={inpStyle({ borderColor: errors.fullName ? "var(--semantic-error)" : "var(--hairline-strong)" })}
             />
             {errors.fullName && <div style={errTextStyle}>{errors.fullName}</div>}
@@ -6011,7 +6011,7 @@ function CourseRegistrationPage({
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="example@domain.com"
+              placeholder="예) example@domain.com"
               style={inpStyle({ borderColor: errors.email ? "var(--semantic-error)" : "var(--hairline-strong)" })}
             />
             {errors.email && <div style={errTextStyle}>{errors.email}</div>}
@@ -6026,7 +6026,7 @@ function CourseRegistrationPage({
               type="text"
               value={phone}
               onChange={e => setPhone(e.target.value)}
-              placeholder="010-0000-0000"
+              placeholder="예) 010-0000-0000"
               style={inpStyle({ borderColor: errors.phone ? "var(--semantic-error)" : "var(--hairline-strong)" })}
             />
             {errors.phone && <div style={errTextStyle}>{errors.phone}</div>}
@@ -6039,7 +6039,7 @@ function CourseRegistrationPage({
               type="text"
               value={company}
               onChange={e => setCompany(e.target.value)}
-              placeholder="오케스트로"
+              placeholder="예) 오케스트로"
               style={inpStyle({ borderColor: errors.company ? "var(--semantic-error)" : "var(--hairline-strong)" })}
             />
             {errors.company && <div style={errTextStyle}>{errors.company}</div>}
@@ -6054,7 +6054,7 @@ function CourseRegistrationPage({
               type="text"
               value={department}
               onChange={e => setDepartment(e.target.value)}
-              placeholder="아카데미팀"
+              placeholder="예) 아카데미팀"
               style={inpStyle()}
             />
           </div>
@@ -6066,7 +6066,7 @@ function CourseRegistrationPage({
               type="text"
               value={position}
               onChange={e => setPosition(e.target.value)}
-              placeholder="선임연구원"
+              placeholder="예) 선임연구원"
               style={inpStyle()}
             />
           </div>
@@ -6081,6 +6081,7 @@ function CourseRegistrationPage({
             max="3"
             value={attendees}
             onChange={e => setAttendees(e.target.value)}
+            placeholder="예) 1"
             style={inpStyle({ borderColor: errors.attendees ? "var(--semantic-error)" : "var(--hairline-strong)" })}
           />
           {errors.attendees && <div style={errTextStyle}>{errors.attendees}</div>}
@@ -6092,7 +6093,7 @@ function CourseRegistrationPage({
           <textarea
             value={comments}
             onChange={e => setComments(e.target.value)}
-            placeholder="기타 요청사항이나 문의사항을 적어주세요."
+            placeholder="예) 주차 공간이 필요합니다. 또는 기타 요청사항을 작성해 주세요."
             style={inpStyle({ minHeight: "80px", resize: "vertical" })}
           />
         </div>
