@@ -896,6 +896,37 @@ const getBgFromPreset = (preset) => {
 // ── [IntroView] Expo Hero & Device-Mockup 적용 메인 화면 ──
 function IntroView({ courses, checkAccess, setSelectedCourse, applications, currentUser, pageConfig, notices, faqs, saveNotices, setActiveTab }) {
   const [selectedNotice, setSelectedNotice] = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const banners = pageConfig?.banners || [
+    {
+      id: "default_1",
+      bgImage: pageConfig?.heroBgImage || "",
+      fgImage: pageConfig?.heroBannerImage || "",
+      fit: pageConfig?.heroBannerFit || "contain"
+    }
+  ];
+
+  const autoSlideEnabled = pageConfig?.bannersAutoSlide !== false;
+  const slideInterval = pageConfig?.bannersSlideInterval || 5000;
+
+  useEffect(() => {
+    if (!autoSlideEnabled || banners.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, slideInterval);
+    return () => clearInterval(timer);
+  }, [currentSlide, banners.length, autoSlideEnabled, slideInterval]);
+
+  const handlePrevSlide = (e) => {
+    e.stopPropagation();
+    setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
+  };
+
+  const handleNextSlide = (e) => {
+    e.stopPropagation();
+    setCurrentSlide((prev) => (prev + 1) % banners.length);
+  };
 
   const defaultMockCourses = [
     { id: "mock-1", title: "AI Agent 설계 및 구축", description: "LangChain 및 주요 프레임워크를 활용해 업무 자동화용 AI 에이전트를 빌드하고 프로덕션 수준으로 구현하는 실무 과정", duration: "2일, 16시간", image: "🤖" },
@@ -932,35 +963,161 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
     <div>
       {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 제거, 1920px 기준 Full-width 및 여백 최적화) ── */}
       <div style={{
-        backgroundImage: pageConfig?.heroBgImage 
-          ? `url(${pageConfig.heroBgImage})` 
-          : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "center",
-        backgroundSize: "cover",
         width: "100%",
         height: "550px",
         boxSizing: "border-box",
-        padding: "0",
-        textAlign: "center",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
         position: "relative",
         overflow: "hidden",
-        borderBottom: "1px solid var(--hairline-strong)"
+        borderBottom: "1px solid var(--hairline-strong)",
+        background: "#000"
       }}>
-        {pageConfig?.heroBannerImage && (
-          <img 
-            src={pageConfig.heroBannerImage} 
-            alt="Top Banner Layer" 
-            style={{ 
-              width: "100%", 
-              height: "100%", 
-              objectFit: pageConfig?.heroBannerFit || "contain", 
-              pointerEvents: "none" 
-            }} 
-          />
+        {/* Slides */}
+        {banners.map((slide, idx) => (
+          <div 
+            key={slide.id || idx}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundImage: slide.bgImage 
+                ? `url(${slide.bgImage})` 
+                : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "center",
+              backgroundSize: "cover",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: idx === currentSlide ? 1 : 0,
+              zIndex: idx === currentSlide ? 2 : 1,
+              transition: "opacity 0.8s ease-in-out",
+              pointerEvents: idx === currentSlide ? "auto" : "none"
+            }}
+          >
+            {slide.fgImage && (
+              <img 
+                src={slide.fgImage} 
+                alt="Top Banner Layer" 
+                style={{ 
+                  width: "100%", 
+                  height: "100%", 
+                  objectFit: slide.fit || "contain", 
+                  pointerEvents: "none" 
+                }} 
+              />
+            )}
+          </div>
+        ))}
+
+        {/* Left & Right Manual Slide Buttons */}
+        {banners.length > 1 && (
+          <>
+            <button 
+              onClick={handlePrevSlide}
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "24px",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                background: "rgba(255, 255, 255, 0.2)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                color: "#ffffff",
+                fontSize: "24px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.4)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1.05)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+              }}
+            >
+              ‹
+            </button>
+            <button 
+              onClick={handleNextSlide}
+              style={{
+                position: "absolute",
+                top: "50%",
+                right: "24px",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                width: "48px",
+                height: "48px",
+                borderRadius: "50%",
+                background: "rgba(255, 255, 255, 0.2)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                color: "#ffffff",
+                fontSize: "24px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.4)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1.05)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+                e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+              }}
+            >
+              ›
+            </button>
+          </>
+        )}
+
+        {/* Carousel Indicators (Dots) */}
+        {banners.length > 1 && (
+          <div style={{
+            position: "absolute",
+            bottom: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 10,
+            display: "flex",
+            gap: "8px"
+          }}>
+            {banners.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentSlide(idx);
+                }}
+                style={{
+                  width: idx === currentSlide ? "24px" : "8px",
+                  height: "8px",
+                  borderRadius: "4px",
+                  border: "none",
+                  background: idx === currentSlide ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  padding: 0
+                }}
+              />
+            ))}
+          </div>
         )}
       </div>
 
@@ -2450,11 +2607,54 @@ function BackOfficeView({
   const [adminMonth, setAdminMonth] = useState(5); // 5 = June
 
   // 페이지 꾸미기 상태
-  const [customBannerImage, setCustomBannerImage] = useState(pageConfig?.heroBannerImage || "");
-  const [customBannerFit, setCustomBannerFit] = useState(pageConfig?.heroBannerFit || "contain");
-  const [customBgImage, setCustomBgImage] = useState(pageConfig?.heroBgImage || "");
+  const [bannersList, setBannersList] = useState([]);
+  const [bannersAutoSlide, setBannersAutoSlide] = useState(true);
+  const [bannersSlideInterval, setBannersSlideInterval] = useState(5000);
+  const [previewSlide, setPreviewSlide] = useState(0);
 
-  const handleImageUpload = (e) => {
+  useEffect(() => {
+    if (!bannersAutoSlide || bannersList.length <= 1) return;
+    const timer = setInterval(() => {
+      setPreviewSlide((prev) => (prev + 1) % bannersList.length);
+    }, bannersSlideInterval);
+    return () => clearInterval(timer);
+  }, [previewSlide, bannersList.length, bannersAutoSlide, bannersSlideInterval]);
+
+  useEffect(() => {
+    if (previewSlide >= bannersList.length && bannersList.length > 0) {
+      setPreviewSlide(bannersList.length - 1);
+    }
+  }, [bannersList.length, previewSlide]);
+
+  const handleUpdateBannerField = (id, field, value) => {
+    setBannersList(prev => prev.map(b => b.id === id ? { ...b, [field]: value } : b));
+  };
+
+  const handleAddBanner = () => {
+    if (bannersList.length >= 5) {
+      alert("배너는 최대 5장까지만 등록 가능합니다.");
+      return;
+    }
+    setBannersList(prev => [
+      ...prev,
+      {
+        id: uid(),
+        bgImage: "",
+        fgImage: "",
+        fit: "contain"
+      }
+    ]);
+  };
+
+  const handleDeleteBanner = (id) => {
+    if (bannersList.length <= 1) {
+      alert("최소 1장의 배너는 유지되어야 합니다.");
+      return;
+    }
+    setBannersList(prev => prev.filter(b => b.id !== id));
+  };
+
+  const handleBannerImageUpload = (id, e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -2490,14 +2690,14 @@ function BackOfficeView({
           return;
         }
 
-        setCustomBannerImage(compressedBase64);
+        handleUpdateBannerField(id, "fgImage", compressedBase64);
       };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
   };
 
-  const handleBgImageUpload = (e) => {
+  const handleBannerBgUpload = (id, e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -2531,7 +2731,7 @@ function BackOfficeView({
           return;
         }
 
-        setCustomBgImage(compressedBase64);
+        handleUpdateBannerField(id, "bgImage", compressedBase64);
       };
       img.src = event.target.result;
     };
@@ -2634,9 +2834,17 @@ function BackOfficeView({
 
   useEffect(() => {
     if (pageConfig) {
-      setCustomBannerImage(pageConfig.heroBannerImage || "");
-      setCustomBannerFit(pageConfig.heroBannerFit || "contain");
-      setCustomBgImage(pageConfig.heroBgImage || "");
+      const savedBanners = pageConfig.banners || [
+        {
+          id: "banner_default_1",
+          bgImage: pageConfig.heroBgImage || "",
+          fgImage: pageConfig.heroBannerImage || "",
+          fit: pageConfig.heroBannerFit || "contain"
+        }
+      ];
+      setBannersList(savedBanners);
+      setBannersAutoSlide(pageConfig.bannersAutoSlide !== false);
+      setBannersSlideInterval(pageConfig.bannersSlideInterval || 5000);
     }
   }, [pageConfig]);
 
@@ -2911,9 +3119,12 @@ function BackOfficeView({
   // 페이지 꾸미기 저장 핸들러
   const handleSavePageConfig = async () => {
     const newConfig = {
-      heroBgImage: customBgImage,
-      heroBannerImage: customBannerImage,
-      heroBannerFit: customBannerFit
+      heroBgImage: bannersList[0]?.bgImage || "",
+      heroBannerImage: bannersList[0]?.fgImage || "",
+      heroBannerFit: bannersList[0]?.fit || "contain",
+      banners: bannersList,
+      bannersAutoSlide,
+      bannersSlideInterval
     };
     await savePageConfig(newConfig);
     alert("소개 페이지 커스텀 설정이 저장되었습니다.");
