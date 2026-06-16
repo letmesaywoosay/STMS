@@ -106,9 +106,9 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
 
   // 페이지 꾸미기 & 연간 교육 일정 상태 & 공지사항 & FAQ 상태
   const [pageConfig, setPageConfig] = useState({
-    heroTitle: "AIDA TUNE",
+    heroTitle: "AIDA OASIS",
     heroSubtitle: "AI 서비스 기획, AI 에이전트 개발, 데이터 엔지니어링 프로젝트 관리 등\n실무 중심의 특화 강의와 실시간 평가 테스트를 하나의 플랫폼에서 신속하게 학습하고 진단하세요.",
-    heroBadge: "🚀 AIDA TUNE 훈련센터 공식 파트너",
+    heroBadge: "🚀 AIDA OASIS 공식 파트너",
     heroBgPreset: "sky"
   });
   const [schedules, setSchedules] = useState([]);
@@ -298,7 +298,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
         setSchedules(s && s.length > 0 ? s : defaultMockSchedules);
 
         const defaultMockNotices = [
-          { id: "n-1", title: "오케스트로 아카데미 개소 및 AIDA TUNE 서비스 런칭 안내", content: "안녕하세요. 오케스트로 아카데미팀입니다. 실무 중심의 특화 강의와 실시간 평가 테스트를 지원하는 AIDA TUNE 서비스가 공식 오픈되었습니다.\n임직원 여러분의 많은 참여 바랍니다.", date: "2026-06-01", author: "관리자", hits: 45 },
+          { id: "n-1", title: "오케스트로 아카데미 개소 및 AIDA OASIS 서비스 런칭 안내", content: "안녕하세요. 오케스트로 아카데미팀입니다. 실무 중심의 특화 강의와 실시간 평가 테스트를 지원하는 AIDA OASIS 서비스가 공식 오픈되었습니다.\n임직원 여러분의 많은 참여 바랍니다.", date: "2026-06-01", author: "관리자", hits: 45 },
           { id: "n-2", title: "[필독] 수강신청 승인 절차 및 수료 기준 안내", content: "각 강좌는 신청 후 관리자의 승인을 거쳐 수강이 확정됩니다. 비디오 학습 진행률이 80% 이상 도달해야 수료가 인정되며 마이페이지에서 이력 확인이 가능합니다.", date: "2026-06-05", author: "관리자", hits: 28 },
           { id: "n-3", title: "6월 정기 생성형 AI 실무 교육 일정 안내", content: "6월에 예정된 생성형 AI 실무 및 프롬프트 엔지니어링 심화 교육 일정이 연간교육계획 메뉴에 등록되었으니 확인하시어 수강신청 바랍니다.", date: "2026-06-09", author: "관리자", hits: 12 }
         ];
@@ -333,17 +333,17 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
           {
             id: "OK-PTE2",
             target: "Partner",
-            name: "AIDA TUNE 솔루션 파트너 기술 심화 교육",
+            name: "AIDA OASIS 솔루션 파트너 기술 심화 교육",
             dateStart: "2026-07-05",
             dateEnd: null,
             time: "10:00-17:00",
             location: "여의도 파크원타워2 43층 파트너룸",
             status: "Separate Notice",
-            overview: "AIDA TUNE 솔루션 공식 파트너사의 엔지니어 및 기술 지원 인력을 대상으로 하는 제품 아키텍처 교육 및 트러블슈팅 가이드 교육입니다.",
-            recommendedAudience: ["AIDA TUNE 도입 및 기술 지원을 담당하는 협력사 엔지니어", "파트너사 기술 영업 총괄 담당자"],
-            objectives: ["AIDA TUNE 백엔드 구조 및 데이터베이스 설계 원칙 학습", "평가 모듈 커스터마이징 및 배포 트러블슈팅 실전 훈련"],
+            overview: "AIDA OASIS 솔루션 공식 파트너사의 엔지니어 및 기술 지원 인력을 대상으로 하는 제품 아키텍처 교육 및 트러블슈팅 가이드 교육입니다.",
+            recommendedAudience: ["AIDA OASIS 도입 및 기술 지원을 담당하는 협력사 엔지니어", "파트너사 기술 영업 총괄 담당자"],
+            objectives: ["AIDA OASIS 백엔드 구조 및 데이터베이스 설계 원칙 학습", "평가 모듈 커스터마이징 및 배포 트러블슈팅 실전 훈련"],
             teachingMethod: ["아키텍처 프레젠테이션 (30%) 및 실 서버 CLI 명령어 실습 (70%)", "시나리오별 에러 대응 워크숍"],
-            curriculum: ["1일차 오전: AIDA TUNE 시스템 구성도 및 연동 API 규격 학습", "1일차 오후: VM 배포 실습 및 로깅 시스템 추적 분석"],
+            curriculum: ["1일차 오전: AIDA OASIS 시스템 구성도 및 연동 API 규격 학습", "1일차 오후: VM 배포 실습 및 로깅 시스템 추적 분석"],
             prerequisites: ["Linux CLI 명령어 숙련자", "기본적인 DB 쿼리(SQL/NoSQL) 및 네트워킹 기본 지식 필수"],
             notices: ["파트너사 대상의 비공개 기술 교육으로 사전 승인된 인원만 참석 가능합니다.", "별도 신청을 받지 않으며, 참석을 원하는 파트너사는 고객 성공 매니저에게 별도 문의하시기 바랍니다."]
           },
@@ -658,7 +658,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
   if (dbLoading) {
     return (
       <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--canvas)" }}>
-        <div style={{ fontSize: "14px", color: "var(--body)", fontWeight: 500 }}>AIDA TUNE 시스템 로딩 중...</div>
+        <div style={{ fontSize: "14px", color: "var(--body)", fontWeight: 500 }}>AIDA OASIS 시스템 로딩 중...</div>
       </div>
     );
   }
@@ -741,7 +741,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
       }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "32px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxWidth: "600px" }}>
-            <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>🎻 AIDA TUNE 아카데미</div>
+            <div style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>AIDA OASIS</div>
             <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.6" }}>
               회사명 : 오케스트로(주) &nbsp;|&nbsp; 서울특별시 영등포구 여의대포 108, 43층 (여의도동, 파크원타워2)<br />
               Email : academy@okestro.com &nbsp;|&nbsp; 대표자 : 김민준 &nbsp;|&nbsp; 사업자등록번호 : 783-85-00169
@@ -752,7 +752,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
           </div>
           
           <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "13px", color: "var(--body)", cursor: "pointer" }}>AIDA TUNE 소개</span>
+            <span style={{ fontSize: "13px", color: "var(--body)", cursor: "pointer" }}>AIDA OASIS 소개</span>
             <span style={{ fontSize: "13px", color: "var(--body)", cursor: "pointer" }}>이용약관</span>
             <span style={{ fontSize: "13px", color: "var(--ink)", fontWeight: 600, cursor: "pointer" }}>개인정보처리방침</span>
             <span style={{ fontSize: "13px", color: "var(--body)", cursor: "pointer" }}>찾아오시는길</span>
@@ -4823,7 +4823,7 @@ function BackOfficeView({
     ]);
     var recipients = data.recipients;
     if (recipients && recipients.length > 0) {
-      var subject = "[AIDA TUNE] 신규 교육 과정 수강 신청: " + data.courseName;
+      var subject = "[AIDA OASIS] 신규 교육 과정 수강 신청: " + data.courseName;
       var body = "신규 수강 신청 접수 내역:\\n\\n" +
                  "- 과정명: " + data.courseName + "\\n" +
                  "- 신청자: " + data.fullName + "\\n" +
