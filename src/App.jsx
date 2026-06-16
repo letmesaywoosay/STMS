@@ -92,7 +92,7 @@ function App() {
             borderBottom: '1px solid var(--hairline)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => navigate('/')}>
-              <img src="/logo.png" alt="AIDA TUNE" style={{ height: "24px", objectFit: "contain" }} />
+              <img src="/logo.png" alt="AIDA OASIS" style={{ height: "24px", objectFit: "contain" }} />
               <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500, borderLeft: '1px solid var(--hairline-strong)', paddingLeft: '12px' }}>관리자 포탈</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -238,7 +238,7 @@ function App() {
           {/* Left Side: Logo & Main Navigation Menus */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
-              <img src="/logo.png" alt="AIDA TUNE" style={{ height: "26px", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+              <img src="/logo.png" alt="AIDA OASIS" style={{ height: "26px", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
