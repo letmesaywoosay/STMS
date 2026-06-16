@@ -22,7 +22,7 @@ const fbGet = async (key) => {
 function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [lmsUser, setLmsUser] = useState(null);
-  const [adminSubTab, setAdminSubTab] = useState("test"); // test: OnTest관리, lms-course: LMS 교육과정, lms-approval: 승인관리
+  const [adminSubTab, setAdminSubTab] = useState("test"); // test: OnTest관리, lms-course: LMS 교육과정, lms-approval: 관리
   
   useEffect(() => {
     const handlePopState = () => {
@@ -183,7 +183,7 @@ function App() {
                 transition: 'all 0.15s'
               }}
             >
-              🛡️ 승인관리
+              🛡️ 관리
             </button>
           </div>
 
