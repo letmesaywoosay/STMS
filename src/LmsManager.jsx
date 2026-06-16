@@ -2606,6 +2606,7 @@ function BackOfficeView({
   const [editingScheduleId, setEditingScheduleId] = useState(null);
   const [adminYear, setAdminYear] = useState(2026);
   const [adminMonth, setAdminMonth] = useState(5); // 5 = June
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
 
   // 페이지 꾸미기 상태
   const [bannersList, setBannersList] = useState([]);
@@ -3119,7 +3120,7 @@ function BackOfficeView({
       await saveSchedules(updated);
       alert("교육 일정을 등록하였습니다.");
     }
-    setScheduleForm({ course: "", date: "", target: "", description: "" });
+    setScheduleForm({ course: "", date: selectedCalendarDate || "", target: "", description: "" });
   };
 
   const handleDeleteSchedule = async (id) => {
@@ -3129,8 +3130,8 @@ function BackOfficeView({
     alert("삭제되었습니다.");
     if (editingScheduleId === id) {
       setEditingScheduleId(null);
-      setScheduleForm({ course: "", date: "", target: "", description: "" });
     }
+    setScheduleForm({ course: "", date: selectedCalendarDate || "", target: "", description: "" });
   };
 
   const handleEditSchedule = (s) => {
@@ -4131,150 +4132,281 @@ function BackOfficeView({
 
       {/* 일정 관리 탭 UI [NEW] */}
       {backTab === "schedule" && (
-        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-          {/* 일정 등록 폼 및 리스트 */}
-          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📅 교육 일정 등록</h4>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>교육 일자 *</label>
-                <input type="date" value={scheduleForm.date} onChange={e => setScheduleForm({ ...scheduleForm, date: e.target.value })} style={inpStyle({ padding: "8px 12px" })} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>교육 과정명 *</label>
-                <input type="text" value={scheduleForm.course} onChange={e => setScheduleForm({ ...scheduleForm, course: e.target.value })} placeholder="예) AI Agent 설계 및 구축 실전" style={inpStyle({ padding: "8px 12px" })} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>수강 권장 대상 *</label>
-                <input type="text" value={scheduleForm.target} onChange={e => setScheduleForm({ ...scheduleForm, target: e.target.value })} placeholder="예) 사내 엔지니어 및 기획생" style={inpStyle({ padding: "8px 12px" })} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>상세 설명</label>
-                <textarea value={scheduleForm.description} onChange={e => setScheduleForm({ ...scheduleForm, description: e.target.value })} placeholder="교육 내용 개요 기입" style={inpStyle({ padding: "8px 12px", minHeight: "60px", resize: "none" })} />
-              </div>
-              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-                <button 
-                  onClick={handleCreateSchedule} 
-                  style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
-                >
-                  {editingScheduleId ? "수정 완료" : "등록 완료"}
-                </button>
-                {editingScheduleId && (
-                  <button 
-                    onClick={() => {
-                      setEditingScheduleId(null);
-                      setScheduleForm({ course: "", date: "", target: "", description: "" });
-                    }} 
-                    style={{ padding: "10px 14px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--body)", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
-                  >
-                    취소
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 일정 목록 테이블 */}
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: "16px 0 0 0" }}>📋 등록된 일정 리스트</h4>
-            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead>
-                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
-                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>날짜</th>
-                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>과정명</th>
-                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>대상</th>
-                    <th style={{ padding: "10px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>관리</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schedules.map(s => (
-                    <tr key={s.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                      <td style={{ padding: "10px", color: "var(--ink)" }}>{s.date}</td>
-                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{s.course}</td>
-                      <td style={{ padding: "10px", color: "var(--body)" }}>{s.target}</td>
-                      <td style={{ padding: "10px", textAlign: "center", display: "flex", gap: "6px", justifyContent: "center" }}>
-                        <button onClick={() => handleEditSchedule(s)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--primary)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
-                        <button onClick={() => handleDeleteSchedule(s.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
-                      </td>
-                    </tr>
-                  ))}
-                  {schedules.length === 0 && (
-                    <tr>
-                      <td colSpan="4" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 교육 일정이 없습니다.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+            <h4 style={{ fontSize: "18px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>📅 교육 일정 관리</h4>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button 
+                onClick={handlePrevMonth} 
+                style={{ padding: "6px 12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-md)", cursor: "pointer", fontSize: "13px", fontWeight: 600, transition: "background 0.2s" }}
+                onMouseEnter={e => e.target.style.background = "var(--hairline)"}
+                onMouseLeave={e => e.target.style.background = "var(--canvas-soft)"}
+              >
+                &lt;
+              </button>
+              <span style={{ fontSize: "15px", fontWeight: 700, color: "var(--ink)", minWidth: "100px", textAlign: "center" }}>
+                {adminYear}년 {adminMonth + 1}월
+              </span>
+              <button 
+                onClick={handleNextMonth} 
+                style={{ padding: "6px 12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-md)", cursor: "pointer", fontSize: "13px", fontWeight: 600, transition: "background 0.2s" }}
+                onMouseEnter={e => e.target.style.background = "var(--hairline)"}
+                onMouseLeave={e => e.target.style.background = "var(--canvas-soft)"}
+              >
+                &gt;
+              </button>
             </div>
           </div>
 
-          {/* 어드민 미니 달력 미리보기 */}
-          <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📅 달력 미리보기</h4>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <button onClick={handlePrevMonth} style={{ padding: "2px 6px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "4px", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>&lt;</button>
-                <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--ink)" }}>{adminYear}. {adminMonth + 1}</span>
-                <button onClick={handleNextMonth} style={{ padding: "2px 6px", background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "4px", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}>&gt;</button>
-              </div>
+          <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden", background: "var(--surface-card)", boxShadow: "var(--shadow-sm)" }}>
+            {/* 요일 헤더 */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid var(--hairline-strong)", padding: "10px 0", textAlign: "center", fontWeight: 700, fontSize: "12px", color: "var(--body)", background: "var(--canvas-soft)" }}>
+              <div style={{ color: "var(--red)" }}>일요일</div>
+              <div>월요일</div>
+              <div>화요일</div>
+              <div>수요일</div>
+              <div>목요일</div>
+              <div>금요일</div>
+              <div style={{ color: "var(--text-link)" }}>토요일</div>
             </div>
-
-            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden", background: "var(--surface-card)" }}>
-              {/* 요일 헤더 */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid var(--hairline-strong)", padding: "6px 0", textAlign: "center", fontWeight: 600, fontSize: "11px", color: "var(--body)" }}>
-                <div style={{ color: "var(--red)" }}>일</div>
-                <div>월</div>
-                <div>화</div>
-                <div>수</div>
-                <div>목</div>
-                <div>금</div>
-                <div style={{ color: "var(--text-link)" }}>토</div>
-              </div>
-              {/* 날짜 그리드 */}
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {rows.map((r, rIdx) => (
-                  <div key={rIdx} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: rIdx === rows.length - 1 ? "none" : "1px solid var(--hairline)", minHeight: "45px" }}>
-                    {r.map((day, dIdx) => {
-                      const dayStr = day ? `${adminYear}-${String(adminMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : "";
-                      const hasEvent = day && schedules.some(s => s.date === dayStr);
-                      return (
-                        <div key={dIdx} style={{ 
-                          padding: "4px", 
+            {/* 날짜 그리드 */}
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {rows.map((r, rIdx) => (
+                <div key={rIdx} style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: rIdx === rows.length - 1 ? "none" : "1px solid var(--hairline)", minHeight: "110px" }}>
+                  {r.map((day, dIdx) => {
+                    const dayStr = day ? `${adminYear}-${String(adminMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : "";
+                    const dayEvents = day ? schedules.filter(s => s.date === dayStr) : [];
+                    return (
+                      <div 
+                        key={dIdx} 
+                        onClick={() => {
+                          if (day) {
+                            setSelectedCalendarDate(dayStr);
+                            setScheduleForm({ course: "", date: dayStr, target: "", description: "" });
+                            setEditingScheduleId(null);
+                          }
+                        }}
+                        style={{ 
+                          padding: "8px", 
                           background: day ? "var(--surface-card)" : "var(--canvas-soft)", 
                           borderRight: dIdx === 6 ? "none" : "1px solid var(--hairline)",
                           display: "flex",
                           flexDirection: "column",
-                          alignItems: "center",
-                          justifyContent: "space-between",
+                          alignItems: "stretch",
+                          justifyContent: "flex-start",
                           boxSizing: "border-box",
+                          cursor: day ? "pointer" : "default",
+                          transition: "background 0.2s",
+                          minHeight: "110px",
                           position: "relative"
-                        }}>
-                          {day && (
+                        }}
+                        onMouseEnter={e => { if (day) e.currentTarget.style.background = "var(--canvas-soft)"; }}
+                        onMouseLeave={e => { if (day) e.currentTarget.style.background = "var(--surface-card)"; }}
+                      >
+                        {day && (
+                          <div style={{ 
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: "6px"
+                          }}>
                             <span style={{ 
-                              fontSize: "11px", 
-                              fontWeight: 600, 
+                              fontSize: "12px", 
+                              fontWeight: 700, 
                               color: dIdx === 0 ? "var(--red)" : (dIdx === 6 ? "var(--text-link)" : "var(--ink)")
                             }}>
                               {day}
                             </span>
-                          )}
-                          {hasEvent && (
-                            <div style={{ 
-                              width: "6px", 
-                              height: "6px", 
-                              background: "var(--text-link)", 
-                              borderRadius: "50%", 
-                              marginBottom: "4px" 
-                            }} />
+                            {dayEvents.length > 0 && (
+                              <span style={{ fontSize: "10px", padding: "1px 5px", background: "var(--primary)", color: "var(--on-primary)", borderRadius: "10px", fontWeight: 600 }}>
+                                {dayEvents.length}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "3px", overflowY: "hidden" }}>
+                          {dayEvents.slice(0, 3).map(s => (
+                            <div 
+                              key={s.id} 
+                              style={{ 
+                                fontSize: "11px", 
+                                background: "rgba(37, 99, 235, 0.06)", 
+                                color: "var(--primary)", 
+                                border: "1px solid rgba(37, 99, 235, 0.15)",
+                                borderRadius: "var(--rounded-sm)", 
+                                padding: "2px 4px", 
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                fontWeight: 500
+                              }}
+                              title={s.course}
+                            >
+                              {s.course}
+                            </div>
+                          ))}
+                          {dayEvents.length > 3 && (
+                            <div style={{ fontSize: "10px", color: "var(--muted)", paddingLeft: "4px", fontWeight: 500 }}>
+                              외 {dayEvents.length - 3}개 더보기...
+                            </div>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           </div>
+
+          {/* 일정 관리 팝업 모달 */}
+          {selectedCalendarDate && (
+            <div style={{ 
+              position: "fixed", 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              background: "rgba(0,0,0,0.45)", 
+              zIndex: 1000, 
+              display: "flex", 
+              justifyContent: "center", 
+              alignItems: "center",
+              backdropFilter: "blur(3px)"
+            }}>
+              <div style={{ 
+                background: "var(--surface-card)", 
+                border: "1px solid var(--hairline-strong)", 
+                borderRadius: "var(--rounded-lg)", 
+                boxShadow: "var(--shadow-lg)", 
+                width: "550px", 
+                maxWidth: "90%", 
+                maxHeight: "85vh", 
+                overflowY: "auto", 
+                display: "flex", 
+                flexDirection: "column", 
+                gap: "24px", 
+                padding: "24px", 
+                position: "relative" 
+              }}>
+                {/* 모달 헤더 */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "12px" }}>
+                  <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>
+                    📅 {selectedCalendarDate} 교육 일정 관리
+                  </h4>
+                  <button 
+                    onClick={() => {
+                      setSelectedCalendarDate(null);
+                      setEditingScheduleId(null);
+                      setScheduleForm({ course: "", date: "", target: "", description: "" });
+                    }}
+                    style={{ 
+                      background: "none", 
+                      border: "none", 
+                      color: "var(--body)", 
+                      fontSize: "18px", 
+                      fontWeight: 600, 
+                      cursor: "pointer" 
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* 등록된 일정 목록 */}
+                <div>
+                  <h5 style={{ fontSize: "13px", fontWeight: 600, color: "var(--ink)", margin: "0 0 10px 0" }}>📋 등록된 일정</h5>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {schedules.filter(s => s.date === selectedCalendarDate).map(s => (
+                      <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "12px", borderRadius: "var(--rounded-md)" }}>
+                        <div style={{ flex: 1, marginRight: "12px" }}>
+                          <div style={{ fontWeight: 700, fontSize: "13px", color: "var(--ink)" }}>{s.course}</div>
+                          <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "4px" }}>🎯 대상: {s.target}</div>
+                          {s.description && <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "4px", whiteSpace: "pre-wrap" }}>📝 {s.description}</div>}
+                        </div>
+                        <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                          <button 
+                            onClick={() => handleEditSchedule(s)} 
+                            style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--primary)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}
+                          >
+                            수정
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteSchedule(s.id)} 
+                            style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {schedules.filter(s => s.date === selectedCalendarDate).length === 0 && (
+                      <div style={{ textAlign: "center", padding: "16px", color: "var(--muted)", fontSize: "12px" }}>
+                        등록된 교육 일정이 없습니다.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 일정 등록 / 수정 폼 */}
+                <div style={{ borderTop: "1px solid var(--hairline-strong)", paddingTop: "16px" }}>
+                  <h5 style={{ fontSize: "13px", fontWeight: 600, color: "var(--ink)", margin: "0 0 12px 0" }}>
+                    {editingScheduleId ? "✏️ 일정 수정" : "➕ 새 일정 추가"}
+                  </h5>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>교육 과정명 *</label>
+                      <input 
+                        type="text" 
+                        value={scheduleForm.course} 
+                        onChange={e => setScheduleForm({ ...scheduleForm, course: e.target.value })} 
+                        placeholder="예) AI Agent 설계 및 구축 실전" 
+                        style={inpStyle({ padding: "8px 12px" })} 
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>수강 권장 대상 *</label>
+                      <input 
+                        type="text" 
+                        value={scheduleForm.target} 
+                        onChange={e => setScheduleForm({ ...scheduleForm, target: e.target.value })} 
+                        placeholder="예) 사내 엔지니어 및 기획자" 
+                        style={inpStyle({ padding: "8px 12px" })} 
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>상세 설명</label>
+                      <textarea 
+                        value={scheduleForm.description} 
+                        onChange={e => setScheduleForm({ ...scheduleForm, description: e.target.value })} 
+                        placeholder="교육 내용 개요 기입" 
+                        style={inpStyle({ padding: "8px 12px", minHeight: "60px", resize: "none" })} 
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                      <button 
+                        onClick={handleCreateSchedule} 
+                        style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+                      >
+                        {editingScheduleId ? "수정 완료" : "등록 완료"}
+                      </button>
+                      {editingScheduleId && (
+                        <button 
+                          onClick={() => {
+                            setEditingScheduleId(null);
+                            setScheduleForm({ course: "", date: selectedCalendarDate, target: "", description: "" });
+                          }} 
+                          style={{ padding: "10px 14px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--body)", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+                        >
+                          취소
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
