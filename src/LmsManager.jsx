@@ -901,7 +901,6 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
   const banners = pageConfig?.banners || [
     {
       id: "default_1",
-      bgImage: pageConfig?.heroBgImage || "",
       fgImage: pageConfig?.heroBannerImage || "",
       fit: pageConfig?.heroBannerFit || "contain"
     }
@@ -969,7 +968,13 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
         position: "relative",
         overflow: "hidden",
         borderBottom: "1px solid var(--hairline-strong)",
-        background: "#000"
+        background: "#000",
+        backgroundImage: pageConfig?.heroBgImage 
+          ? `url(${pageConfig.heroBgImage})` 
+          : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        backgroundSize: "cover"
       }}>
         {/* Slides */}
         {banners.map((slide, idx) => (
@@ -981,12 +986,7 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
               left: 0,
               width: "100%",
               height: "100%",
-              backgroundImage: slide.bgImage 
-                ? `url(${slide.bgImage})` 
-                : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "center",
-              backgroundSize: "cover",
+              background: "transparent",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -2611,6 +2611,7 @@ function BackOfficeView({
   const [bannersAutoSlide, setBannersAutoSlide] = useState(true);
   const [bannersSlideInterval, setBannersSlideInterval] = useState(5000);
   const [previewSlide, setPreviewSlide] = useState(0);
+  const [bannersBgImage, setBannersBgImage] = useState("");
 
   useEffect(() => {
     if (!bannersAutoSlide || bannersList.length <= 1) return;
@@ -2639,7 +2640,6 @@ function BackOfficeView({
       ...prev,
       {
         id: uid(),
-        bgImage: "",
         fgImage: "",
         fit: "contain"
       }
@@ -2697,7 +2697,7 @@ function BackOfficeView({
     reader.readAsDataURL(file);
   };
 
-  const handleBannerBgUpload = (id, e) => {
+  const handleUnifiedBgUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -2731,7 +2731,7 @@ function BackOfficeView({
           return;
         }
 
-        handleUpdateBannerField(id, "bgImage", compressedBase64);
+        setBannersBgImage(compressedBase64);
       };
       img.src = event.target.result;
     };
@@ -2845,6 +2845,7 @@ function BackOfficeView({
       setBannersList(savedBanners);
       setBannersAutoSlide(pageConfig.bannersAutoSlide !== false);
       setBannersSlideInterval(pageConfig.bannersSlideInterval || 5000);
+      setBannersBgImage(pageConfig.heroBgImage || savedBanners[0]?.bgImage || "");
     }
   }, [pageConfig]);
 
@@ -3118,11 +3119,17 @@ function BackOfficeView({
 
   // 페이지 꾸미기 저장 핸들러
   const handleSavePageConfig = async () => {
+    // Clear bgImage from individual banners to save Firestore storage
+    const cleanedBanners = bannersList.map(banner => {
+      const { bgImage, ...rest } = banner;
+      return rest;
+    });
+
     const newConfig = {
-      heroBgImage: bannersList[0]?.bgImage || "",
+      heroBgImage: bannersBgImage,
       heroBannerImage: bannersList[0]?.fgImage || "",
       heroBannerFit: bannersList[0]?.fit || "contain",
-      banners: bannersList,
+      banners: cleanedBanners,
       bannersAutoSlide,
       bannersSlideInterval
     };
@@ -4429,7 +4436,35 @@ function BackOfficeView({
                 )}
               </div>
 
-              {/* 2. 배너 목록 및 편집 */}
+              {/* 2. 통합 배너 배경 이미지 설정 */}
+              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "16px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>🏞️ 통합 배너 배경 이미지 설정</h5>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "2px" }}>
+                  배너 공통 배경 이미지 등록 (배경 레이어)
+                </label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleUnifiedBgUpload} 
+                  style={{ fontSize: "12px", color: "var(--body)" }} 
+                />
+                {bannersBgImage && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+                    <div style={{ width: "120px", height: "45px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
+                      <img src={bannersBgImage} alt="BG Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setBannersBgImage("")}
+                      style={{ padding: "4px 8px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                    >
+                      배경 제거
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. 배너 목록 및 편집 */}
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>📋 배너 목록 ({bannersList.length}/5)</h5>
@@ -4507,31 +4542,6 @@ function BackOfficeView({
                           </div>
                         )}
                       </div>
-
-                      {/* 2. 하단 레이어 (배경 이미지) */}
-                      <div style={{ borderTop: "1px dashed var(--hairline)", paddingTop: "12px" }}>
-                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>🏞️ 배너 배경 이미지 등록 (배경 레이어)</label>
-                        <input 
-                          type="file" 
-                          accept="image/*" 
-                          onChange={(e) => handleBannerBgUpload(banner.id, e)} 
-                          style={{ fontSize: "12px", color: "var(--body)" }} 
-                        />
-                        {banner.bgImage && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
-                            <div style={{ width: "80px", height: "30px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
-                              <img src={banner.bgImage} alt="BG Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                            </div>
-                            <button 
-                              type="button"
-                              onClick={() => handleUpdateBannerField(banner.id, "bgImage", "")}
-                              style={{ padding: "3px 6px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", cursor: "pointer" }}
-                            >
-                              배경 제거
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -4555,8 +4565,8 @@ function BackOfficeView({
             }}>
               {/* Preview Hero Band */}
               <div style={{ 
-                backgroundImage: bannersList[previewSlide]?.bgImage 
-                  ? `url(${bannersList[previewSlide].bgImage})` 
+                backgroundImage: bannersBgImage 
+                  ? `url(${bannersBgImage})` 
                   : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "center",
