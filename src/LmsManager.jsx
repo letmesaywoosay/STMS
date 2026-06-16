@@ -932,23 +932,36 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
     <div>
       {/* ── Expo-inspired Hero Band (하늘색 그라데이션 및 디바이스 목업 크롬 제거, 1920px 기준 Full-width 및 여백 최적화) ── */}
       <div style={{
-        background: pageConfig?.heroBannerImage 
-          ? `url(${pageConfig.heroBannerImage}) no-repeat center/${pageConfig.heroBannerFit || "cover"}` 
-          : getBgFromPreset(pageConfig?.heroBgPreset),
-        backgroundColor: pageConfig?.heroBannerImage ? "transparent" : undefined,
+        backgroundImage: pageConfig?.heroBgImage 
+          ? `url(${pageConfig.heroBgImage})` 
+          : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "center",
+        backgroundSize: "cover",
         width: "100%",
         height: "550px",
         boxSizing: "border-box",
         padding: "0",
         textAlign: "center",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         position: "relative",
         overflow: "hidden",
         borderBottom: "1px solid var(--hairline-strong)"
       }}>
+        {pageConfig?.heroBannerImage && (
+          <img 
+            src={pageConfig.heroBannerImage} 
+            alt="Top Banner Layer" 
+            style={{ 
+              width: "100%", 
+              height: "100%", 
+              objectFit: pageConfig?.heroBannerFit || "contain", 
+              pointerEvents: "none" 
+            }} 
+          />
+        )}
       </div>
 
 
@@ -2437,9 +2450,9 @@ function BackOfficeView({
   const [adminMonth, setAdminMonth] = useState(5); // 5 = June
 
   // 페이지 꾸미기 상태
-  const [customBgPreset, setCustomBgPreset] = useState(pageConfig?.heroBgPreset || "sky");
   const [customBannerImage, setCustomBannerImage] = useState(pageConfig?.heroBannerImage || "");
-  const [customBannerFit, setCustomBannerFit] = useState(pageConfig?.heroBannerFit || "cover");
+  const [customBannerFit, setCustomBannerFit] = useState(pageConfig?.heroBannerFit || "contain");
+  const [customBgImage, setCustomBgImage] = useState(pageConfig?.heroBgImage || "");
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -2478,6 +2491,47 @@ function BackOfficeView({
         }
 
         setCustomBannerImage(compressedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleBgImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxW = 1920;
+
+        if (width > maxW) {
+          height = Math.round((height * maxW) / width);
+          width = maxW;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const compressedBase64 = file.type.includes("png") 
+          ? canvas.toDataURL("image/png") 
+          : canvas.toDataURL("image/jpeg", 0.85);
+
+        const sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        
+        if (sizeInKb > 900) {
+          alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 화질을 낮추거나 더 작은 이미지로 업로드해주세요. (Firestore 저장 제한으로 인해 최대 900KB까지만 가능합니다)`);
+          return;
+        }
+
+        setCustomBgImage(compressedBase64);
       };
       img.src = event.target.result;
     };
@@ -2580,9 +2634,9 @@ function BackOfficeView({
 
   useEffect(() => {
     if (pageConfig) {
-      setCustomBgPreset(pageConfig.heroBgPreset || "sky");
       setCustomBannerImage(pageConfig.heroBannerImage || "");
-      setCustomBannerFit(pageConfig.heroBannerFit || "cover");
+      setCustomBannerFit(pageConfig.heroBannerFit || "contain");
+      setCustomBgImage(pageConfig.heroBgImage || "");
     }
   }, [pageConfig]);
 
@@ -2857,7 +2911,7 @@ function BackOfficeView({
   // 페이지 꾸미기 저장 핸들러
   const handleSavePageConfig = async () => {
     const newConfig = {
-      heroBgPreset: customBgPreset,
+      heroBgImage: customBgImage,
       heroBannerImage: customBannerImage,
       heroBannerFit: customBannerFit
     };
@@ -4120,80 +4174,75 @@ function BackOfficeView({
         <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
           {/* 입력 폼 */}
           <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>🎨 상단배너 관리 및 배경 테마 설정</h4>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>🎨 상단 배너 이미지 레이어 설정</h4>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "20px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "20px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "20px" }}>
+                {/* 1. 상단 레이어 (전경 PNG) */}
                 <div>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>🏞️ 상단배너 이미지 등록 (PNG)</label>
-                  <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "8px" }}>배너로 등록할 PNG 파일을 업로드하세요. (권장 해상도: 1920x550)</span>
+                  <label style={{ display: "block", fontSize: "13.5px", fontWeight: 700, color: "var(--ink)", marginBottom: "8px" }}>🖼️ 상단 배너 이미지 등록 (PNG - 전경 레이어)</label>
+                  <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "8px" }}>배너의 전경에 위치할 투명 배경의 PNG 이미지를 등록하세요. (권장 해상도: 1920x550)</span>
                   <input 
                     type="file" 
                     accept="image/png" 
                     onChange={handleImageUpload} 
                     style={{ fontSize: "13px", color: "var(--body)" }} 
                   />
+                  {customBannerImage && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", background: "var(--canvas)", padding: "12px", borderRadius: "var(--rounded-md)", border: "1px solid var(--hairline-strong)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ width: "100px", height: "40px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
+                          <img src={customBannerImage} alt="Banner Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => setCustomBannerImage("")} 
+                          style={{ padding: "6px 10px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}
+                        >
+                          상단 이미지 제거
+                        </button>
+                      </div>
+                      
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", borderTop: "1px solid var(--hairline)", paddingTop: "8px", marginTop: "4px" }}>
+                        <span style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 600 }}>이미지 채우기 방식:</span>
+                        <select 
+                          value={customBannerFit} 
+                          onChange={e => setCustomBannerFit(e.target.value)} 
+                          style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
+                        >
+                          <option value="contain">전체 비율 보존 (Contain - 권장)</option>
+                          <option value="cover">꽉 차게 자르기 (Cover)</option>
+                          <option value="100% 100%">공간에 강제 맞춤 (Fill)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                
-                {customBannerImage && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px", borderTop: "1px solid var(--hairline)", paddingTop: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div style={{ width: "100px", height: "40px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas)" }}>
-                        <img src={customBannerImage} alt="Banner Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+
+                {/* 2. 하단 레이어 (배경 이미지) */}
+                <div style={{ borderTop: "1px solid var(--hairline-strong)", paddingTop: "20px" }}>
+                  <label style={{ display: "block", fontSize: "13.5px", fontWeight: 700, color: "var(--ink)", marginBottom: "8px" }}>🏞️ 배너 배경 이미지 등록 (배경 레이어)</label>
+                  <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "8px" }}>배너의 배경이 될 이미지를 등록하세요. 등록하지 않을 경우 기본 하늘색 그라데이션이 적용됩니다.</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleBgImageUpload} 
+                    style={{ fontSize: "13px", color: "var(--body)" }} 
+                  />
+                  {customBgImage && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "12px", background: "var(--canvas)", padding: "12px", borderRadius: "var(--rounded-md)", border: "1px solid var(--hairline-strong)" }}>
+                      <div style={{ width: "100px", height: "40px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
+                        <img src={customBgImage} alt="Bg Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                       <button 
                         type="button"
-                        onClick={() => setCustomBannerImage("")} 
-                        style={{ padding: "6px 10px", background: "var(--canvas)", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}
+                        onClick={() => setCustomBgImage("")} 
+                        style={{ padding: "6px 10px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}
                       >
-                        이미지 제거
+                        배경 이미지 제거
                       </button>
                     </div>
-                    
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 600 }}>이미지 채우기 방식:</span>
-                      <select 
-                        value={customBannerFit} 
-                        onChange={e => setCustomBannerFit(e.target.value)} 
-                        style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
-                      >
-                        <option value="cover">꽉 차게 자르기 (Cover)</option>
-                        <option value="contain">전체 비율 보존 (Contain)</option>
-                        <option value="100% 100%">공간에 강제 맞춤 (Fill)</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ borderTop: "1px solid var(--hairline-strong)", paddingTop: "16px" }}>
-                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px" }}>🎨 배너 배경 그라데이션 프리셋</label>
-                  <span style={{ fontSize: "12px", color: "var(--body)", display: "block", marginBottom: "8px" }}>배너 이미지를 미등록하거나 투명 영역이 있는 경우 적용되는 테마 색상입니다.</span>
-                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                    {[
-                      { id: "sky", name: "Sky Wash (스카이블루)", previewBg: "linear-gradient(135deg, #cfe7ff, #a8c8e8)" },
-                      { id: "slate", name: "Cool Slate (스틸블루)", previewBg: "linear-gradient(135deg, #eceef2, #d5d9e2)" },
-                      { id: "rose", name: "Sweet Rose (파스텔로즈)", previewBg: "linear-gradient(135deg, #fff1f2, #ffe4e6)" },
-                      { id: "gold", name: "Warm Gold (샌드골드)", previewBg: "linear-gradient(135deg, #fefce8, #fef9c3)" }
-                    ].map(preset => (
-                      <button key={preset.id} onClick={() => setCustomBgPreset(preset.id)}
-                        style={{
-                          flex: 1,
-                          minWidth: "130px",
-                          padding: "10px",
-                          background: "var(--surface-card)",
-                          border: `2px solid ${customBgPreset === preset.id ? "var(--primary)" : "var(--hairline-strong)"}`,
-                          borderRadius: "var(--rounded-md)",
-                          cursor: "pointer",
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "center",
-                          gap: "6px"
-                        }}>
-                        <div style={{ width: "30px", height: "30px", borderRadius: "50%", background: preset.previewBg, border: "1px solid var(--hairline)" }} />
-                        <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--ink)" }}>{preset.name}</span>
-                      </button>
-                    ))}
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -4214,19 +4263,33 @@ function BackOfficeView({
             }}>
               {/* Preview Hero Band */}
               <div style={{ 
-                background: customBannerImage 
-                  ? `url(${customBannerImage}) no-repeat center/${customBannerFit || "cover"}` 
-                  : getBgFromPreset(customBgPreset),
-                backgroundColor: customBannerImage ? "transparent" : undefined,
+                backgroundImage: customBgImage 
+                  ? `url(${customBgImage})` 
+                  : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                backgroundSize: "cover",
                 padding: "0", 
                 height: "180px",
+                width: "100%",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
-                textAlign: "center",
-                position: "relative"
+                position: "relative",
+                overflow: "hidden"
               }}>
+                {customBannerImage && (
+                  <img 
+                    src={customBannerImage} 
+                    alt="Preview Top Layer" 
+                    style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      objectFit: customBannerFit || "contain", 
+                      pointerEvents: "none" 
+                    }} 
+                  />
+                )}
               </div>
             </div>
           </div>
