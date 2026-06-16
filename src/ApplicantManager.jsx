@@ -504,12 +504,7 @@ export default function ApplicantManager({ viewPath }) {
     window.scrollTo({top:0,behavior:"instant"});
   },[mainMenu]);
 
-  // 어드민 뷰에서는 강제로 list 탭으로 리다이렉트
-  useEffect(()=>{
-    if(viewPath === "/admin" && mainMenu === "home"){
-      setMainMenu("list");
-    }
-  },[viewPath, mainMenu]);
+
 
   // ── 비밀번호 확인 ─────────────────────────────────────────
   const confirmDelete=(msg,action)=>setDeleteConfirm({msg,action});
@@ -1294,6 +1289,7 @@ export default function ApplicantManager({ viewPath }) {
   const safeMenu = isOfficer && !OFFICER_ALLOWED.includes(mainMenu) ? "briefing" : mainMenu;
 
   const ADMIN_TABS = isAdmin ? [
+    {id:"home",   icon:"📊",  label:"대시보드"},
     {id:"list",   icon:"≡",  label:"관리 리스트"},
     ...(can(userRole,"report_menu") ?[{id:"report",icon:"",label:"월별 보고서"}]:[]),
     ...(can(userRole,"dept_menu")   ?[{id:"dept",  icon:"",label:"부서/팀 관리"}]:[]),
@@ -2380,6 +2376,7 @@ export default function ApplicantManager({ viewPath }) {
                 const allTabs=isOfficer
                   ?[{id:"briefing",icon:"",label:"브리핑"}]
                   :[
+                    {id:"home",icon:"📊",label:"대시보드"},
                     {id:"list",icon:"≡",label:"관리 리스트"},
                     ...(can(userRole,"ai_menu")?[{id:"ai",icon:"",label:"AI 자동분류"}]:[]),
                     // ...(can(userRole,"ai_menu")?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
@@ -6979,7 +6976,7 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
       )}
 
       {/* 맨 위로 가기 플로팅 버튼 */}
-      {["list","report","dept"].includes(mainMenu)&&(()=>{
+      {["home","list","report","dept"].includes(mainMenu)&&(()=>{
         const ScrollTopBtn=()=>{
           const [visible,setVisible]=useState(false);
           useEffect(()=>{
