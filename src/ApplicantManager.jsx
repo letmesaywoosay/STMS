@@ -5444,14 +5444,11 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
             </div>
           );
         })()}
-      </div>
-
         {/* ═══ 관리 설정 페이지 ═══ */}
         {isSuperAdmin&&mainMenu==="settings"&&(()=>{
           const genCode=()=>{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");};
           return(
-            <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,padding:"32px",boxShadow:shadow,marginTop:"20px",width:"100%"}}>
-              <div className="page-enter" style={{width:"100%"}}>
+            <div className="page-enter" style={{width:"100%", maxWidth:"1200px", margin:"20px auto 0", background:C.surface, borderRadius:"16px", border:`1px solid ${C.border}`, padding:"32px", boxShadow:shadow, boxSizing:"border-box"}}>
               {(()=>{
                 const AdminMgmtPanel=()=>{
                   // 탭 상태는 부모(ApplicantManager)에서 관리 — 폭 조절로 인한 재마운트 시에도 탭 유지
@@ -6185,10 +6182,11 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                 };
                 return <AdminMgmtPanel key="admin-mgmt"/>;
               })()}
-              </div>
             </div>
           );
         })()}
+      </div>
+
 
 
 
