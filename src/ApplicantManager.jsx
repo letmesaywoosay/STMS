@@ -1295,6 +1295,7 @@ export default function ApplicantManager({ viewPath }) {
     ...(can(userRole,"dept_menu")   ?[{id:"dept",  icon:"",label:"부서/팀 관리"}]:[]),
     ...(can(userRole,"ai_menu")     ?[{id:"ai",    icon:"",label:"AI 자동분류"}]:[]),
     // ...(can(userRole,"ai_menu")     ?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
+    ...(isSuperAdmin ? [{id:"settings", icon:"⚙️", label:"설정"}] : [])
   ] : [];
 
   const fmtYML=ym=>{if(!ym)return"";const[y,m]=ym.split("-");return`${y}년 ${parseInt(m)}월`;};
@@ -2358,12 +2359,6 @@ export default function ApplicantManager({ viewPath }) {
             {dbStatus==="local"&&<span style={{color:C.amber,fontWeight:600,fontSize:"10px",whiteSpace:"nowrap"}}>⚠️ 로컬 저장</span>}
             {dbStatus?.startsWith("error:")&&<span style={{color:C.red,fontWeight:600,fontSize:"10px",whiteSpace:"nowrap"}}>⚠️ DB 오류</span>}
             {(isOfficer||isAdmin)&&<button onClick={doLogout} style={{padding:"3px 10px",borderRadius:"20px",border:`1px solid ${C.border}`,cursor:"pointer",background:"transparent",color:C.muted,fontSize:"10px",fontWeight:600,fontFamily:"inherit",whiteSpace:"nowrap"}}>로그아웃</button>}
-            {isSuperAdmin&&(
-              <button onClick={()=>setAdminPanelOpen(o=>!o)} title="관리 설정"
-                style={{width:"28px",height:"28px",borderRadius:"8px",border:`1px solid ${adminPanelOpen?C.blue:C.border}`,background:adminPanelOpen?`${C.blue}10`:"transparent",cursor:"pointer",fontSize:"15px",display:"flex",alignItems:"center",justifyContent:"center",color:adminPanelOpen?C.blue:C.muted,transition:"all 0.15s",flexShrink:0}}>
-                ⚙️
-              </button>
-            )}
           </div>
 
           {/* 모바일: DB 상태 dot + 햄버거 */}
@@ -2381,8 +2376,8 @@ export default function ApplicantManager({ viewPath }) {
                     ...(can(userRole,"ai_menu")?[{id:"ai",icon:"",label:"AI 자동분류"}]:[]),
                     // ...(can(userRole,"ai_menu")?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
                     ...(can(userRole,"report_menu")?[{id:"report",icon:"",label:"월별 보고서"}]:[]),
-                    ...(isSuperAdmin?[{id:"admin",icon:"",label:"관리자 설정"}]:[]),
                     ...(can(userRole,"dept_menu")?[{id:"dept",icon:"",label:"부서/팀 관리",indent:true}]:[]),
+                    ...(isSuperAdmin?[{id:"settings",icon:"⚙️",label:"설정"}]:[]),
                   ];
                 const curMenu=isOfficer?safeMenu:mainMenu;
                 return(
@@ -2396,16 +2391,12 @@ export default function ApplicantManager({ viewPath }) {
                           const active=curMenu===tab.id;
                           return(
                             <button key={tab.id} onClick={()=>{
-                              if(tab.id==="admin"){
-                                setAdminPanelOpen(true);
-                              } else {
-                                setMainMenu(tab.id);
-                                if(tab.id==="ai"&&!aiMailModal){
-                                  const yms=new Set();
-                                  applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>yms.add(d.slice(0,7)));});
-                                  const list=[...yms].sort().reverse();
-                                  setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
-                                }
+                              setMainMenu(tab.id);
+                              if(tab.id==="ai"&&!aiMailModal){
+                                const yms=new Set();
+                                applicants.forEach(a=>{[a.date1,a.date2,a.date3].filter(Boolean).forEach(d=>yms.add(d.slice(0,7)));});
+                                const list=[...yms].sort().reverse();
+                                setAiMailModal({step:1,yearMonth:list[0]||"",availableYMs:list,groups:{},emails:[],isGenerating:false});
                               }
                               setOpen(false);
                             }} style={{width:"100%",padding:tab.indent?"10px 20px 10px 40px":"13px 20px",border:"none",background:active?`${C.blue}08`:"transparent",color:active?C.blue:tab.indent?C.subtle:C.text,fontSize:tab.indent?"13px":"14px",fontWeight:active?700:400,fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:"10px",cursor:"pointer",borderLeft:active?`3px solid ${C.blue}`:"3px solid transparent"}}>
@@ -2457,14 +2448,6 @@ export default function ApplicantManager({ viewPath }) {
               </button>
             );
           })}
-          {isAdmin&&isSuperAdmin&&(
-            <button onClick={()=>setAdminPanelOpen(o=>!o)} title="관리 설정"
-              style={{padding:"0 18px",height:"52px",border:"none",cursor:"pointer",background:"transparent",color:adminPanelOpen?C.blue:C.muted,fontSize:"16px",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",marginLeft:"4px"}}
-              onMouseEnter={e=>e.currentTarget.style.color=C.blue}
-              onMouseLeave={e=>{if(!adminPanelOpen) e.currentTarget.style.color=C.muted}}>
-              ⚙️
-            </button>
-          )}
         </div>
       </div>
       )}
@@ -2515,6 +2498,7 @@ export default function ApplicantManager({ viewPath }) {
               dept:   "부서/팀 관리",
               admin:  "관리",
               briefing:"브리핑",
+              settings:"설정",
             })[safeMenu] || "관리 리스트"}
           </h1>
         </div>
@@ -5462,84 +5446,12 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
         })()}
       </div>
 
-        {/* ═══ 관리 설정 사이드 패널 ═══ */}
-        {isSuperAdmin&&(()=>{
+        {/* ═══ 관리 설정 페이지 ═══ */}
+        {isSuperAdmin&&mainMenu==="settings"&&(()=>{
           const genCode=()=>{const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");};
           return(
-            <>
-              {/* 오버레이 배경 */}
-              {adminPanelOpen&&<div onClick={()=>setAdminPanelOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.3)",zIndex:300,backdropFilter:"blur(2px)"}}/>}
-              {/* 사이드 패널 */}
-              <div style={{position:"fixed",top:0,right:0,bottom:0,width:`min(${adminPanelWidth}px,95vw)`,background:C.surface,boxShadow:"-4px 0 32px rgba(0,0,0,0.15)",zIndex:301,transform:adminPanelOpen?"translateX(0)":"translateX(100%)",transition:adminPanelResizing?"none":"transform 0.3s cubic-bezier(0.4,0,0.2,1), width 0.15s ease",display:"flex",flexDirection:"column",overflowY:"auto"}}>
-                {/* 드래그 리사이즈 핸들 */}
-                <div
-                  onMouseDown={(e)=>{
-                    e.preventDefault();
-                    const startX=e.clientX;
-                    const startW=adminPanelWidth;
-                    setAdminPanelResizing(true);
-                    const onMove=(ev)=>{
-                      const delta=startX-ev.clientX;
-                      const next=startW+delta;
-                      const max=Math.max(window.innerWidth-80,480);
-                      const clamped=Math.min(Math.max(next,480),max);
-                      setAdminPanelWidth(clamped);
-                    };
-                    const onUp=()=>{
-                      setAdminPanelResizing(false);
-                      window.removeEventListener("mousemove",onMove);
-                      window.removeEventListener("mouseup",onUp);
-                      try{ localStorage.setItem("aida:adminPanelWidth",String(adminPanelWidth)); }catch{}
-                    };
-                    window.addEventListener("mousemove",onMove);
-                    window.addEventListener("mouseup",onUp);
-                  }}
-                  onTouchStart={(e)=>{
-                    const t=e.touches[0]; if(!t) return;
-                    const startX=t.clientX;
-                    const startW=adminPanelWidth;
-                    setAdminPanelResizing(true);
-                    const onMove=(ev)=>{
-                      const tt=ev.touches[0]; if(!tt) return;
-                      const delta=startX-tt.clientX;
-                      const next=startW+delta;
-                      const max=Math.max(window.innerWidth-80,480);
-                      const clamped=Math.min(Math.max(next,480),max);
-                      setAdminPanelWidth(clamped);
-                    };
-                    const onEnd=()=>{
-                      setAdminPanelResizing(false);
-                      window.removeEventListener("touchmove",onMove);
-                      window.removeEventListener("touchend",onEnd);
-                      try{ localStorage.setItem("aida:adminPanelWidth",String(adminPanelWidth)); }catch{}
-                    };
-                    window.addEventListener("touchmove",onMove,{passive:false});
-                    window.addEventListener("touchend",onEnd);
-                  }}
-                  onDoubleClick={()=>{
-                    const next=adminPanelWidth>720?680:Math.max(window.innerWidth-80,480);
-                    setAdminPanelWidth(next);
-                    try{ localStorage.setItem("aida:adminPanelWidth",String(next)); }catch{}
-                  }}
-                  title="좌우로 드래그하여 폭 조절 · 더블클릭으로 토글"
-                  style={{position:"absolute",top:0,left:0,bottom:0,width:"8px",cursor:"ew-resize",zIndex:5,background:adminPanelResizing?`${C.blue}22`:"transparent",transition:"background 0.15s",touchAction:"none"}}
-                  onMouseEnter={e=>{ if(!adminPanelResizing) e.currentTarget.style.background=`${C.blue}11`; }}
-                  onMouseLeave={e=>{ if(!adminPanelResizing) e.currentTarget.style.background="transparent"; }}
-                >
-                  {/* 핸들 시각 표시 */}
-                  <div style={{position:"absolute",top:"50%",left:"2px",transform:"translateY(-50%)",width:"4px",height:"40px",borderRadius:"2px",background:adminPanelResizing?C.blue:`${C.border2}`,transition:"background 0.15s"}}/>
-                </div>
-                {/* 패널 헤더 */}
-                <div style={{padding:"18px 24px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",background:C.surface,position:"sticky",top:0,zIndex:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                    <span style={{fontSize:"18px"}}>⚙️</span>
-                    <span style={{fontWeight:800,fontSize:"16px",color:C.text}}>관리</span>
-                  </div>
-                  <button onClick={()=>setAdminPanelOpen(false)} style={{width:"32px",height:"32px",borderRadius:"8px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:"16px",color:C.muted,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                </div>
-                {/* 패널 콘텐츠 */}
-                <div style={{padding:"20px 24px",flex:1}}>
-                  <div className="page-enter" style={{width:"100%"}}>
+            <div style={{background:C.surface,borderRadius:"16px",border:`1px solid ${C.border}`,padding:"32px",boxShadow:shadow,marginTop:"20px",width:"100%"}}>
+              <div className="page-enter" style={{width:"100%"}}>
               {(()=>{
                 const AdminMgmtPanel=()=>{
                   // 탭 상태는 부모(ApplicantManager)에서 관리 — 폭 조절로 인한 재마운트 시에도 탭 유지
@@ -6273,10 +6185,8 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
                 };
                 return <AdminMgmtPanel key="admin-mgmt"/>;
               })()}
-                  </div>
-                </div>
               </div>
-            </>
+            </div>
           );
         })()}
 
