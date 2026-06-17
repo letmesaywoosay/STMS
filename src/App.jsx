@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import MyComponent from './ApplicantManager';
 import QuestionBank from './QuestionBank';
 import LmsManager from './LmsManager';
-import Dashboard from './Dashboard';
 
 // Firestore REST API 유틸리티
 const FB_API_KEY = "AIzaSyCarxTqSx__7AfzVNHzN-ilnk0gNN6PkTU";
@@ -23,7 +22,7 @@ const fbGet = async (key) => {
 function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [lmsUser, setLmsUser] = useState(null);
-  const [adminSubTab, setAdminSubTab] = useState("dashboard"); // dashboard: 대시보드, test: 솔루션 테스트 관리, lms-course: 영상 관리, lms-approval: 관리
+  const [adminSubTab, setAdminSubTab] = useState("lms-approval"); // test: 솔루션 테스트 관리, lms-course: 영상 관리, lms-approval: 관리
   
   useEffect(() => {
     const handlePopState = () => {
@@ -66,7 +65,7 @@ function App() {
   const handleAdminLoginSuccess = (user) => {
     sessionStorage.setItem('aida:lms_login', JSON.stringify(user));
     setLmsUser(user);
-    setAdminSubTab("dashboard");
+    setAdminSubTab("lms-approval");
     navigate('/admin');
   };
 
@@ -92,7 +91,7 @@ function App() {
             boxSizing: 'border-box',
             borderBottom: '1px solid var(--hairline)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => setAdminSubTab("dashboard")}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => navigate('/')}>
               <img src="/logo.png" alt="AIDA OASIS" style={{ height: "24px", objectFit: "contain" }} />
               <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500, borderLeft: '1px solid var(--hairline-strong)', paddingLeft: '12px' }}>관리자 포탈</span>
             </div>
@@ -190,9 +189,6 @@ function App() {
 
           {/* 본문 뷰 출력 */}
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            {adminSubTab === 'dashboard' && (
-              <Dashboard onTabChange={setAdminSubTab} />
-            )}
             {adminSubTab === 'test' && (
               <MyComponent viewPath="/admin" />
             )}
