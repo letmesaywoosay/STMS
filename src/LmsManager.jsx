@@ -666,39 +666,41 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
   if (viewPath === "/admin") {
     return (
       <div style={{ padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" }}>
-        <BackOfficeView 
-          adminSubTabGroup={adminSubTabGroup}
-          currentUser={currentUser}
-          historyLogs={historyLogs}
-          saveHistoryLogs={saveHistoryLogs}
-          users={users} 
-          saveUsers={saveUsers} 
-          courses={courses} 
-          saveCourses={saveCourses} 
-          applications={applications} 
-          saveApplications={saveApplications} 
-          viewLogs={viewLogs} 
-          deptData={deptData} 
-          jobTypes={jobTypes}
-          pageConfig={pageConfig}
-          savePageConfig={savePageConfig}
-          schedules={schedules}
-          saveSchedules={saveSchedules}
-          notices={notices}
-          saveNotices={saveNotices}
-          faqs={faqs}
-          saveFaqs={saveFaqs}
-          eduCourses={eduCourses}
-          saveEduCourses={saveEduCourses}
-          eduRegistrations={eduRegistrations}
-          saveEduRegistrations={saveEduRegistrations}
-          eduInfoBlocks={eduInfoBlocks}
-          saveEduInfoBlocks={saveEduInfoBlocks}
-          eduEmailRecipients={eduEmailRecipients}
-          saveEduEmailRecipients={saveEduEmailRecipients}
-          eduConfig={eduConfig}
-          saveEduConfig={saveEduConfig}
-        />
+        <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
+          <BackOfficeView 
+            adminSubTabGroup={adminSubTabGroup}
+            currentUser={currentUser}
+            historyLogs={historyLogs}
+            saveHistoryLogs={saveHistoryLogs}
+            users={users} 
+            saveUsers={saveUsers} 
+            courses={courses} 
+            saveCourses={saveCourses} 
+            applications={applications} 
+            saveApplications={saveApplications} 
+            viewLogs={viewLogs} 
+            deptData={deptData} 
+            jobTypes={jobTypes}
+            pageConfig={pageConfig}
+            savePageConfig={savePageConfig}
+            schedules={schedules}
+            saveSchedules={saveSchedules}
+            notices={notices}
+            saveNotices={saveNotices}
+            faqs={faqs}
+            saveFaqs={saveFaqs}
+            eduCourses={eduCourses}
+            saveEduCourses={saveEduCourses}
+            eduRegistrations={eduRegistrations}
+            saveEduRegistrations={saveEduRegistrations}
+            eduInfoBlocks={eduInfoBlocks}
+            saveEduInfoBlocks={saveEduInfoBlocks}
+            eduEmailRecipients={eduEmailRecipients}
+            saveEduEmailRecipients={saveEduEmailRecipients}
+            eduConfig={eduConfig}
+            saveEduConfig={saveEduConfig}
+          />
+        </div>
       </div>
     );
   }
