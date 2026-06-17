@@ -92,7 +92,7 @@ function App() {
             boxSizing: 'border-box',
             borderBottom: '1px solid var(--hairline)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => navigate('/')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => setAdminSubTab("dashboard")}>
               <img src="/logo.png" alt="AIDA OASIS" style={{ height: "24px", objectFit: "contain" }} />
               <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500, borderLeft: '1px solid var(--hairline-strong)', paddingLeft: '12px' }}>관리자 포탈</span>
             </div>
@@ -138,22 +138,6 @@ function App() {
 
           {/* 서브 네비게이션 탭 */}
           <div style={{ display: 'flex', background: 'var(--canvas)', borderBottom: '1px solid var(--hairline)', padding: '0 24px', boxSizing: 'border-box', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setAdminSubTab("dashboard")}
-              style={{
-                padding: '16px 20px',
-                border: 'none',
-                background: 'none',
-                borderBottom: adminSubTab === 'dashboard' ? '2px solid var(--primary)' : 'none',
-                color: adminSubTab === 'dashboard' ? 'var(--ink)' : 'var(--body)',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              📊 대시보드
-            </button>
             <button
               onClick={() => setAdminSubTab("lms-approval")}
               style={{
