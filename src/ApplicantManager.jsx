@@ -504,6 +504,12 @@ export default function ApplicantManager({ viewPath }) {
     window.scrollTo({top:0,behavior:"instant"});
   },[mainMenu]);
 
+  useEffect(()=>{
+    const handleReset=()=>setMainMenu("home");
+    window.addEventListener("aida:reset_test_menu",handleReset);
+    return()=>window.removeEventListener("aida:reset_test_menu",handleReset);
+  },[]);
+
 
 
   // ── 비밀번호 확인 ─────────────────────────────────────────
@@ -2371,7 +2377,6 @@ export default function ApplicantManager({ viewPath }) {
                 const allTabs=isOfficer
                   ?[{id:"briefing",icon:"",label:"브리핑"}]
                   :[
-                    {id:"home",icon:"📊",label:"대시보드"},
                     {id:"list",icon:"≡",label:"관리 리스트"},
                     ...(can(userRole,"ai_menu")?[{id:"ai",icon:"",label:"AI 자동분류"}]:[]),
                     // ...(can(userRole,"ai_menu")?[{id:"ai_exam",icon:"",label:"AI 시험출제"}]:[]),
@@ -2431,7 +2436,7 @@ export default function ApplicantManager({ viewPath }) {
               </button>
             );
           })}
-          {isAdmin&&ADMIN_TABS.map(tab=>{
+          {isAdmin&&ADMIN_TABS.filter(tab=>tab.id!=="home").map(tab=>{
             const active=mainMenu===tab.id||(tab.id==="admin"&&mainMenu==="dept");
             return(
               <button key={tab.id} onClick={()=>{
@@ -2456,7 +2461,7 @@ export default function ApplicantManager({ viewPath }) {
       <div className={mainMenu==="home"?"main-content-home":"main-content"} style={viewPath === "/admin" ? { background: "var(--canvas)", borderRadius: "var(--rounded-lg)", padding: "32px", border: `1px solid var(--hairline-strong)`, boxShadow: shadow, maxWidth: "1440px", margin: "0 auto" } : {maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 108px)"}}>
         {viewPath === "/admin" && (
           <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
-            {ADMIN_TABS.map(tab => {
+            {ADMIN_TABS.filter(tab=>tab.id!=="home").map(tab => {
               const active = mainMenu === tab.id;
               return (
                 <button
