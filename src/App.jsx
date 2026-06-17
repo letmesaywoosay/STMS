@@ -170,7 +170,10 @@ function App() {
               📖 영상 관리
             </button>
             <button
-              onClick={() => setAdminSubTab("test")}
+              onClick={() => {
+                setAdminSubTab("test");
+                window.dispatchEvent(new CustomEvent("aida:reset_test_menu"));
+              }}
               style={{
                 padding: '16px 20px',
                 border: 'none',
