@@ -2484,6 +2484,8 @@ function BackOfficeView({
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [memberFilterRole, setMemberFilterRole] = useState("all");
   const [memberFilterStatus, setMemberFilterStatus] = useState("all");
+  const [showCredsModal, setShowCredsModal] = useState(false);
+  const [selectedCredsUser, setSelectedCredsUser] = useState(null);
 
   // adminSubTabGroup 변경 시 backTab 자동 싱크
   useEffect(() => {
@@ -3923,6 +3925,15 @@ function BackOfficeView({
                                   권한 변경
                                 </button>
                                 <button 
+                                  onClick={() => {
+                                    setSelectedCredsUser(u);
+                                    setShowCredsModal(true);
+                                  }} 
+                                  style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                                >
+                                  정보 보기
+                                </button>
+                                <button 
                                   onClick={() => handleDeleteMember(u.id)} 
                                   style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
                                 >
@@ -4038,6 +4049,90 @@ function BackOfficeView({
                   );
                 })()}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 가입 계정 정보(ID/PW) 보기 모달 */}
+      {showCredsModal && selectedCredsUser && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 20000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{
+            background: "var(--surface-card)",
+            borderRadius: "var(--rounded-lg)",
+            padding: "24px",
+            width: "360px",
+            boxShadow: shadowLg,
+            border: "1px solid var(--hairline-strong)",
+            position: "relative"
+          }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 700, color: "var(--ink)", margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: "8px" }}>
+              🔑 계정 정보 확인
+            </h4>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>회원 이름</label>
+                <div style={{ padding: "8px 12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, color: "var(--ink)" }}>
+                  {selectedCredsUser.name}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>ID (이메일)</label>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={selectedCredsUser.email} 
+                    style={inpStyle({ background: "var(--canvas-soft)", flex: 1, fontSize: "12px", padding: "6px 10px" })} 
+                  />
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedCredsUser.email);
+                      alert("이메일 주소가 클립보드에 복사되었습니다.");
+                    }}
+                    style={{ padding: "6px 10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-md)", fontSize: "11px", cursor: "pointer", fontWeight: 600 }}
+                  >
+                    복사
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>PW (비밀번호)</label>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={selectedCredsUser.password || "비밀번호 없음"} 
+                    style={inpStyle({ background: "var(--canvas-soft)", flex: 1, fontSize: "12px", padding: "6px 10px", fontFamily: "monospace" })} 
+                  />
+                  {selectedCredsUser.password && (
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedCredsUser.password);
+                        alert("비밀번호가 클립보드에 복사되었습니다.");
+                      }}
+                      style={{ padding: "6px 10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-md)", fontSize: "11px", cursor: "pointer", fontWeight: 600 }}
+                    >
+                      복사
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => {
+                  setShowCredsModal(false);
+                  setSelectedCredsUser(null);
+                }}
+                style={{ padding: "8px 16px", background: "var(--primary)", border: "none", color: "var(--on-primary)", borderRadius: "var(--rounded-md)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+              >
+                확인
+              </button>
             </div>
           </div>
         </div>
