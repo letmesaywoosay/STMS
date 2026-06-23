@@ -2002,10 +2002,152 @@ function ClassroomView({
         </div>
       </div>
       ) : (
-        <div style={{ height: "450px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--body)", background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", boxShadow: shadow }}>
-          <span style={{ fontSize: "48px" }}>📺</span>
-          <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "12px", color: "var(--ink)" }}>학습할 교육 동영상을 선택해 주세요.</div>
-        </div>
+        <>
+          {courses.length === 0 ? (
+            <div style={{ height: "450px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--body)", background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", boxShadow: shadow }}>
+              <span style={{ fontSize: "48px" }}>📺</span>
+              <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "12px", color: "var(--ink)" }}>등록된 강의가 없습니다.</div>
+            </div>
+          ) : (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "24px"
+            }}>
+              {courses.map(course => {
+                const progress = getLectureProgress(course.id);
+                const isComp = progress === 100;
+                const videoId = getYoutubeId(course.youtubeUrl);
+                const thumbUrl = videoId
+                  ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+                  : null;
+                return (
+                  <div
+                    key={course.id}
+                    onClick={() => setSelectedLecture(course)}
+                    style={{
+                      background: "var(--surface-card)",
+                      border: "1px solid var(--hairline-strong)",
+                      borderRadius: "var(--rounded-lg)",
+                      boxShadow: shadow,
+                      cursor: "pointer",
+                      overflow: "hidden",
+                      transition: "transform 0.18s, box-shadow 0.18s",
+                      display: "flex",
+                      flexDirection: "column"
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                      e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,0.15)";
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = shadow;
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <div style={{
+                      width: "100%",
+                      aspectRatio: "16/9",
+                      background: thumbUrl ? "#000" : "linear-gradient(135deg, var(--primary) 0%, #6C47FF 100%)",
+                      overflow: "hidden",
+                      position: "relative",
+                      flexShrink: 0
+                    }}>
+                      {thumbUrl ? (
+                        <img
+                          src={thumbUrl}
+                          alt={course.title}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+                          <span style={{ fontSize: "40px" }}>🎬</span>
+                        </div>
+                      )}
+                      {/* Play overlay */}
+                      <div style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(0,0,0,0.25)",
+                        opacity: 0,
+                        transition: "opacity 0.18s"
+                      }}
+                        onMouseOver={e => e.currentTarget.style.opacity = "1"}
+                        onMouseOut={e => e.currentTarget.style.opacity = "0"}
+                      >
+                        <div style={{
+                          width: "48px",
+                          height: "48px",
+                          borderRadius: "50%",
+                          background: "rgba(255,255,255,0.95)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "20px"
+                        }}>▶️</div>
+                      </div>
+                      {/* Completion badge */}
+                      {isComp && (
+                        <div style={{
+                          position: "absolute",
+                          top: "8px",
+                          right: "8px",
+                          background: "#10B981",
+                          color: "#fff",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          padding: "3px 8px",
+                          borderRadius: "999px"
+                        }}>✅ 완료</div>
+                      )}
+                    </div>
+
+                    {/* Card Body */}
+                    <div style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "10px", flexGrow: 1 }}>
+                      <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--ink)", lineHeight: "1.4", wordBreak: "keep-all" }}>
+                        {course.title}
+                      </div>
+                      {course.description && (
+                        <div style={{
+                          fontSize: "12px",
+                          color: "var(--body)",
+                          lineHeight: "1.5",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden"
+                        }}>
+                          {course.description}
+                        </div>
+                      )}
+
+                      {/* Progress bar */}
+                      <div style={{ marginTop: "auto" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                          <span style={{ fontSize: "11px", color: "var(--body)", fontWeight: 500 }}>학습 진도</span>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: isComp ? "#10B981" : "var(--primary)" }}>{progress}%</span>
+                        </div>
+                        <div style={{ height: "6px", background: "var(--canvas-soft)", borderRadius: "999px", overflow: "hidden" }}>
+                          <div style={{
+                            height: "100%",
+                            width: `${progress}%`,
+                            background: isComp ? "#10B981" : "var(--primary)",
+                            borderRadius: "999px",
+                            transition: "width 0.4s ease"
+                          }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
