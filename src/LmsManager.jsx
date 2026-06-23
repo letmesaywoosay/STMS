@@ -666,7 +666,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
   if (viewPath === "/admin") {
     return (
       <div style={{ padding: "24px", background: "var(--canvas-soft)", minHeight: "100vh" }}>
-        <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
           <BackOfficeView 
             adminSubTabGroup={adminSubTabGroup}
             currentUser={currentUser}
@@ -711,7 +711,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
 
       {/* ── 본문 화면 출력 ── */}
       <div style={{ flex: 1 }}>
-        {activeTab === "intro" && <IntroView courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} applications={applications} currentUser={currentUser} pageConfig={pageConfig} notices={notices} faqs={faqs} saveNotices={saveNotices} setActiveTab={setActiveTab} />}
+        {activeTab === "intro" && <IntroView courses={courses} eduCourses={eduCourses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} applications={applications} currentUser={currentUser} pageConfig={pageConfig} notices={notices} faqs={faqs} saveNotices={saveNotices} setActiveTab={setActiveTab} onNavigate={onNavigate} />}
         {activeTab === "course" && <CourseListPage eduCourses={eduCourses} infoBlocks={eduInfoBlocks} onNavigate={onNavigate} />}
         {activeTab === "course-detail" && <CourseDetailPage eduCourses={eduCourses} viewPath={viewPath} onNavigate={onNavigate} />}
         {activeTab === "course-register" && <CourseRegistrationPage eduCourses={eduCourses} viewPath={viewPath} currentUser={currentUser} users={users} saveUsers={saveUsers} eduRegistrations={eduRegistrations} saveEduRegistrations={saveEduRegistrations} emailRecipients={eduEmailRecipients} eduConfig={eduConfig} onNavigate={onNavigate} />}
@@ -896,7 +896,7 @@ const getBgFromPreset = (preset) => {
 };
 
 // ── [IntroView] Expo Hero & Device-Mockup 적용 메인 화면 ──
-function IntroView({ courses, checkAccess, setSelectedCourse, applications, currentUser, pageConfig, notices, faqs, saveNotices, setActiveTab }) {
+function IntroView({ courses, eduCourses = [], checkAccess, setSelectedCourse, applications, currentUser, pageConfig, notices, faqs, saveNotices, setActiveTab, onNavigate }) {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -932,10 +932,46 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
   const defaultMockCourses = [
     { id: "mock-1", title: "AI Agent 설계 및 구축", description: "LangChain 및 주요 프레임워크를 활용해 업무 자동화용 AI 에이전트를 빌드하고 프로덕션 수준으로 구현하는 실무 과정", duration: "2일, 16시간", image: "🤖" },
     { id: "mock-2", title: "생성형 AI를 활용한 서비스 기획 실무", description: "대규모 언어모델(LLM) 기반의 서비스 컨셉 구상부터 시나리오 작성, API 스펙 파악까지 통합 아우르는 기획 노하우 과정", duration: "1일, 8시간", image: "💡" },
-    { id: "mock-3", title: "Prompt Engineering 실무", description: "LLM의 성능을 백퍼센트 끌어올리는 구조적 질문 프롬프트 작성 규칙 및 피드백 루프 조율을 체득하는 실전 테크닉 과정", duration: "1일, 8시간", image: "✍️" }
+    { id: "mock-3", title: "Prompt Engineering 실무", description: "LLM의 성능을 백퍼센트 끌어올리는 구조적 질문 프롬프트 작성 규칙 및 피드백 루프 조율을 체득하는 실전 테크닉 과정", duration: "1일, 8시간", image: "✍️" },
+    { id: "mock-4", title: "Kubernetes 인프라 구축 실무", description: "컨테이너 오케스트레이션을 위한 쿠버네티스 클러스터 빌드 및 배포 실무 테크닉 과정", duration: "2일, 16시간", image: "🐳" }
   ];
 
-  const displayCourses = courses.length > 0 ? courses.slice(0, 3) : defaultMockCourses;
+  // 현시각부터 30일 후까지의 모든 교육과정을 불러와서 카드로 보여주기 (개수 제한 없음)
+  const getDisplayCourses = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    // dateStart가 있는 코스 중, 현재 년도와 현재 월에 해당하는 코스 필터링
+    const monthlyCourses = eduCourses.filter(c => {
+      if (!c.dateStart) return false;
+      const startDate = new Date(c.dateStart);
+      return startDate.getFullYear() === currentYear && startDate.getMonth() === currentMonth;
+    });
+
+    let result = [...monthlyCourses];
+    
+    // 만약 현재 월에 해당하는 코스가 하나도 없다면 defaultMockCourses를 폴백으로 사용
+    if (result.length === 0) {
+      result = defaultMockCourses;
+    }
+    
+    // 최대 4개만 노출하도록 제한
+    result = result.slice(0, 4);
+    
+    // 컴포넌트 데이터 규격에 맞게 맵핑 (name -> title 등 호환 처리)
+    return result.map(c => ({
+      id: c.id,
+      title: c.name || c.title || "",
+      description: c.overview || c.description || "",
+      duration: c.time ? `${c.dateStart || ""} (${c.time})` : (c.duration || "별도 공지"),
+      image: c.image || (c.target === "Partner" ? "🤝" : c.target === "Customer" ? "👤" : "🎓"),
+      bgImage: c.bgImage || "", // bgImage 필드 매핑 추가
+      rawCourse: c // 원래 데이터를 보관하여 클릭 이벤트 등 처리 시 유용하도록 함
+    }));
+  };
+
+  const displayCourses = getDisplayCourses();
 
   const displayNotices = notices ? notices.slice(0, 4) : [];
   const displayFaqs = faqs ? faqs.slice(0, 4) : [];
@@ -951,12 +987,14 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
   };
 
   const handleCourseCardClick = (c) => {
-    if (courses.length > 0) {
-      setSelectedCourse(c);
-      checkAccess("classroom");
+    // edu_courses에서 직접 상세 보기를 원하므로, 클릭 시 해당 교육과정의 상세 정보 페이지로 바로 라우팅 이동
+    const targetCourse = c.rawCourse || c;
+    if (targetCourse && targetCourse.id) {
+      setActiveTab("course-detail"); // 탭 상태 즉시 동기화
+      onNavigate(`/course/detail/${targetCourse.id}`);
     } else {
-      alert(`[${c.title}] 수강을 원하실 경우 '나의 강의실'로 입장하셔서 수강 신청을 클릭해주세요!`);
-      checkAccess("classroom");
+      setActiveTab("course"); // 탭 상태 즉시 동기화
+      onNavigate("/course");
     }
   };
 
@@ -1128,43 +1166,151 @@ function IntroView({ courses, checkAccess, setSelectedCourse, applications, curr
       <div style={{ padding: "96px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "32px" }}>
           <div>
-            <h2 style={{ fontSize: "36px", fontWeight: 600, color: "var(--ink)", margin: 0, letterSpacing: "-1.08px" }}>🔥 실시간 인기 클래스</h2>
-            <span style={{ fontSize: "14px", color: "var(--body)" }}>수강생들이 가장 선호하는 핵심 커리큘럼입니다.</span>
+            <h2 style={{ fontSize: "36px", fontWeight: 600, color: "var(--ink)", margin: 0, letterSpacing: "-1.08px" }}>🔥 Coming Soon Class</h2>
+            <span style={{ fontSize: "14px", color: "var(--body)" }}>여기서 바로 신청하세요.</span>
           </div>
-          <button onClick={() => checkAccess("classroom")} style={{ background: "none", border: "none", color: "var(--text-link)", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>전체 과정 보기 ➔</button>
+          <button onClick={() => setActiveTab("course")} style={{ background: "none", border: "none", color: "var(--text-link)", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}>전체 과정 보기 ➔</button>
         </div>
 
-        <div style={{ gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", display: "grid", gap: "24px" }}>
-          {displayCourses.map(c => (
-            <div key={c.id} onClick={() => handleCourseCardClick(c)}
-              style={{
-                background: "var(--surface-card)",
-                border: "1px solid var(--hairline-strong)",
-                borderRadius: "var(--rounded-lg)",
-                padding: "24px",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                boxSizing: "border-box"
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = "translateY(-4px)";
-                e.currentTarget.style.boxShadow = shadow;
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}>
-              <div style={{ width: "45px", height: "45px", borderRadius: "var(--rounded-md)", background: "var(--canvas-soft)", color: "var(--primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px", marginBottom: "16px" }}>
-                {c.image || "🎓"}
+        <div style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", display: "grid", gap: "24px" }}>
+          {displayCourses.map((c, idx) => {
+            // 그라데이션 및 색상 풀을 두어 다채롭고 아름다운 썸네일 이미지 제공
+            const gradients = [
+              "linear-gradient(135deg, #0A192F, #1E293B)",
+              "linear-gradient(135deg, #0284C7, #0369A1)",
+              "linear-gradient(135deg, #0F766E, #115E59)",
+              "linear-gradient(135deg, #4338CA, #3730A3)"
+            ];
+            const currentGradient = gradients[idx % gradients.length];
+
+            return (
+              <div key={c.id} onClick={() => handleCourseCardClick(c)}
+                style={{
+                  background: "var(--surface-card)",
+                  border: "1px solid var(--hairline-strong)",
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                  transition: "all 0.25s ease",
+                  boxSizing: "border-box",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)"
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = "translateY(-6px)";
+                  e.currentTarget.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)";
+                  e.currentTarget.style.borderColor = "var(--primary-active)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)";
+                  e.currentTarget.style.borderColor = "var(--hairline-strong)";
+                }}>
+                {/* 상단 썸네일 이미지/그라데이션 영역 */}
+                <div style={{
+                  height: "180px", // 16:9 비율 근사치로 기존 140px에서 약 130%인 180px로 변경
+                  background: c.bgImage ? `url(${c.bgImage}) center/cover no-repeat` : currentGradient,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  padding: "16px",
+                  boxSizing: "border-box",
+                  position: "relative"
+                }}>
+                  {/* 상단 뱃지 */}
+                  <div style={{
+                    alignSelf: "flex-start",
+                    background: "rgba(0, 0, 0, 0.4)",
+                    backdropFilter: "blur(4px)",
+                    borderRadius: "4px",
+                    padding: "4px 8px",
+                    color: "#ffffff",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px"
+                  }}>
+                    {c.rawCourse?.target || c.target || "AIDA EDUCATION"}
+                  </div>
+                  
+                  {/* 썸네일 내 대형 아이콘/데코 (지정 이미지가 없을 때만 표출) */}
+                  {!c.bgImage && (
+                    <div style={{
+                      position: "absolute",
+                      right: "16px",
+                      bottom: "16px",
+                      fontSize: "40px",
+                      opacity: 0.85
+                    }}>
+                      {c.image || "🎓"}
+                    </div>
+                  )}
+                </div>
+
+                {/* 하단 정보 텍스트 영역 */}
+                <div style={{ padding: "20px", display: "flex", flexDirection: "column", flexGrow: 1, justifyContent: "space-between" }}>
+                  <div>
+                    {/* 과정 명 */}
+                    <h3 style={{
+                      fontSize: "16px",
+                      fontWeight: 700,
+                      color: "var(--ink)",
+                      margin: "0 0 8px 0",
+                      lineHeight: "1.4",
+                      height: "44px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical"
+                    }}>
+                      {c.title}
+                    </h3>
+
+                    {/* 설명 */}
+                    <p style={{
+                      fontSize: "13px",
+                      color: "var(--body)",
+                      lineHeight: "1.5",
+                      margin: "0 0 16px 0",
+                      height: "38px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical"
+                    }}>
+                      {c.description}
+                    </p>
+                  </div>
+
+                  <div>
+                    {/* 구분선 */}
+                    <div style={{ borderTop: "1px solid var(--hairline)", margin: "8px 0" }} />
+
+                    {/* 기간 및 가격/무료 정보 행 */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "12px", color: "var(--text-link)", fontWeight: 600 }}>
+                        ⏳ {c.duration || "별도 공지"}
+                      </span>
+                      <span style={{
+                        fontSize: "12px",
+                        color: "#0284C7",
+                        fontWeight: 700,
+                        background: "#E0F2FE",
+                        padding: "2px 8px",
+                        borderRadius: "4px"
+                      }}>
+                        무료
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px 0" }}>{c.title}</h3>
-              <p style={{ fontSize: "14px", color: "var(--body)", lineHeight: "1.5", margin: "0 0 16px 0", height: "48px", overflow: "hidden" }}>{c.description}</p>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--hairline)", paddingTop: "12px" }}>
-                <span style={{ fontSize: "13px", color: "var(--text-link)", fontWeight: 600 }}>{c.duration || "동영상강의"}</span>
-                <span style={{ fontSize: "13px", color: "var(--body)" }}>무료 신청 가능</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -1416,7 +1562,6 @@ function ScheduleView({ schedules }) {
               <strong style={{ fontSize: "13px", color: "var(--text-link)" }}>📅 교육 일정 상세</strong>
               <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>{detailSchedule.date}</span>
             </div>
-            <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", margin: "0 0 12px 0" }}>{detailSchedule.course}</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
               <div>
                 <span style={{ fontSize: "11px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 600, display: "block" }}>수강 권장 대상</span>
@@ -1437,52 +1582,6 @@ function ScheduleView({ schedules }) {
   );
 }
 
-// ── [RegisterForm] 회원가입 컴포넌트 ──
-function RegisterForm({ regForm, setRegForm, handleRegister, authErr }) {
-  return (
-    <div>
-      <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", marginBottom: "20px", textAlign: "center", letterSpacing: "-0.5px" }}>TUNE 회원가입</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "450px", overflowY: "auto", paddingRight: "4px" }}>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>이름 *</label>
-          <input type="text" value={regForm.name} onChange={e => setRegForm({ ...regForm, name: e.target.value })} placeholder="홍길동" style={inpStyle({ padding: "8px 12px" })} />
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>이메일 주소 *</label>
-          <input type="email" value={regForm.email} onChange={e => setRegForm({ ...regForm, email: e.target.value })} placeholder="username@okestro.com" style={inpStyle({ padding: "8px 12px" })} />
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>비밀번호 *</label>
-          <input type="password" value={regForm.password} onChange={e => setRegForm({ ...regForm, password: e.target.value })} placeholder="비밀번호 설정" style={inpStyle({ padding: "8px 12px" })} />
-        </div>
-      </div>
-
-      {authErr && <div style={{ fontSize: "13px", color: "var(--semantic-error)", fontWeight: 500, margin: "8px 0" }}>⚠️ {authErr}</div>}
-      <button onClick={handleRegister}
-        style={{ 
-          width: '100%', 
-          padding: '12px', 
-          marginTop: '16px',
-          background: 'var(--primary)', 
-          color: 'var(--on-primary)', 
-          border: 'none', 
-          borderRadius: 'var(--rounded-md)', 
-          fontSize: '14px', 
-          fontWeight: 500, 
-          cursor: 'pointer',
-          transition: 'background 0.15s' 
-        }}
-        onMouseOver={(e) => e.currentTarget.style.background = "var(--primary-active)"}
-        onMouseOut={(e) => e.currentTarget.style.background = "var(--primary)"}
-      >
-        가입 신청 완료
-      </button>
-    </div>
-  );
-}
-
-// ── [ClassroomView] 나의 강의실 ──
-// ── [ClassroomView] 나의 강의실 ──
 function ClassroomView({ 
   courses, 
   currentUser, 
@@ -1499,21 +1598,6 @@ function ClassroomView({
   const [notesText, setNotesText] = useState("");
   const [adminAnswerTexts, setAdminAnswerTexts] = useState({});
 
-  // 1. 초기 강의 설정
-  useEffect(() => {
-    if (courses && courses.length > 0) {
-      if (!selectedLecture) {
-        setSelectedLecture(courses[0]);
-      } else {
-        const updated = courses.find(c => c.id === selectedLecture.id);
-        if (updated) setSelectedLecture(updated);
-      }
-    } else {
-      setSelectedLecture(null);
-    }
-  }, [courses]);
-
-  // 2. 선택 강의 변경 시 개인 강의 노트 로드
   useEffect(() => {
     if (selectedLecture) {
       const myNote = lmsNotes.find(n => n.email === currentUser.email && n.lectureId === selectedLecture.id);
@@ -1533,7 +1617,6 @@ function ClassroomView({
     }
   };
 
-  // 3. 진도율 시뮬레이션 관련 헬퍼
   const getLectureProgress = (lectureId) => {
     const item = lmsProgress.find(p => p.email === currentUser.email && p.lectureId === lectureId);
     return item?.progress || 0;
@@ -1584,7 +1667,6 @@ function ClassroomView({
     await updateProgressState(selectedLecture.id, nextPct);
   };
 
-  // 4. Q&A 질문/답변 핸들러
   const handleAddQuestion = async () => {
     if (!selectedLecture || !newQuestionText.trim()) return;
     const newQA = {
@@ -1607,7 +1689,6 @@ function ClassroomView({
     alert("관리자 답변이 저장되었습니다.");
   };
 
-  // 5. 강의 노트 저장 핸들러
   const handleSaveNote = async () => {
     if (!selectedLecture) return;
     const existingIdx = lmsNotes.findIndex(n => n.email === currentUser.email && n.lectureId === selectedLecture.id);
@@ -1634,320 +1715,152 @@ function ClassroomView({
     alert("강의 노트가 저장되었습니다.");
   };
 
-  // 그룹화 로직
-  const groupedLectures = courses.reduce((acc, c) => {
-    const groupName = c.courseName || "General / 기타 과정";
-    if (!acc[groupName]) {
-      acc[groupName] = [];
-    }
-    acc[groupName].push(c);
-    return acc;
-  }, {});
-
   const activeProgress = selectedLecture ? getLectureProgress(selectedLecture.id) : 0;
   const isCompleted = activeProgress === 100;
 
-  const currentVideoId = selectedLecture ? getYoutubeId(selectedLecture.youtubeUrl) : "dQw4w9WgXcQ";
+  const currentVideoId = selectedLecture ? getYoutubeId(selectedLecture.youtubeUrl) : null;
 
   return (
-    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box", display: "flex", gap: "28px", flexWrap: "wrap" }}>
-      {/* ── A. 좌측 플레이리스트 사이드바 ── */}
-      <div style={{ width: "340px", display: "flex", flexDirection: "column", gap: "16px", flexShrink: 0 }}>
-        <div style={{ 
-          padding: "20px", 
-          background: "var(--surface-card)", 
-          border: "1px solid var(--hairline-strong)", 
-          borderRadius: "var(--rounded-lg)", 
-          boxShadow: shadow 
-        }}>
-          <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: "0 0 4px 0" }}>🎓 LMS 온라인 강의실</h4>
-          <span style={{ fontSize: "12px", color: "var(--body)" }}>과정별 교육 동영상 학습 목록입니다.</span>
-        </div>
-
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "column", 
-          gap: "14px", 
-          padding: "20px",
-          background: "var(--surface-card)",
-          border: "1px solid var(--hairline-strong)",
-          borderRadius: "var(--rounded-lg)",
-          boxShadow: shadow,
-          maxHeight: "600px",
-          overflowY: "auto"
-        }}>
-          {Object.keys(groupedLectures).length === 0 ? (
-            <div style={{ textAlign: "center", color: "var(--body)", fontSize: "13px", padding: "24px 0" }}>
-              등록된 강의 영상이 없습니다.
-            </div>
-          ) : (
-            Object.keys(groupedLectures).map(groupName => (
-              <div key={groupName} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <div style={{ 
-                  fontSize: "13px", 
-                  fontWeight: 700, 
-                  color: "#1E3A8A", 
-                  padding: "6px 12px", 
-                  background: "#EFF6FF", 
-                  borderRadius: "var(--rounded-md)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px"
-                }}>
-                  📚 {groupName}
-                </div>
-                
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px", paddingLeft: "8px" }}>
-                  {groupedLectures[groupName].map(lecture => {
-                    const pct = getLectureProgress(lecture.id);
-                    const status = getLectureStatus(lecture.id);
-                    const isSelected = selectedLecture?.id === lecture.id;
-                    
-                    let statusLabel = "⚪ 학습 전";
-                    let statusColor = "var(--body)";
-                    if (status === "completed" || pct === 100) {
-                      statusLabel = "🟢 학습 완료";
-                      statusColor = "var(--green)";
-                    } else if (status === "learning" || pct > 0) {
-                      statusLabel = `🔵 학습 중 (${pct}%)`;
-                      statusColor = "var(--primary)";
-                    }
-
-                    return (
-                      <div 
-                        key={lecture.id}
-                        onClick={() => setSelectedLecture(lecture)}
-                        style={{
-                          padding: "10px 12px",
-                          borderRadius: "var(--rounded-md)",
-                          background: isSelected ? "rgba(30, 58, 138, 0.08)" : "transparent",
-                          borderLeft: isSelected ? "3px solid var(--primary)" : "3px solid transparent",
-                          cursor: "pointer",
-                          transition: "all 0.15s ease",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "4px"
-                        }}
-                        onMouseOver={e => {
-                          if (!isSelected) e.currentTarget.style.background = "var(--canvas-soft)";
-                        }}
-                        onMouseOut={e => {
-                          if (!isSelected) e.currentTarget.style.background = "transparent";
-                        }}
-                      >
-                        <div style={{ fontSize: "13px", fontWeight: isSelected ? 600 : 500, color: "var(--ink)", lineHeight: "1.3" }}>
-                          {lecture.title}
-                        </div>
-                        <div style={{ fontSize: "11px", fontWeight: 600, color: statusColor }}>
-                          {statusLabel}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
+      <div style={{ 
+        background: "var(--surface-card)", 
+        border: "1px solid var(--hairline-strong)", 
+        borderRadius: "var(--rounded-lg)", 
+        padding: "24px", 
+        boxShadow: shadow,
+        marginBottom: "32px"
+      }}>
+        <h4 style={{ fontSize: "24px", fontWeight: 600, color: "var(--ink)", margin: "0 0 6px 0", letterSpacing: "-0.5px" }}>🎬 온라인 강의</h4>
+        <span style={{ fontSize: "14px", color: "var(--body)" }}>업로드된 온라인 교육 동영상을 자유롭게 시청하고 진도를 관리할 수 있습니다.</span>
       </div>
 
-      {/* ── B. 우측 비디오 재생 공간 및 부가 기능 ── */}
-      <div style={{ flex: 1, minWidth: "500px", display: "flex", flexDirection: "column", gap: "24px" }}>
-        {selectedLecture ? (
-          <>
-            {/* 비디오 플레이어 본체 카드 */}
-            <div style={{ 
-              background: "var(--surface-card)", 
-              border: "1px solid var(--hairline-strong)", 
-              borderRadius: "var(--rounded-lg)", 
-              padding: "24px", 
-              boxShadow: shadow 
-            }}>
-              <div style={{ 
-                width: "100%", 
-                aspectRatio: "16/9", 
-                borderRadius: "var(--rounded-lg)", 
-                overflow: "hidden", 
-                background: "#000", 
+      {selectedLecture ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "flex-start" }}>
+            <button 
+              onClick={() => setSelectedLecture(null)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 16px",
+                background: "var(--canvas)",
                 border: "1px solid var(--hairline-strong)",
-                marginBottom: "20px"
-              }}>
-                {currentVideoId ? (
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    src={`https://www.youtube.com/embed/${currentVideoId}`}
-                    title={selectedLecture.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                ) : (
-                  <div style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: "100%",
-                    color: "#fff",
-                    padding: "24px",
-                    textAlign: "center",
-                    background: "var(--primary-active)",
-                    boxSizing: "border-box"
-                  }}>
-                    <span style={{ fontSize: "36px", marginBottom: "12px" }}>⚠️</span>
-                    <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px", color: "var(--on-primary)" }}>재생할 수 없는 동영상입니다</div>
-                    <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px", maxWidth: "340px", lineHeight: "1.4" }}>
-                      유튜브 주소가 올바르지 않거나 동영상 설정에서 외부 퍼가기(Embedding)가 차단되었을 수 있습니다. 아래 버튼으로 유튜브에서 직접 감상해 주세요.
-                    </div>
-                    <a
-                      href={getAbsoluteUrl(selectedLecture?.youtubeUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        padding: "8px 16px",
-                        background: "var(--surface-card)",
-                        color: "var(--text-link)",
-                        border: "none",
-                        borderRadius: "var(--rounded-md)",
-                        fontSize: "13px",
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseOver={e => {
-                        e.currentTarget.style.background = "var(--primary)";
-                        e.currentTarget.style.color = "var(--on-primary)";
-                      }}
-                      onMouseOut={e => {
-                        e.currentTarget.style.background = "var(--surface-card)";
-                        e.currentTarget.style.color = "var(--text-link)";
-                      }}
-                    >
-                      📺 YouTube에서 직접 보기
-                    </a>
-                  </div>
-                )}
-              </div>
+                borderRadius: "var(--rounded-md)",
+                color: "var(--ink)",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.15s"
+              }}
+              onMouseOver={e => e.currentTarget.style.background = "var(--canvas-soft)"}
+              onMouseOut={e => e.currentTarget.style.background = "var(--canvas)"}
+            >
+              ⬅ 강의 목록으로 돌아가기
+            </button>
+          </div>
 
-              {/* 강좌 제목 및 메타정보 */}
-              <div style={{ borderBottom: "1px solid var(--hairline)", paddingBottom: "16px", marginBottom: "20px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "12px", background: "var(--primary-active)", color: "var(--on-primary)", padding: "2px 8px", borderRadius: "10px", fontWeight: 600 }}>
-                    {selectedLecture.courseName || "일반 과정"}
-                  </span>
-                  
-                  {currentVideoId && (
-                    <a
-                      href={getAbsoluteUrl(selectedLecture.youtubeUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        fontSize: "12px",
-                        color: "var(--text-link)",
-                        fontWeight: 600,
-                        textDecoration: "none",
-                        padding: "4px 10px",
-                        borderRadius: "6px",
-                        border: "1px solid var(--hairline-strong)",
-                        background: "var(--canvas-soft)",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseOver={e => {
-                        e.currentTarget.style.background = "var(--primary-active)";
-                        e.currentTarget.style.color = "var(--on-primary)";
-                      }}
-                      onMouseOut={e => {
-                        e.currentTarget.style.background = "var(--canvas-soft)";
-                        e.currentTarget.style.color = "var(--text-link)";
-                      }}
-                    >
-                      📺 YouTube에서 열기 (임베드 재생 오류 발생 시)
-                    </a>
+          <div style={{ display: "flex", gap: "28px", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: "500px", display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div style={{ 
+                background: "var(--surface-card)", 
+                border: "1px solid var(--hairline-strong)", 
+                borderRadius: "var(--rounded-lg)", 
+                padding: "24px", 
+                boxShadow: shadow 
+              }}>
+                <div style={{ 
+                  width: "100%", 
+                  aspectRatio: "16/9", 
+                  borderRadius: "var(--rounded-lg)", 
+                  overflow: "hidden", 
+                  background: "#000", 
+                  border: "1px solid var(--hairline-strong)",
+                  marginBottom: "20px"
+                }}>
+                  {currentVideoId ? (
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      src={`https://www.youtube.com/embed/${currentVideoId}`}
+                      title={selectedLecture.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  ) : (
+                    <div style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                      color: "#fff",
+                      padding: "24px",
+                      textAlign: "center",
+                      background: "var(--primary-active)",
+                      boxSizing: "border-box"
+                    }}>
+                      <span style={{ fontSize: "36px", marginBottom: "12px" }}>⚠️</span>
+                      <div style={{ fontSize: "16px", fontWeight: 600, marginBottom: "8px", color: "var(--on-primary)" }}>재생할 수 없는 동영상입니다</div>
+                      <div style={{ fontSize: "12px", color: "var(--muted)", marginBottom: "16px", maxWidth: "340px", lineHeight: "1.4" }}>
+                        유튜브 주소가 올바르지 않거나 동영상 설정에서 외부 퍼가기(Embedding)가 차단되었을 수 있습니다. 아래 버튼으로 유튜브에서 직접 감상해 주세요.
+                      </div>
+                      <a
+                        href={getAbsoluteUrl(selectedLecture?.youtubeUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: "8px 16px",
+                          background: "var(--surface-card)",
+                          color: "var(--text-link)",
+                          border: "none",
+                          borderRadius: "var(--rounded-md)",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          textDecoration: "none",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseOver={e => {
+                          e.currentTarget.style.background = "var(--primary)";
+                          e.currentTarget.style.color = "var(--on-primary)";
+                        }}
+                        onMouseOut={e => {
+                          e.currentTarget.style.background = "var(--surface-card)";
+                          e.currentTarget.style.color = "var(--text-link)";
+                        }}
+                      >
+                        📺 YouTube에서 직접 보기
+                      </a>
+                    </div>
                   )}
                 </div>
-                <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", margin: "8px 0 6px 0" }}>
-                  {selectedLecture.title}
-                </h3>
-                <p style={{ fontSize: "14px", color: "var(--body)", lineHeight: "1.5", margin: 0, whiteSpace: "pre-line" }}>
-                  {selectedLecture.description}
-                </p>
               </div>
 
-              {/* 실시간 진도율 및 학습 완료 토글 */}
-              <div style={{ background: "var(--canvas-soft)", padding: "20px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--body)", marginBottom: "6px" }}>
-                    <span style={{ fontWeight: 600 }}>재생 진행도 시뮬레이션</span>
-                    <strong style={{ color: "var(--primary)" }}>{activeProgress}% 시청 완료</strong>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={activeProgress}
-                      onChange={handleSliderChange}
-                      style={{ flexGrow: 1, accentColor: "var(--primary)", cursor: "pointer" }}
-                    />
-                    <span style={{ fontSize: "11px", color: "var(--muted)", whiteSpace: "nowrap" }}>슬라이더 조정 가능</span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleToggleComplete}
-                  style={{
-                    width: "100%",
-                    padding: "14px",
-                    border: "none",
-                    borderRadius: "var(--rounded-md)",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    background: isCompleted ? "var(--green)" : "var(--primary)",
-                    color: "var(--on-primary)",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                    transition: "background 0.2s"
-                  }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.background = isCompleted ? "#047857" : "var(--primary-active)";
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.background = isCompleted ? "var(--green)" : "var(--primary)";
-                  }}
-                >
-                  {isCompleted ? "✓ 학습 완료됨 (클릭하여 완료 취소)" : "🎓 학습 완료 처리하기"}
-                </button>
-              </div>
-            </div>
-
-            {/* Q&A / Notes Bottom Tab 카드 */}
-            <div style={{ 
-              background: "var(--surface-card)", 
-              border: "1px solid var(--hairline-strong)", 
-              borderRadius: "var(--rounded-lg)", 
-              padding: "24px", 
-              boxShadow: shadow 
-            }}>
-              {/* 탭 헤더 */}
-              <div style={{ display: "flex", gap: "12px", borderBottom: "1.5px solid var(--hairline-strong)", paddingBottom: "10px", marginBottom: "20px" }}>
-                <button
-                  onClick={() => setActiveBottomTab("qa")}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    fontSize: "15px",
-                    fontWeight: 600,
-                    color: activeBottomTab === "qa" ? "var(--primary)" : "var(--body)",
-                    cursor: "pointer",
-                    padding: "6px 12px",
-                    borderBottom: activeBottomTab === "qa" ? "2.5px solid var(--primary)" : "2.5px solid transparent",
-                    transition: "all 0.15s"
-                  }}
-                >
+              {/* Q&A / Notes Bottom Tab 카드 */}
+              <div style={{ 
+                background: "var(--surface-card)", 
+                border: "1px solid var(--hairline-strong)", 
+                borderRadius: "var(--rounded-lg)", 
+                padding: "24px", 
+                boxShadow: shadow 
+              }}>
+                {/* 탭 헤더 */}
+                <div style={{ display: "flex", gap: "12px", borderBottom: "1.5px solid var(--hairline-strong)", paddingBottom: "10px", marginBottom: "20px" }}>
+                  <button
+                    onClick={() => setActiveBottomTab("qa")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      fontSize: "15px",
+                      fontWeight: 600,
+                      color: activeBottomTab === "qa" ? "var(--primary)" : "var(--body)",
+                      cursor: "pointer",
+                      padding: "6px 12px",
+                      borderBottom: activeBottomTab === "qa" ? "2.5px solid var(--primary)" : "2.5px solid transparent",
+                      transition: "all 0.15s"
+                    }}
+                  >
                   질문하기 (Q&A)
                 </button>
                 <button
@@ -2085,14 +1998,15 @@ function ClassroomView({
                 </div>
               )}
             </div>
-          </>
-        ) : (
-          <div style={{ height: "450px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--body)", background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", boxShadow: shadow }}>
-            <span style={{ fontSize: "48px" }}>📺</span>
-            <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "12px", color: "var(--ink)" }}>학습할 교육 동영상을 선택해 주세요.</div>
           </div>
-        )}
+        </div>
       </div>
+      ) : (
+        <div style={{ height: "450px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "var(--body)", background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", boxShadow: shadow }}>
+          <span style={{ fontSize: "48px" }}>📺</span>
+          <div style={{ fontSize: "16px", fontWeight: 600, marginTop: "12px", color: "var(--ink)" }}>학습할 교육 동영상을 선택해 주세요.</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2427,6 +2341,7 @@ function BackOfficeView({
     abbr: "AI",
     seq: "1",
     name: "",
+    bgImage: "", // 배너/썸네일 이미지 URL 필드 추가
     dateStart: "",
     dateEnd: "",
     time: "13:00-18:00",
@@ -2476,18 +2391,9 @@ function BackOfficeView({
       setAdminGasUrl(eduConfig.googleSheetsScriptUrl || "");
     }
   }, [eduConfig]);
-
-  // 코드 생성 도우미
-  const genCode = (tgt, abbr, seq) => {
-    const tChar = tgt === "Customer" ? "C" : (tgt === "Partner" ? "P" : "E");
-    const aStr = (abbr || "XX").slice(0, 2).toUpperCase();
-    const sStr = seq || "1";
-    return `OK-${tChar}${aStr}${sStr}`;
-  };
-
   const handleSaveEduCourse = async () => {
     const {
-      id, target, abbr, seq, name, dateStart, dateEnd, time, location, status, overview,
+      id, target, abbr, seq, name, bgImage, dateStart, dateEnd, time, location, status, overview,
       recommendedAudience, objectives, teachingMethod, curriculum, prerequisites, notices
     } = eduCourseForm;
 
@@ -2496,16 +2402,24 @@ function BackOfficeView({
       return;
     }
 
-    const courseCode = editingEduCourseId ? id : genCode(target, abbr, seq);
-
     const parseBullets = (text) => {
+      if (Array.isArray(text)) return text;
+      if (!text) return [];
       return text.split("\n").map(line => line.trim()).filter(line => line.length > 0);
     };
+
+    const courseCode = editingEduCourseId ? id : `COURSE-${Date.now()}`;
+
+    // teachingMethod는 클릭 세그먼트 버튼에서 받아온 단일 텍스트이므로 단일 원소 배열로 저장
+    const methodParsed = typeof teachingMethod === "string" 
+      ? [teachingMethod.trim()] 
+      : teachingMethod;
 
     const newCourse = {
       id: courseCode,
       target,
       name: name.trim(),
+      bgImage: bgImage ? bgImage.trim() : "",
       dateStart,
       dateEnd: dateEnd ? dateEnd : null,
       time: time.trim(),
@@ -2514,7 +2428,7 @@ function BackOfficeView({
       overview: overview.trim(),
       recommendedAudience: parseBullets(recommendedAudience),
       objectives: parseBullets(objectives),
-      teachingMethod: parseBullets(teachingMethod),
+      teachingMethod: methodParsed,
       curriculum: parseBullets(curriculum),
       prerequisites: parseBullets(prerequisites),
       notices: parseBullets(notices),
@@ -2526,10 +2440,6 @@ function BackOfficeView({
       updated = eduCourses.map(c => c.id === editingEduCourseId ? newCourse : c);
       alert("교육과정이 수정되었습니다.");
     } else {
-      if (eduCourses.some(c => c.id === courseCode)) {
-        alert("이미 동일한 과정 코드가 등록되어 있습니다. 고유 식별 번호를 확인해주세요.");
-        return;
-      }
       updated = [newCourse, ...eduCourses];
       alert("교육과정이 개설되었습니다.");
     }
@@ -2538,7 +2448,7 @@ function BackOfficeView({
     setShowEduCourseFormModal(false);
     setEditingEduCourseId(null);
     setEduCourseForm({
-      id: "", target: "Customer", abbr: "AI", seq: "1", name: "", dateStart: "", dateEnd: "",
+      id: "", target: "Customer", abbr: "AI", seq: "1", name: "", bgImage: "", dateStart: "", dateEnd: "",
       time: "13:00-18:00", location: "여의도 파크원타워2 43층 대회의실", status: "Available",
       overview: "", recommendedAudience: "", objectives: "", teachingMethod: "", curriculum: "",
       prerequisites: "", notices: ""
@@ -2562,6 +2472,7 @@ function BackOfficeView({
       abbr: parsedAbbr,
       seq: parsedSeq,
       name: c.name,
+      bgImage: c.bgImage || "",
       dateStart: c.dateStart,
       dateEnd: c.dateEnd || "",
       time: c.time,
@@ -5122,6 +5033,119 @@ function BackOfficeView({
                     />
                   </div>
 
+                  <div>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>과정 썸네일 / 배너 이미지 *</label>
+                    
+                    {/* 드래그 앤 드랍 영역 */}
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = "var(--primary)";
+                        e.currentTarget.style.background = "var(--canvas-soft)";
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = "var(--hairline-strong)";
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = "var(--hairline-strong)";
+                        e.currentTarget.style.background = "transparent";
+                        
+                        const file = e.dataTransfer.files[0];
+                        if (file && file.type.startsWith("image/")) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            setEduCourseForm({ ...eduCourseForm, bgImage: event.target.result });
+                          };
+                          reader.readAsDataURL(file);
+                        } else {
+                          alert("이미지 파일만 등록할 수 있습니다.");
+                        }
+                      }}
+                      onClick={() => {
+                        document.getElementById("edu-thumbnail-input").click();
+                      }}
+                      style={{
+                        border: "2px dashed var(--hairline-strong)",
+                        borderRadius: "8px",
+                        padding: "20px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        position: "relative",
+                        minHeight: "100px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px"
+                      }}
+                    >
+                      <input
+                        id="edu-thumbnail-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              setEduCourseForm({ ...eduCourseForm, bgImage: event.target.result });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        style={{ display: "none" }}
+                      />
+
+                      {eduCourseForm.bgImage ? (
+                        <div style={{ position: "relative", width: "100%", maxHeight: "150px", overflow: "hidden", borderRadius: "6px" }}>
+                          <img
+                            src={eduCourseForm.bgImage}
+                            alt="Preview"
+                            style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "6px" }}
+                          />
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEduCourseForm({ ...eduCourseForm, bgImage: "" });
+                            }}
+                            style={{
+                              position: "absolute",
+                              top: "8px",
+                              right: "8px",
+                              background: "rgba(0,0,0,0.6)",
+                              color: "#fff",
+                              borderRadius: "50%",
+                              width: "24px",
+                              height: "24px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "12px",
+                              fontWeight: "bold",
+                              cursor: "pointer"
+                            }}
+                          >
+                            ✕
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: "24px" }}>📁</span>
+                          <span style={{ fontSize: "13px", color: "var(--body)" }}>
+                            이미지 파일을 드래그하여 놓거나 <strong>클릭하여 업로드</strong>하세요.
+                          </span>
+                          <span style={{ fontSize: "11px", color: "var(--body-muted)" }}>
+                            (권장 비율: 16:9, 미등록 시 기본 그라데이션 자동 적용)
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div>
                       <label style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>시작 일자 *</label>
@@ -5191,11 +5215,42 @@ function BackOfficeView({
                     />
                   </div>
 
+                  {/* 교육 진행 방식 선택 (이론 / 실습 / 이론+실습 클릭식) */}
+                  <div style={{ marginBottom: "16px" }}>
+                    <label style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "8px", fontWeight: 600 }}>🏫 교육 진행 방식 *</label>
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      {["이론", "실습", "이론+실습"].map(method => {
+                        const isSelected = eduCourseForm.teachingMethod.trim() === method;
+                        return (
+                          <button
+                            key={method}
+                            type="button"
+                            onClick={() => setEduCourseForm({ ...eduCourseForm, teachingMethod: method })}
+                            style={{
+                              flex: 1,
+                              padding: "10px 12px",
+                              borderRadius: "var(--rounded-md)",
+                              border: `1px solid ${isSelected ? "var(--primary)" : "var(--hairline-strong)"}`,
+                              background: isSelected ? "var(--primary)" : "var(--canvas)",
+                              color: isSelected ? "var(--on-primary)" : "var(--ink)",
+                              fontWeight: 600,
+                              fontSize: "13px",
+                              cursor: "pointer",
+                              transition: "all 0.15s ease",
+                              textAlign: "center"
+                            }}
+                          >
+                            {method}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {/* 불릿 리스트 편집 영역 */}
                   {[
                     { label: "🎯 추천 대상 (줄바꿈으로 구분)", key: "recommendedAudience" },
                     { label: "💡 학습 목표 (줄바꿈으로 구분)", key: "objectives" },
-                    { label: "🏫 교육 진행 방식 (줄바꿈으로 구분)", key: "teachingMethod" },
                     { label: "📋 교육 커리큘럼 (줄바꿈으로 구분)", key: "curriculum" },
                     { label: "🔌 사전 필요 지식 (줄바꿈으로 구분)", key: "prerequisites" },
                     { label: "📌 교육 유의 사항 (줄바꿈으로 구분)", key: "notices" }
@@ -5622,7 +5677,19 @@ function CourseListPage({ eduCourses, infoBlocks, onNavigate }) {
 // ── [CourseDetailPage] 상세 조회 페이지 ──
 function CourseDetailPage({ eduCourses, viewPath, onNavigate }) {
   const courseId = viewPath.replace("/course/detail/", "");
-  const course = eduCourses.find(c => c.id === courseId);
+  
+  // 모의 데이터용 리스트 선언
+  const defaultMockCourses = [
+    { id: "mock-1", name: "AI Agent 설계 및 구축", overview: "LangChain 및 주요 프레임워크를 활용해 업무 자동화용 AI 에이전트를 빌드하고 프로덕션 수준으로 구현하는 실무 과정", target: "Customer", status: "Available", dateStart: "2026-06-25", time: "10:00-17:00", place: "여의도 파크원타워2 43층 대회의실", method: "오프라인 강의 및 실습", fee: "무료", requirements: "파이썬 기초 문법 이해 및 REST API 사용 유경험자" },
+    { id: "mock-2", name: "생성형 AI를 활용한 서비스 기획 실무", overview: "대규모 언어모델(LLM) 기반의 서비스 컨셉 구상부터 시나리오 작성, API 스펙 파악까지 통합 아우르는 기획 노하우 과정", target: "Customer", status: "Available", dateStart: "2026-06-20", time: "13:00-18:00", place: "여의도 파크원타워2 43층 대회의실", method: "이론 및 그룹 토의", fee: "무료" },
+    { id: "mock-3", name: "Prompt Engineering 실무", overview: "LLM의 성능을 백퍼센트 끌어올리는 구조적 질문 프롬프트 작성 규칙 및 피드백 루프 조율을 체득하는 실전 테크닉 과정", target: "Customer", status: "Available", dateStart: "2026-06-18", time: "09:00-18:00", place: "비대면 실시간 (Zoom)", method: "온라인 실시간 실습", fee: "무료" },
+    { id: "mock-4", name: "Kubernetes 인프라 구축 실무", overview: "컨테이너 오케스트레이션을 위한 쿠버네티스 클러스터 빌드 및 배포 실무 테크닉 과정", target: "Partner", status: "Available", dateStart: "2026-06-24", time: "10:00-18:00", place: "여의도 파크원타워2 43층 대회의실", method: "오프라인 실습", fee: "무료" }
+  ];
+
+  let course = eduCourses.find(c => c.id === courseId);
+  if (!course) {
+    course = defaultMockCourses.find(m => m.id === courseId);
+  }
 
   if (!course) {
     return (
@@ -5653,33 +5720,51 @@ function CourseDetailPage({ eduCourses, viewPath, onNavigate }) {
       </div>
 
       {/* 헤더 메타 영역 */}
-      <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", marginBottom: "32px" }}>
-        <span style={{
-          fontSize: "12px",
-          fontWeight: 600,
-          padding: "4px 10px",
-          borderRadius: "var(--rounded-pill)",
-          background: course.target === "Customer" ? "#eff6ff" : (course.target === "Partner" ? "#fef2f2" : "#f0fdf4"),
-          color: course.target === "Customer" ? "#1d4ed8" : (course.target === "Partner" ? "#b91c1c" : "#15803d"),
-          display: "inline-block",
-          marginBottom: "16px"
-        }}>
-          {course.target === "Customer" ? "고객 대상 교육" : (course.target === "Partner" ? "파트너 대상 기술 교육" : "기타 교육 과정")}
-        </span>
-        <h1 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: "0 0 24px 0", letterSpacing: "-0.5px" }}>{course.name}</h1>
+      <div style={{ 
+        background: "var(--surface-card)", 
+        border: "1px solid var(--hairline-strong)", 
+        borderRadius: "var(--rounded-lg)", 
+        overflow: "hidden",
+        marginBottom: "32px",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)"
+      }}>
+        {/* 상단 배너 이미지 영역 */}
+        {course.bgImage && (
+          <div style={{
+            width: "100%",
+            height: "506px", // 900px 너비 기준 16:9 비율 (900 * 9 / 16 = 506.25px)
+            background: `url(${course.bgImage}) center/cover no-repeat`,
+            borderBottom: "1px solid var(--hairline-strong)"
+          }} />
+        )}
+        <div style={{ padding: "32px" }}>
+          <span style={{
+            fontSize: "12px",
+            fontWeight: 600,
+            padding: "4px 10px",
+            borderRadius: "var(--rounded-pill)",
+            background: course.target === "Customer" ? "#eff6ff" : (course.target === "Partner" ? "#fef2f2" : "#f0fdf4"),
+            color: course.target === "Customer" ? "#1d4ed8" : (course.target === "Partner" ? "#b91c1c" : "#15803d"),
+            display: "inline-block",
+            marginBottom: "16px"
+          }}>
+            {course.target === "Customer" ? "고객 대상 교육" : (course.target === "Partner" ? "파트너 대상 기술 교육" : "기타 교육 과정")}
+          </span>
+          <h1 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", margin: "0 0 24px 0", letterSpacing: "-0.5px" }}>{course.name}</h1>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", borderTop: "1px solid var(--hairline-strong)", paddingTop: "20px" }}>
-          <div>
-            <span style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>📅 교육 일정</span>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>{formatScheduleDetail(course.dateStart, course.dateEnd)}</span>
-          </div>
-          <div>
-            <span style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>⏰ 교육 시간</span>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>{course.time}</span>
-          </div>
-          <div>
-            <span style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>📍 교육 장소</span>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>{course.location}</span>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", borderTop: "1px solid var(--hairline-strong)", paddingTop: "20px" }}>
+            <div>
+              <span style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>📅 교육 일정</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>{formatScheduleDetail(course.dateStart, course.dateEnd)}</span>
+            </div>
+            <div>
+              <span style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>⏰ 교육 시간</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>{course.time}</span>
+            </div>
+            <div>
+              <span style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>📍 교육 장소</span>
+              <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>{course.location}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -5776,7 +5861,19 @@ function CourseRegistrationPage({
   onNavigate
 }) {
   const courseId = viewPath.replace("/course/register/", "");
-  const course = eduCourses.find(c => c.id === courseId);
+  
+  // 모의 데이터용 리스트 선언
+  const defaultMockCourses = [
+    { id: "mock-1", name: "AI Agent 설계 및 구축", overview: "LangChain 및 주요 프레임워크를 활용해 업무 자동화용 AI 에이전트를 빌드하고 프로덕션 수준으로 구현하는 실무 과정", target: "Customer", status: "Available", dateStart: "2026-06-25", time: "10:00-17:00", place: "여의도 파크원타워2 43층 대회의실", method: "오프라인 강의 및 실습", fee: "무료", requirements: "파이썬 기초 문법 이해 및 REST API 사용 유경험자" },
+    { id: "mock-2", name: "생성형 AI를 활용한 서비스 기획 실무", overview: "대규모 언어모델(LLM) 기반의 서비스 컨셉 구상부터 시나리오 작성, API 스펙 파악까지 통합 아우르는 기획 노하우 과정", target: "Customer", status: "Available", dateStart: "2026-06-20", time: "13:00-18:00", place: "여의도 파크원타워2 43층 대회의실", method: "이론 및 그룹 토의", fee: "무료" },
+    { id: "mock-3", name: "Prompt Engineering 실무", overview: "LLM의 성능을 백퍼센트 끌어올리는 구조적 질문 프롬프트 작성 규칙 및 피드백 루프 조율을 체득하는 실전 테크닉 과정", target: "Customer", status: "Available", dateStart: "2026-06-18", time: "09:00-18:00", place: "비대면 실시간 (Zoom)", method: "온라인 실시간 실습", fee: "무료" },
+    { id: "mock-4", name: "Kubernetes 인프라 구축 실무", overview: "컨테이너 오케스트레이션을 위한 쿠버네티스 클러스터 빌드 및 배포 실무 테크닉 과정", target: "Partner", status: "Available", dateStart: "2026-06-24", time: "10:00-18:00", place: "여의도 파크원타워2 43층 대회의실", method: "오프라인 실습", fee: "무료" }
+  ];
+
+  let course = eduCourses.find(c => c.id === courseId);
+  if (!course) {
+    course = defaultMockCourses.find(m => m.id === courseId);
+  }
 
   if (!course) {
     return (
