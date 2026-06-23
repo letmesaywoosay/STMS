@@ -779,7 +779,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
             <button onClick={() => setAuthMode(null)} style={{ position: "absolute", top: "20px", right: "20px", border: "none", background: "none", fontSize: "20px", color: "var(--muted)", cursor: "pointer" }}>✕</button>
             {authMode === "login" && (
               <div>
-                <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", marginBottom: "24px", textAlign: "center", letterSpacing: "-0.5px" }}>TUNE 로그인</h3>
+                <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", marginBottom: "24px", textAlign: "center", letterSpacing: "-0.5px" }}>로그인</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>이메일 주소</label>
@@ -6664,3 +6664,72 @@ function renderHtmlOrText(text) {
   return <span style={{ whiteSpace: "pre-line" }}>{text}</span>;
 }
 
+
+function RegisterForm({ regForm, setRegForm, handleRegister, authErr }) {
+  return (
+    <div>
+      <h3 style={{ fontSize: "22px", fontWeight: 600, color: "var(--ink)", marginBottom: "24px", textAlign: "center", letterSpacing: "-0.5px" }}>회원가입</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div>
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>이름 <span style={{ color: "var(--semantic-error)" }}>*</span></label>
+          <input
+            type="text"
+            value={regForm.name}
+            onChange={e => setRegForm(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="홍길동"
+            style={{
+              width: "100%", padding: "12px 16px", border: "1px solid var(--hairline-strong)",
+              borderRadius: "var(--rounded-md)", fontSize: "14px", boxSizing: "border-box",
+              outline: "none", background: "var(--canvas)", color: "var(--ink)"
+            }}
+          />
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>이메일 주소 <span style={{ color: "var(--semantic-error)" }}>*</span></label>
+          <input
+            type="email"
+            value={regForm.email}
+            onChange={e => setRegForm(prev => ({ ...prev, email: e.target.value }))}
+            placeholder="example@okestro.com"
+            style={{
+              width: "100%", padding: "12px 16px", border: "1px solid var(--hairline-strong)",
+              borderRadius: "var(--rounded-md)", fontSize: "14px", boxSizing: "border-box",
+              outline: "none", background: "var(--canvas)", color: "var(--ink)"
+            }}
+          />
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>비밀번호 <span style={{ color: "var(--semantic-error)" }}>*</span></label>
+          <input
+            type="password"
+            value={regForm.password}
+            onChange={e => setRegForm(prev => ({ ...prev, password: e.target.value }))}
+            placeholder="비밀번호 입력 (6자 이상)"
+            style={{
+              width: "100%", padding: "12px 16px", border: "1px solid var(--hairline-strong)",
+              borderRadius: "var(--rounded-md)", fontSize: "14px", boxSizing: "border-box",
+              outline: "none", background: "var(--canvas)", color: "var(--ink)"
+            }}
+          />
+        </div>
+        <div style={{ fontSize: "12px", color: "var(--body)", background: "var(--canvas-soft)", borderRadius: "var(--rounded-md)", padding: "10px 12px", lineHeight: "1.6" }}>
+          ℹ️ <strong>@okestro.com</strong> 이메일로 가입 시 즉시 승인됩니다.<br />
+          외부 이메일은 관리자 승인 후 로그인이 가능합니다.
+        </div>
+        {authErr && <div style={{ fontSize: "13px", color: "var(--semantic-error)", fontWeight: 500 }}>⚠️ {authErr}</div>}
+        <button
+          onClick={handleRegister}
+          style={{
+            width: "100%", padding: "12px", border: "none",
+            borderRadius: "var(--rounded-md)", background: "var(--primary)",
+            color: "var(--on-primary)", fontSize: "14px", fontWeight: 500, cursor: "pointer"
+          }}
+          onMouseOver={e => e.currentTarget.style.background = "var(--primary-active)"}
+          onMouseOut={e => e.currentTarget.style.background = "var(--primary)"}
+        >
+          가입 신청
+        </button>
+      </div>
+    </div>
+  );
+}
