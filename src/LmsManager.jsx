@@ -2,6 +2,7 @@
 // LmsManager.jsx
 import { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
+import RegisterModal from "./RegisterModal";
 
 const FB_API_KEY = "AIzaSyCarxTqSx__7AfzVNHzN-ilnk0gNN6PkTU";
 const FB_PROJECT = "solutiontestsystem";
@@ -565,33 +566,32 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
-  const handleRegister = async () => {
-    const { email, password, name } = regForm;
-    if (!email.trim() || !password.trim() || !name.trim()) {
-      setAuthErr("모든 필수 입력 항목을 채워주세요.");
-      return;
-    }
+  // RegisterModal의 onRegister prop 형식에 맞는 핸들러
+  // payload: { email, password, passwordConfirm, jobType, companyName, division, team, memberType }
+  const handleRegister = async (payload) => {
+    const { email, password, jobType, companyName, division, team, memberType } = payload;
 
+    // 이메일 중복 체크
     if (users.some(u => u.email.toLowerCase() === email.trim().toLowerCase())) {
-      setAuthErr("이미 사용 중인 이메일 주소입니다.");
-      return;
+      throw new Error("이미 사용 중인 이메일 주소입니다.");
     }
 
     const isOkestro = email.trim().toLowerCase().endsWith("@okestro.com");
-    const userType = isOkestro ? "company" : "partner";
+    // 파트너사는 관리자 승인 필요, 내부 임직원(@okestro.com)은 즉시 승인
+    const userType = memberType === 'partner' ? 'partner' : 'company';
     const role = isOkestro ? "admin" : "user";
-    const approved = isOkestro;
+    const approved = isOkestro || memberType === 'employee';
 
     const newUser = {
       id: uid(),
       email: email.trim(),
       password: password.trim(),
-      name: name.trim(),
+      name: email.split('@')[0], // 이름: 이메일 로컬 파트 임시 사용
       userType,
-      company: "",
-      division: "",
-      team: "",
-      jobType: "",
+      company: companyName || "",
+      division: division || "",
+      team: team || "",
+      jobType: jobType || "",
       role,
       approved,
       registeredAt: new Date().toISOString()
@@ -599,15 +599,6 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
 
     const updated = [newUser, ...users];
     await saveUsers(updated);
-    
-    if (newUser.approved) {
-      alert("회원가입이 완료되었습니다! 로그인해 주세요.");
-    } else {
-      alert("회원가입이 정상 접수되었습니다. 관리자 승인 완료 후 로그인이 가능합니다.");
-    }
-    
-    setAuthMode("login");
-    setAuthErr("");
   };
 
 
@@ -762,8 +753,8 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
         </div>
       </div>
 
-      {/* 로그인/회원가입 모달 (Expo 라이트 카드 테마) */}
-      {authMode && (
+      {/* 로그인/비밀번호찾기 모달 (Expo 라이트 카드 테마) */}
+      {authMode && authMode !== "register" && (
         <div onClick={e => e.target === e.currentTarget && setAuthMode(null)} style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.4)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{ 
             background: "var(--surface-card)", 
@@ -802,9 +793,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
                 </div>
               </div>
             )}
-            {authMode === "register" && (
-              <RegisterForm regForm={regForm} setRegForm={setRegForm} handleRegister={handleRegister} authErr={authErr} />
-            )}
+            {/* register 모드는 별도 RegisterModal로 처리 (아래 조건부 렌더링 참고) */}
             {authMode === "findPw" && (
               <div>
                 <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", marginBottom: "20px", textAlign: "center" }}>비밀번호 재설정</h3>
@@ -837,6 +826,17 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
             )}
           </div>
         </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────
+          단계별 진입형 회원가입 모달 – RegisterModal (TSX 컴포넌트)
+          authMode === "register" 일 때만 렌더링
+      ──────────────────────────────────────────────────────────────── */}
+      {authMode === "register" && (
+        <RegisterModal
+          onClose={() => setAuthMode(null)}
+          onRegister={handleRegister}
+        />
       )}
 
       {/* Guest Alert 모달 (Expo 라이트 카드 테마) */}
