@@ -22,7 +22,7 @@ const fbGet = async (key) => {
 function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [lmsUser, setLmsUser] = useState(null);
-  const [adminSubTab, setAdminSubTab] = useState("test"); // test: OnTest관리, lms: LMS관리
+  const [adminSubTab, setAdminSubTab] = useState("lms-approval"); // test: 솔루션 테스트 관리, lms-course: 영상 관리, lms-approval: 관리
   
   useEffect(() => {
     const handlePopState = () => {
@@ -65,7 +65,7 @@ function App() {
   const handleAdminLoginSuccess = (user) => {
     sessionStorage.setItem('aida:lms_login', JSON.stringify(user));
     setLmsUser(user);
-    setAdminSubTab("test");
+    setAdminSubTab("lms-approval");
     navigate('/admin');
   };
 
@@ -87,96 +87,129 @@ function App() {
             padding: '0 24px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
             boxSizing: 'border-box',
             borderBottom: '1px solid var(--hairline)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => navigate('/')}>
-              <img src="/logo.png" alt="AIDA TUNE" style={{ height: "24px", objectFit: "contain" }} />
-              <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500, borderLeft: '1px solid var(--hairline-strong)', paddingLeft: '12px' }}>관리자 포탈</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500 }}>🛡️ {lmsUser.name} 관리자</span>
-              <button 
-                onClick={() => navigate('/')} 
-                style={{ 
-                  height: '36px',
-                  padding: '0 14px', 
-                  background: 'var(--primary)', 
-                  border: 'none', 
-                  borderRadius: 'var(--rounded-md)', 
-                  color: 'var(--on-primary)', 
-                  fontSize: '13px', 
-                  fontWeight: 500, 
-                  cursor: 'pointer',
-                  transition: 'background 0.15s' 
-                }}
-                onMouseOver={(e) => e.currentTarget.style.background = 'var(--primary-active)'}
-                onMouseOut={(e) => e.currentTarget.style.background = 'var(--primary)'}
-              >
-                사용자 홈
-              </button>
-              <button 
-                onClick={handleAdminLogout} 
-                style={{ 
-                  height: '36px',
-                  padding: '0 14px', 
-                  background: 'var(--canvas)', 
-                  border: '1px solid var(--hairline-strong)', 
-                  borderRadius: 'var(--rounded-md)', 
-                  color: 'var(--ink)', 
-                  fontSize: '13px', 
-                  fontWeight: 500, 
-                  cursor: 'pointer' 
-                }}
-              >
-                로그아웃
-              </button>
+            <div style={{
+              width: '100%',
+              maxWidth: '1200px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => navigate('/')}>
+                <img src="/logo.png" alt="AIDA OASIS" style={{ height: "24px", objectFit: "contain" }} />
+                <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500, borderLeft: '1px solid var(--hairline-strong)', paddingLeft: '12px' }}>관리자 포탈</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '13px', color: 'var(--body)', fontWeight: 500 }}>{lmsUser.name} 관리자</span>
+                <button 
+                  onClick={() => navigate('/')} 
+                  style={{ 
+                    height: '36px',
+                    padding: '0 14px', 
+                    background: 'var(--primary)', 
+                    border: 'none', 
+                    borderRadius: 'var(--rounded-md)', 
+                    color: 'var(--on-primary)', 
+                    fontSize: '13px', 
+                    fontWeight: 500, 
+                    cursor: 'pointer',
+                    transition: 'background 0.15s' 
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = 'var(--primary-active)'}
+                  onMouseOut={(e) => e.currentTarget.style.background = 'var(--primary)'}
+                >
+                  사용자 홈
+                </button>
+                <button 
+                  onClick={handleAdminLogout} 
+                  style={{ 
+                    height: '36px',
+                    padding: '0 14px', 
+                    background: 'var(--canvas)', 
+                    border: '1px solid var(--hairline-strong)', 
+                    borderRadius: 'var(--rounded-md)', 
+                    color: 'var(--ink)', 
+                    fontSize: '13px', 
+                    fontWeight: 500, 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  로그아웃
+                </button>
+              </div>
             </div>
           </div>
 
           {/* 서브 네비게이션 탭 */}
-          <div style={{ display: 'flex', background: 'var(--canvas)', borderBottom: '1px solid var(--hairline)', padding: '0 24px', boxSizing: 'border-box' }}>
-            <button
-              onClick={() => setAdminSubTab("test")}
-              style={{
-                padding: '16px 20px',
-                border: 'none',
-                background: 'none',
-                borderBottom: adminSubTab === 'test' ? '2px solid var(--primary)' : 'none',
-                color: adminSubTab === 'test' ? 'var(--ink)' : 'var(--body)',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              📊 OnTest 솔루션 테스트 관리
-            </button>
-            <button
-              onClick={() => setAdminSubTab("lms")}
-              style={{
-                padding: '16px 20px',
-                border: 'none',
-                background: 'none',
-                borderBottom: adminSubTab === 'lms' ? '2px solid var(--primary)' : 'none',
-                color: adminSubTab === 'lms' ? 'var(--ink)' : 'var(--body)',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s'
-              }}
-            >
-              🎓 LMS 교육 과정 & 승인 관리
-            </button>
+          <div style={{ background: 'var(--canvas)', borderBottom: '1px solid var(--hairline)', padding: '0 24px', boxSizing: 'border-box' }}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setAdminSubTab("lms-approval")}
+                style={{
+                  padding: '16px 20px',
+                  border: 'none',
+                  background: 'none',
+                  borderBottom: adminSubTab === 'lms-approval' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: adminSubTab === 'lms-approval' ? 'var(--ink)' : 'var(--body)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                관리
+              </button>
+              <button
+                onClick={() => setAdminSubTab("lms-course")}
+                style={{
+                  padding: '16px 20px',
+                  border: 'none',
+                  background: 'none',
+                  borderBottom: adminSubTab === 'lms-course' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: adminSubTab === 'lms-course' ? 'var(--ink)' : 'var(--body)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                영상 관리
+              </button>
+              <button
+                onClick={() => {
+                  setAdminSubTab("test");
+                  window.dispatchEvent(new CustomEvent("aida:reset_test_menu"));
+                }}
+                style={{
+                  padding: '16px 20px',
+                  border: 'none',
+                  background: 'none',
+                  borderBottom: adminSubTab === 'test' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: adminSubTab === 'test' ? 'var(--ink)' : 'var(--body)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                솔루션 테스트 관리
+              </button>
+            </div>
           </div>
 
           {/* 본문 뷰 출력 */}
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-            {adminSubTab === 'test' ? (
+            {adminSubTab === 'test' && (
               <MyComponent viewPath="/admin" />
-            ) : (
-              <LmsManager viewPath="/admin" onNavigate={navigate} />
+            )}
+            {adminSubTab === 'lms-course' && (
+              <LmsManager viewPath="/admin" onNavigate={navigate} adminSubTabGroup="course" />
+            )}
+            {adminSubTab === 'lms-approval' && (
+              <LmsManager viewPath="/admin" onNavigate={navigate} adminSubTabGroup="approval" />
             )}
           </div>
         </div>
@@ -194,91 +227,281 @@ function App() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--canvas)', fontFamily: 'var(--sans)' }}>
-      {/* ── 일반 사용자 GNB 헤더 (Expo top-nav 스타일 적용) ── */}
+      {/* ── 일반 사용자 GNB 헤더 (단일 행 프리미엄 다크 네이비 테마 적용) ── */}
       <div style={{
-        background: 'var(--canvas)',
-        borderBottom: '1px solid var(--hairline)',
+        background: '#0A192F',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         padding: '0 24px',
-        height: '64px',
+        height: '72px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
         position: 'sticky',
         top: 0,
         zIndex: 100,
         boxSizing: 'border-box'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
-          <img src="/logo.png" alt="AIDA TUNE" style={{ height: "30px", objectFit: "contain" }} />
-        </div>
+        <div style={{
+          width: '100%',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          {/* Left Side: Logo & Main Navigation Menus */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => navigate('/')}>
+              <img src="/logo.png" alt="AIDA OASIS" style={{ height: "26px", objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+            </div>
 
-        {/* GNB 일반 수강생 메뉴 및 관리자 퀵링크 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: 'var(--rounded-md)',
-              border: 'none',
-              background: isLmsView ? 'var(--primary)' : 'transparent',
-              color: isLmsView ? 'var(--on-primary)' : 'var(--body)',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseOver={(e) => {
-              if(!isLmsView) e.currentTarget.style.color = 'var(--ink)';
-            }}
-            onMouseOut={(e) => {
-              if(!isLmsView) e.currentTarget.style.color = 'var(--body)';
-            }}
-          >
-            🎓 LMS 강의실
-          </button>
-
-          {/* 관리자 계정 로그인되어 있을 시 관리자 포탈 이동 퀵링크 노출 */}
-          {lmsUser && lmsUser.role === 'admin' && (
-            <button
-              onClick={() => navigate('/admin')}
-              style={{
-                padding: '6px 12px',
-                borderRadius: 'var(--rounded-md)',
-                border: '1px solid var(--hairline-strong)',
-                background: 'var(--canvas)',
-                color: 'var(--ink)',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-            >
-              ⚙️ 관리자 포탈
-            </button>
-          )}
-
-          {lmsUser && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: '1px solid var(--hairline)', paddingLeft: '16px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--body)' }}>👤 {lmsUser.name}</span>
-              <button
-                onClick={handleAdminLogout}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 'var(--rounded-sm)',
-                  border: '1px solid var(--hairline-strong)',
-                  background: 'var(--canvas)',
-                  color: 'var(--body)',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  cursor: 'pointer'
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              {/* 오프라인 교육 (드롭다운) */}
+              <div 
+                style={{ position: 'relative' }}
+                onMouseEnter={() => {
+                  const el = document.getElementById('dropdown-offline');
+                  if (el) el.style.display = 'block';
+                }}
+                onMouseLeave={() => {
+                  const el = document.getElementById('dropdown-offline');
+                  if (el) el.style.display = 'none';
                 }}
               >
-                로그아웃
-              </button>
+                <span
+                  style={{
+                    color: (path.startsWith('/course') || path === '/schedule') ? '#38BDF8' : '#94A3B8',
+                    fontSize: '14px',
+                    fontWeight: (path.startsWith('/course') || path === '/schedule') ? '600' : '500',
+                    cursor: 'pointer',
+                    transition: 'color 0.15s ease',
+                    padding: '24px 4px 24px 4px',
+                    display: 'inline-block'
+                  }}
+                  onMouseOver={e => {
+                    if (!(path.startsWith('/course') || path === '/schedule')) e.currentTarget.style.color = '#F8FAFC';
+                  }}
+                  onMouseOut={e => {
+                    if (!(path.startsWith('/course') || path === '/schedule')) e.currentTarget.style.color = '#94A3B8';
+                  }}
+                >
+                  오프라인 교육 ▾
+                </span>
+                <div 
+                  id="dropdown-offline"
+                  style={{
+                    display: 'none',
+                    position: 'absolute',
+                    top: '56px',
+                    left: 0,
+                    background: '#0F172A',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                    padding: '8px 0',
+                    minWidth: '140px',
+                    zIndex: 1000
+                  }}
+                >
+                  <div 
+                    onClick={() => navigate('/course')}
+                    style={{
+                      padding: '10px 16px',
+                      color: path.startsWith('/course') ? '#38BDF8' : '#E2E8F0',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      fontWeight: path.startsWith('/course') ? '600' : 'normal'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = '#1E293B'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    교육신청
+                  </div>
+                  <div 
+                    onClick={() => navigate('/schedule')}
+                    style={{
+                      padding: '10px 16px',
+                      color: path === '/schedule' ? '#38BDF8' : '#E2E8F0',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      fontWeight: path === '/schedule' ? '600' : 'normal'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = '#1E293B'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    연간교육계획
+                  </div>
+                </div>
+              </div>
+
+              {/* 온라인 교육 (드롭다운) */}
+              <div 
+                style={{ position: 'relative' }}
+                onMouseEnter={() => {
+                  const el = document.getElementById('dropdown-online');
+                  if (el) el.style.display = 'block';
+                }}
+                onMouseLeave={() => {
+                  const el = document.getElementById('dropdown-online');
+                  if (el) el.style.display = 'none';
+                }}
+              >
+                <span
+                  style={{
+                    color: path === '/classroom' ? '#38BDF8' : '#94A3B8',
+                    fontSize: '14px',
+                    fontWeight: path === '/classroom' ? '600' : '500',
+                    cursor: 'pointer',
+                    transition: 'color 0.15s ease',
+                    padding: '24px 4px 24px 4px',
+                    display: 'inline-block'
+                  }}
+                  onMouseOver={e => {
+                    if (path !== '/classroom') e.currentTarget.style.color = '#F8FAFC';
+                  }}
+                  onMouseOut={e => {
+                    if (path !== '/classroom') e.currentTarget.style.color = '#94A3B8';
+                  }}
+                >
+                  온라인 교육 ▾
+                </span>
+                <div 
+                  id="dropdown-online"
+                  style={{
+                    display: 'none',
+                    position: 'absolute',
+                    top: '56px',
+                    left: 0,
+                    background: '#0F172A',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+                    padding: '8px 0',
+                    minWidth: '140px',
+                    zIndex: 1000
+                  }}
+                >
+                  <div 
+                    onClick={() => {
+                      if (!lmsUser) {
+                        navigate('/');
+                        setTimeout(() => {
+                          window.dispatchEvent(new CustomEvent('aida:trigger_guest_alert'));
+                        }, 50);
+                      } else {
+                        navigate('/classroom');
+                      }
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      color: path === '/classroom' ? '#38BDF8' : '#E2E8F0',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      fontWeight: path === '/classroom' ? '600' : 'normal'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = '#1E293B'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    온라인 강의
+                  </div>
+                </div>
+              </div>
+
+
             </div>
-          )}
+          </div>
+
+          {/* Right Side: Authentication Links & Prominent LMS Classroom Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {!lmsUser ? (
+              <>
+                <span
+                  onClick={() => {
+                    navigate('/');
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('aida:trigger_auth', { detail: "login" }));
+                    }, 50);
+                  }}
+                  style={{ fontSize: '13px', color: '#94A3B8', cursor: 'pointer', fontWeight: 500, transition: 'color 0.15s' }}
+                  onMouseOver={e => e.currentTarget.style.color = '#F8FAFC'}
+                  onMouseOut={e => e.currentTarget.style.color = '#94A3B8'}
+                >
+                  로그인
+                </span>
+                <span
+                  onClick={() => {
+                    navigate('/');
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('aida:trigger_auth', { detail: "register" }));
+                    }, 50);
+                  }}
+                  style={{ fontSize: '13px', color: '#94A3B8', cursor: 'pointer', fontWeight: 500, transition: 'color 0.15s' }}
+                  onMouseOver={e => e.currentTarget.style.color = '#F8FAFC'}
+                  onMouseOut={e => e.currentTarget.style.color = '#94A3B8'}
+                >
+                  회원가입
+                </span>
+              </>
+            ) : (
+              <>
+                {lmsUser.role === 'admin' && (
+                  <button
+                    onClick={() => navigate('/admin')}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      background: 'transparent',
+                      color: '#F8FAFC',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    ⚙️ 관리자 포탈
+                  </button>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '16px' }}>
+                  <span style={{ fontSize: '13px', color: '#E2E8F0' }}>👤 {lmsUser.name}님</span>
+                  <button
+                    onClick={handleAdminLogout}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      background: 'transparent',
+                      color: '#94A3B8',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={e => {
+                      e.currentTarget.style.color = '#F8FAFC';
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.color = '#94A3B8';
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    로그아웃
+                  </button>
+                </div>
+              </>
+            )}
+
+
+          </div>
         </div>
       </div>
 
