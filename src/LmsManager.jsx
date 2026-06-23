@@ -567,26 +567,26 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
   };
 
   // RegisterModal의 onRegister prop 형식에 맞는 핸들러
-  // payload: { email, password, passwordConfirm, jobType, companyName, division, team, memberType }
+  // payload: { userId, password, passwordConfirm, jobType, companyName, division, team, memberType }
   const handleRegister = async (payload) => {
-    const { email, password, jobType, companyName, division, team, memberType } = payload;
+    const { userId, password, jobType, companyName, division, team, memberType } = payload;
 
-    // 이메일 중복 체크
-    if (users.some(u => u.email.toLowerCase() === email.trim().toLowerCase())) {
-      throw new Error("이미 사용 중인 이메일 주소입니다.");
+    // 아이디 중복 체크
+    if (users.some(u => (u.userId || u.email || '').toLowerCase() === userId.trim().toLowerCase())) {
+      throw new Error("이미 사용 중인 아이디입니다.");
     }
 
-    const isOkestro = email.trim().toLowerCase().endsWith("@okestro.com");
-    // 파트너사는 관리자 승인 필요, 내부 임직원(@okestro.com)은 즉시 승인
+    // 파트너사는 관리자 승인 필요, 내부 임직원은 즉시 승인
     const userType = memberType === 'partner' ? 'partner' : 'company';
-    const role = isOkestro ? "admin" : "user";
-    const approved = isOkestro || memberType === 'employee';
+    const role = memberType === 'employee' ? "admin" : "user";
+    const approved = memberType === 'employee';
 
     const newUser = {
       id: uid(),
-      email: email.trim(),
+      userId: userId.trim(),        // 로그인 아이디
+      email: userId.trim(),         // 기존 호환성 유지
       password: password.trim(),
-      name: email.split('@')[0], // 이름: 이메일 로컬 파트 임시 사용
+      name: userId.trim(),          // 이름: 아이디로 임시 설정
       userType,
       company: companyName || "",
       division: division || "",
