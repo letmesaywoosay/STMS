@@ -2735,7 +2735,7 @@ function BackOfficeView({
         const canvas = document.createElement("canvas");
         let width = img.width;
         let height = img.height;
-        const maxW = 1920;
+        const maxW = 1280;
 
         if (width > maxW) {
           height = Math.round((height * maxW) / width);
@@ -2747,11 +2747,22 @@ function BackOfficeView({
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
-        const compressedBase64 = canvas.toDataURL("image/png");
-        const sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        let compressedBase64 = canvas.toDataURL("image/png");
+        let sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         
+        // If PNG is too large, fallback to jpeg compression to fit Firestore limits
         if (sizeInKb > 900) {
-          alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 화질을 낮추거나 더 작은 이미지로 업로드해주세요. (Firestore 저장 제한으로 인해 최대 900KB까지만 가능합니다)`);
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+          sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        }
+
+        if (sizeInKb > 900) {
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
+          sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        }
+
+        if (sizeInKb > 900) {
+          alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 더 작은 해상도의 이미지로 업로드해주세요.`);
           return;
         }
 
@@ -2773,7 +2784,7 @@ function BackOfficeView({
         const canvas = document.createElement("canvas");
         let width = img.width;
         let height = img.height;
-        const maxW = 1920;
+        const maxW = 1280;
 
         if (width > maxW) {
           height = Math.round((height * maxW) / width);
@@ -2785,14 +2796,24 @@ function BackOfficeView({
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
 
-        const compressedBase64 = file.type.includes("png") 
+        let compressedBase64 = file.type.includes("png") 
           ? canvas.toDataURL("image/png") 
           : canvas.toDataURL("image/jpeg", 0.85);
 
-        const sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        let sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         
         if (sizeInKb > 900) {
-          alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 화질을 낮추거나 더 작은 이미지로 업로드해주세요. (Firestore 저장 제한으로 인해 최대 900KB까지만 가능합니다)`);
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.80);
+          sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        }
+
+        if (sizeInKb > 900) {
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.60);
+          sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
+        }
+
+        if (sizeInKb > 900) {
+          alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 더 작은 해상도의 이미지로 업로드해주세요.`);
           return;
         }
 
