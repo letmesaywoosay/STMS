@@ -500,42 +500,7 @@ function App() {
               </>
             )}
 
-            <button
-              onClick={() => {
-                if (!lmsUser) {
-                  navigate('/');
-                  setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('aida:trigger_guest_alert'));
-                  }, 50);
-                } else {
-                  navigate('/classroom');
-                }
-              }}
-              style={{
-                background: '#000000',
-                color: '#ffffff',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: '24px',
-                padding: '8px 18px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={e => {
-                e.currentTarget.style.background = '#1E293B';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
-              }}
-              onMouseOut={e => {
-                e.currentTarget.style.background = '#000000';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
-              }}
-            >
-              🎓 온라인 강의
-            </button>
+
           </div>
         </div>
       </div>
