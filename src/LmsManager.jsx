@@ -2066,29 +2066,50 @@ function ClassroomView({
                         </div>
                       )}
                       {/* Play overlay */}
-                      <div style={{
+                      <div className="play-overlay" style={{
                         position: "absolute",
                         inset: 0,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        background: "rgba(0,0,0,0.25)",
+                        background: "rgba(15, 23, 42, 0.4)",
+                        backdropFilter: "blur(2px)",
                         opacity: 0,
-                        transition: "opacity 0.18s"
+                        transition: "opacity 0.25s ease"
                       }}
                         onMouseOver={e => e.currentTarget.style.opacity = "1"}
                         onMouseOut={e => e.currentTarget.style.opacity = "0"}
                       >
                         <div style={{
-                          width: "48px",
-                          height: "48px",
+                          width: "54px",
+                          height: "54px",
                           borderRadius: "50%",
-                          background: "rgba(255,255,255,0.95)",
+                          background: "rgba(255, 255, 255, 0.95)",
+                          boxShadow: "0 8px 24px rgba(0, 0, 0, 0.25), inset 0 2px 2px rgba(255, 255, 255, 0.5)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: "20px"
-                        }}>▶️</div>
+                          transition: "transform 0.2s ease, background-color 0.2s ease",
+                          cursor: "pointer"
+                        }}
+                          onMouseOver={e => {
+                            e.currentTarget.style.transform = "scale(1.08)";
+                            e.currentTarget.style.backgroundColor = "#ffffff";
+                          }}
+                          onMouseOut={e => {
+                            e.currentTarget.style.transform = "scale(1)";
+                            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.95)";
+                          }}
+                        >
+                          <div style={{
+                            width: 0,
+                            height: 0,
+                            borderStyle: "solid",
+                            borderWidth: "10px 0 10px 16px",
+                            borderColor: "transparent transparent transparent #0A192F",
+                            marginLeft: "4px"
+                          }} />
+                        </div>
                       </div>
                       {/* Completion badge */}
                       {isComp && (
