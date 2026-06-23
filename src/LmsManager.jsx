@@ -2473,6 +2473,12 @@ function BackOfficeView({
   eduConfig, saveEduConfig
 }) {
   const [backTab, setBackTab] = useState("apply");
+  const genCode = (target, abbr, seq) => {
+    const prefix = target === "Customer" ? "OK-CA" : (target === "Partner" ? "OK-PA" : "OK-EA");
+    const formattedAbbr = (abbr || "AI").substring(0, 2).toUpperCase();
+    const formattedSeq = seq || "1";
+    return `${prefix}${formattedAbbr}${formattedSeq}`;
+  };
   const [courseForm, setCourseForm] = useState({ title: "", description: "", youtubeUrl: "" });
   const [selectedCourseNameOption, setSelectedCourseNameOption] = useState("");
   const [customCourseName, setCustomCourseName] = useState("");
