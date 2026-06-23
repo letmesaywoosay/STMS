@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 // ApplicantManager.jsx
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
@@ -2458,7 +2458,7 @@ export default function ApplicantManager({ viewPath }) {
       )}
 
       {/* 메인 콘텐츠 */}
-      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={viewPath === "/admin" ? { background: "var(--canvas)", borderRadius: "var(--rounded-lg)", padding: "32px", border: `1px solid var(--hairline-strong)`, boxShadow: shadow, maxWidth: "1440px", margin: "0 auto" } : {maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 108px)"}}>
+      <div className={mainMenu==="home"?"main-content-home":"main-content"} style={viewPath === "/admin" ? { background: "var(--canvas)", borderRadius: "var(--rounded-lg)", padding: "32px", border: `1px solid var(--hairline-strong)`, boxShadow: shadow, maxWidth: "1200px", margin: "0 auto" } : {maxWidth:"1440px",margin:"0 auto",padding:mainMenu==="home"?"0":mainMenu==="admin"?"20px 40px 40px":"28px 40px 60px",minHeight:mainMenu==="admin"?"auto":"calc(100vh - 108px)"}}>
         {viewPath === "/admin" && (
           <div style={{ display: "flex", gap: "10px", borderBottom: `1.5px solid var(--hairline-strong)`, paddingBottom: "12px", marginBottom: "24px", flexWrap: "wrap" }}>
             {ADMIN_TABS.filter(tab=>tab.id!=="home").map(tab => {
