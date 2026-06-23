@@ -2473,12 +2473,6 @@ function BackOfficeView({
   eduConfig, saveEduConfig
 }) {
   const [backTab, setBackTab] = useState("apply");
-  const genCode = (target, abbr, seq) => {
-    const prefix = target === "Customer" ? "OK-CA" : (target === "Partner" ? "OK-PA" : "OK-EA");
-    const formattedAbbr = (abbr || "AI").substring(0, 2).toUpperCase();
-    const formattedSeq = seq || "1";
-    return `${prefix}${formattedAbbr}${formattedSeq}`;
-  };
   const [courseForm, setCourseForm] = useState({ title: "", description: "", youtubeUrl: "" });
   const [selectedCourseNameOption, setSelectedCourseNameOption] = useState("");
   const [customCourseName, setCustomCourseName] = useState("");
@@ -2490,7 +2484,6 @@ function BackOfficeView({
   const [memberSearchQuery, setMemberSearchQuery] = useState("");
   const [memberFilterRole, setMemberFilterRole] = useState("all");
   const [memberFilterStatus, setMemberFilterStatus] = useState("all");
-
 
   // adminSubTabGroup 변경 시 backTab 자동 싱크
   useEffect(() => {
@@ -2507,8 +2500,6 @@ function BackOfficeView({
   const [eduCourseForm, setEduCourseForm] = useState({
     id: "",
     target: "Customer",
-    abbr: "AI",
-    seq: "1",
     name: "",
     bgImage: "", // 배너/썸네일 이미지 URL 필드 추가
     dateStart: "",
@@ -2562,7 +2553,7 @@ function BackOfficeView({
   }, [eduConfig]);
   const handleSaveEduCourse = async () => {
     const {
-      id, target, abbr, seq, name, bgImage, dateStart, dateEnd, time, location, status, overview,
+      id, target, name, bgImage, dateStart, dateEnd, time, location, status, overview,
       recommendedAudience, objectives, teachingMethod, curriculum, prerequisites, notices
     } = eduCourseForm;
 
@@ -2617,7 +2608,7 @@ function BackOfficeView({
     setShowEduCourseFormModal(false);
     setEditingEduCourseId(null);
     setEduCourseForm({
-      id: "", target: "Customer", abbr: "AI", seq: "1", name: "", bgImage: "", dateStart: "", dateEnd: "",
+      id: "", target: "Customer", name: "", bgImage: "", dateStart: "", dateEnd: "",
       time: "13:00-18:00", location: "여의도 파크원타워2 43층 대회의실", status: "Available",
       overview: "", recommendedAudience: "", objectives: "", teachingMethod: "", curriculum: "",
       prerequisites: "", notices: ""
@@ -2626,20 +2617,10 @@ function BackOfficeView({
 
   const handleEditEduCourse = (c) => {
     const joinBullets = (arr) => arr ? arr.join("\n") : "";
-    
-    let parsedAbbr = "AI";
-    let parsedSeq = "1";
-    if (c.id && c.id.startsWith("OK-")) {
-      const remainder = c.id.slice(4); 
-      parsedAbbr = remainder.slice(0, 2);
-      parsedSeq = remainder.slice(2);
-    }
 
     setEduCourseForm({
       id: c.id,
       target: c.target,
-      abbr: parsedAbbr,
-      seq: parsedSeq,
       name: c.name,
       bgImage: c.bgImage || "",
       dateStart: c.dateStart,
@@ -4927,7 +4908,6 @@ function BackOfficeView({
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
               <thead>
                 <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
-                  <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600 }}>코드</th>
                   <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600 }}>대상</th>
                   <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600 }}>과정명</th>
                   <th style={{ padding: "12px 16px", color: "var(--ink)", fontWeight: 600 }}>일정</th>
@@ -4938,7 +4918,6 @@ function BackOfficeView({
               <tbody>
                 {eduCourses.map(c => (
                   <tr key={c.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                    <td style={{ padding: "12px 16px", fontFamily: "monospace" }}>{c.id}</td>
                     <td style={{ padding: "12px 16px" }}>
                       <span style={{
                         fontSize: "10px",
@@ -5136,47 +5115,6 @@ function BackOfficeView({
                 </h3>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {/* 코드 조합 도우미 (신규 등록 시에만 노출) */}
-                  {!editingEduCourseId ? (
-                    <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "12px", borderRadius: "var(--rounded-md)" }}>
-                      <span style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "6px" }}>🔑 과정 코드 자동생성기</span>
-                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                        <select
-                          value={eduCourseForm.target}
-                          onChange={e => setEduCourseForm({ ...eduCourseForm, target: e.target.value })}
-                          style={inpStyle({ padding: "6px 10px", width: "120px" })}
-                        >
-                          <option value="Customer">Customer (C)</option>
-                          <option value="Partner">Partner (P)</option>
-                          <option value="Other">Other (E)</option>
-                        </select>
-                        <input
-                          type="text"
-                          maxLength="2"
-                          value={eduCourseForm.abbr}
-                          onChange={e => setEduCourseForm({ ...eduCourseForm, abbr: e.target.value.toUpperCase() })}
-                          placeholder="과목코드(2글자)"
-                          style={inpStyle({ padding: "6px 10px", width: "120px" })}
-                        />
-                        <input
-                          type="number"
-                          min="1"
-                          value={eduCourseForm.seq}
-                          onChange={e => setEduCourseForm({ ...eduCourseForm, seq: e.target.value })}
-                          placeholder="순번"
-                          style={inpStyle({ padding: "6px 10px", width: "60px" })}
-                        />
-                        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-link)", marginLeft: "auto" }}>
-                          예정 코드: {genCode(eduCourseForm.target, eduCourseForm.abbr, eduCourseForm.seq)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>과정 코드 (수정불가)</label>
-                      <input type="text" value={eduCourseForm.id} disabled style={inpStyle({ background: "var(--canvas-soft)", cursor: "not-allowed" })} />
-                    </div>
-                  )}
 
                   <div>
                     <label style={{ display: "block", fontSize: "12px", color: "var(--body)", marginBottom: "4px" }}>과정 대상 타겟</label>
