@@ -1,4 +1,4 @@
-﻿/* eslint-disable */
+/* eslint-disable */
 // RegisterModal.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 // 단계별 진입형 회원가입 컴포넌트
@@ -17,7 +17,7 @@ type MemberType = 'partner' | 'employee';
 type Step = 1 | 2 | 3;
 
 interface RegisterFormData {
-  email: string;
+  userId: string;          // 로그인 아이디 (이메일 대신 사용)
   password: string;
   passwordConfirm: string;
   jobType: string;
@@ -260,22 +260,20 @@ const InfoForm: React.FC<InfoFormProps> = ({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        {/* 공통: 이메일 */}
+        {/* 공통: 아이디 */}
         <div>
-          <label style={labelStyle}>이메일 주소 {requiredMark}</label>
+          <label style={labelStyle}>아이디 {requiredMark}</label>
           <input
-            type="email" value={formData.email}
-            onChange={(e) => onChange('email', e.target.value)}
-            placeholder={isPartner ? 'partner@company.com' : 'name@okestro.com'}
+            type="text" value={formData.userId}
+            onChange={(e) => onChange('userId', e.target.value)}
+            placeholder="사용하실 아이디를 입력해 주세요"
             style={inputStyle}
             onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; }}
             onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--hairline-strong)'; }}
           />
-          {!isPartner && (
-            <p style={{ fontSize: '12px', color: 'var(--semantic-success)', marginTop: '4px' }}>
-              ✓ @okestro.com 이메일은 가입 즉시 자동 승인됩니다.
-            </p>
-          )}
+          <p style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>
+            영문, 숫자, 특수문자(_.-) 조합으로 4자 이상 입력해 주세요.
+          </p>
         </div>
 
         {/* 공통: 비밀번호 */}
@@ -443,13 +441,13 @@ const InfoForm: React.FC<InfoFormProps> = ({
 
 interface SuccessScreenProps {
   memberType: MemberType;
-  email: string;
+  userId: string;
   isAutoApproved: boolean;
   onGoToLogin: () => void;
 }
 
 const SuccessScreen: React.FC<SuccessScreenProps> = ({
-  memberType, email, isAutoApproved, onGoToLogin,
+  memberType, userId, isAutoApproved, onGoToLogin,
 }) => (
   <div style={{ textAlign: 'center', padding: '8px 0' }}>
     <div style={{
@@ -479,7 +477,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
             🎉 즉시 로그인 가능합니다.
           </p>
           <p style={{ fontSize: '13px', color: 'var(--body)', lineHeight: 1.6 }}>
-            <strong>{email}</strong> 계정으로 바로 로그인하실 수 있습니다.
+            <strong>{userId}</strong> 아이디로 바로 로그인하실 수 있습니다.
           </p>
         </>
       ) : (
@@ -488,7 +486,7 @@ const SuccessScreen: React.FC<SuccessScreenProps> = ({
             📬 관리자 승인 후 로그인이 가능합니다.
           </p>
           <p style={{ fontSize: '13px', color: 'var(--body)', lineHeight: 1.6 }}>
-            <strong>{email}</strong>으로 신청이 접수되었습니다.<br />
+            <strong>{userId}</strong> 아이디로 신청이 접수되었습니다.<br />
             {memberType === 'partner'
               ? '파트너사 회원은 담당 관리자 검토 후 1~2 영업일 내에 승인됩니다.'
               : '관리자 확인 후 계정이 활성화됩니다.'
@@ -582,7 +580,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ onClose, onRegister, exte
   const [isAutoApproved, setIsAutoApproved] = useState(false);
 
   const [formData, setFormData] = useState<RegisterFormData>({
-    email: '', password: '', passwordConfirm: '',
+    userId: '', password: '', passwordConfirm: '',
     jobType: '', companyName: '', division: '', team: '',
   });
 
@@ -599,9 +597,10 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ onClose, onRegister, exte
 
   // 유효성 검사
   const validate = (): boolean => {
-    const { email, password, passwordConfirm, jobType, companyName, division, team } = formData;
-    if (!email.trim())                                          { setInternalErr('이메일 주소를 입력해 주세요.');                      return false; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))      { setInternalErr('올바른 이메일 형식이 아닙니다.');                    return false; }
+    const { userId, password, passwordConfirm, jobType, companyName, division, team } = formData;
+    if (!userId.trim())                                         { setInternalErr('아이디를 입력해 주세요.');                          return false; }
+    if (userId.trim().length < 4)                               { setInternalErr('아이디는 4자 이상이어야 합니다.');                   return false; }
+    if (/\s/.test(userId.trim()))                               { setInternalErr('아이디에 공백을 사용할 수 없습니다.');               return false; }
     if (!password.trim())                                       { setInternalErr('비밀번호를 입력해 주세요.');                         return false; }
     if (password.length < 6)                                    { setInternalErr('비밀번호는 6자 이상이어야 합니다.');                  return false; }
     if (password !== passwordConfirm)                           { setInternalErr('비밀번호와 비밀번호 확인이 일치하지 않습니다.');       return false; }
@@ -619,10 +618,8 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ onClose, onRegister, exte
     setInternalErr('');
     try {
       await onRegister({ ...formData, memberType });
-      const autoApproved =
-        formData.email.toLowerCase().endsWith('@okestro.com') ||
-        memberType === 'employee';
-      setIsAutoApproved(autoApproved);
+      // 내부 임직원은 즉시 승인, 파트너사는 관리자 승인 대기
+      setIsAutoApproved(memberType === 'employee');
       setStep(3);
     } catch (e: unknown) {
       setInternalErr(e instanceof Error ? e.message : '오류가 발생했습니다.');
@@ -684,7 +681,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ onClose, onRegister, exte
         {step === 3 && (
           <SuccessScreen
             memberType={memberType!}
-            email={formData.email}
+            userId={formData.userId}
             isAutoApproved={isAutoApproved}
             onGoToLogin={onClose}
           />
