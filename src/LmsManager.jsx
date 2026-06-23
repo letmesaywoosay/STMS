@@ -2735,7 +2735,7 @@ function BackOfficeView({
         const canvas = document.createElement("canvas");
         let width = img.width;
         let height = img.height;
-        const maxW = 1280;
+        const maxW = 1920;
 
         if (width > maxW) {
           height = Math.round((height * maxW) / width);
@@ -2751,17 +2751,17 @@ function BackOfficeView({
         let sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         
         // If PNG is too large, fallback to jpeg compression to fit Firestore limits
-        if (sizeInKb > 900) {
-          compressedBase64 = canvas.toDataURL("image/jpeg", 0.8);
+        if (sizeInKb > 1024) {
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
           sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         }
 
-        if (sizeInKb > 900) {
-          compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
+        if (sizeInKb > 1024) {
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
           sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         }
 
-        if (sizeInKb > 900) {
+        if (sizeInKb > 1024) {
           alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 더 작은 해상도의 이미지로 업로드해주세요.`);
           return;
         }
@@ -2784,7 +2784,7 @@ function BackOfficeView({
         const canvas = document.createElement("canvas");
         let width = img.width;
         let height = img.height;
-        const maxW = 1280;
+        const maxW = 1920;
 
         if (width > maxW) {
           height = Math.round((height * maxW) / width);
@@ -2802,17 +2802,17 @@ function BackOfficeView({
 
         let sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         
-        if (sizeInKb > 900) {
-          compressedBase64 = canvas.toDataURL("image/jpeg", 0.80);
+        if (sizeInKb > 1024) {
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
           sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         }
 
-        if (sizeInKb > 900) {
-          compressedBase64 = canvas.toDataURL("image/jpeg", 0.60);
+        if (sizeInKb > 1024) {
+          compressedBase64 = canvas.toDataURL("image/jpeg", 0.70);
           sizeInKb = Math.round((compressedBase64.length * 3) / 4 / 1024);
         }
 
-        if (sizeInKb > 900) {
+        if (sizeInKb > 1024) {
           alert(`이미지 용량이 너무 큽니다 (${sizeInKb}KB). 더 작은 해상도의 이미지로 업로드해주세요.`);
           return;
         }
