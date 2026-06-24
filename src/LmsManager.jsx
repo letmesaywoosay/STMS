@@ -5729,7 +5729,6 @@ function CourseListPage({ eduCourses, infoBlocks, onNavigate }) {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
           <thead>
             <tr style={{ background: "var(--canvas-soft)", borderBottom: "2px solid var(--hairline-strong)", textAlign: "left" }}>
-              <th style={{ padding: "16px 20px", width: "120px", color: "var(--ink)", fontWeight: 600 }}>과정 코드</th>
               <th style={{ padding: "16px 20px", width: "120px", color: "var(--ink)", fontWeight: 600 }}>대상</th>
               <th style={{ padding: "16px 20px", color: "var(--ink)", fontWeight: 600 }}>교육 과정명</th>
               <th style={{ padding: "16px 20px", width: "200px", color: "var(--ink)", fontWeight: 600 }}>교육 일정</th>
@@ -5742,7 +5741,6 @@ function CourseListPage({ eduCourses, infoBlocks, onNavigate }) {
               const statusCfg = getStatusLabelAndStyle(c.status, c.target);
               return (
                 <tr key={c.id} style={{ borderBottom: "1px solid var(--hairline)", transition: "background 0.15s" }}>
-                  <td style={{ padding: "16px 20px", color: "var(--body)", fontFamily: "monospace" }}>{c.id}</td>
                   <td style={{ padding: "16px 20px" }}>
                     <span style={{
                       fontSize: "11px",
