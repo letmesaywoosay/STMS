@@ -3794,7 +3794,7 @@ function BackOfficeView({
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                   <input
                     type="text"
-                    placeholder="이름 또는 이메일 검색..."
+                    placeholder="이름 또는 아이디 검색..."
                     value={memberSearchQuery}
                     onChange={e => setMemberSearchQuery(e.target.value)}
                     style={inpStyle({ padding: "6px 12px", fontSize: "13px", flex: "1 1 200px" })}
@@ -3830,7 +3830,7 @@ function BackOfficeView({
                   <thead>
                     <tr style={{ background: "var(--canvas-soft)", borderBottom: "1.5px solid var(--hairline-strong)", textAlign: "left" }}>
                       <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이름</th>
-                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>이메일</th>
+                      <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>아이디</th>
                       <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>구분</th>
                       <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>상태</th>
                       <th style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>권한</th>
@@ -3873,7 +3873,7 @@ function BackOfficeView({
                         return (
                           <tr key={u.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
                             <td style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 600 }}>{u.name}</td>
-                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>{u.email}</td>
+                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>{u.userId || u.email}</td>
                             <td style={{ padding: "10px 12px" }}>
                               <span style={{
                                 fontSize: "11px",
@@ -4079,18 +4079,18 @@ function BackOfficeView({
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>ID (이메일)</label>
+                <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>ID (아이디)</label>
                 <div style={{ display: "flex", gap: "6px" }}>
                   <input 
                     type="text" 
                     readOnly 
-                    value={selectedCredsUser.email} 
+                    value={selectedCredsUser.userId || selectedCredsUser.email} 
                     style={inpStyle({ background: "var(--canvas-soft)", flex: 1, fontSize: "12px", padding: "6px 10px" })} 
                   />
                   <button 
                     onClick={() => {
-                      navigator.clipboard.writeText(selectedCredsUser.email);
-                      alert("이메일 주소가 클립보드에 복사되었습니다.");
+                      navigator.clipboard.writeText(selectedCredsUser.userId || selectedCredsUser.email);
+                      alert("아이디가 클립보드에 복사되었습니다.");
                     }}
                     style={{ padding: "6px 10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-md)", fontSize: "11px", cursor: "pointer", fontWeight: 600 }}
                   >
