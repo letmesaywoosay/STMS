@@ -721,7 +721,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
             saveLmsNotes={saveLmsNotes} 
           />
         )}
-        {activeTab === "mypage" && currentUser && <MyPageView applications={applications} courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} />}
+        {activeTab === "mypage" && currentUser && <MyPageView applications={applications} courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} lmsProgress={lmsProgress} />}
       </div>
 
       {/* ── Expo 스타일 미니멀 에디토리얼 푸터 ── */}
@@ -2021,10 +2021,19 @@ function ClassroomView({
                 const thumbUrl = videoId
                   ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
                   : null;
+                const isEnrolled = lmsProgress.some(p => p.email === currentUser.email && p.lectureId === course.id);
                 return (
                   <div
                     key={course.id}
-                    onClick={() => setSelectedLecture(course)}
+                    onClick={() => {
+                      if (isEnrolled) {
+                        setSelectedLecture(course);
+                      } else {
+                        if (window.confirm(`'${course.title}' 과정을 수강 신청하시겠습니까?`)) {
+                          updateProgressState(course.id, 0);
+                        }
+                      }
+                    }}
                     style={{
                       background: "var(--surface-card)",
                       border: "1px solid var(--hairline-strong)",
@@ -2152,7 +2161,7 @@ function ClassroomView({
                           <span style={{ fontSize: "11px", color: "var(--body)", fontWeight: 500 }}>학습 진도</span>
                           <span style={{ fontSize: "11px", fontWeight: 700, color: isComp ? "#10B981" : "var(--primary)" }}>{progress}%</span>
                         </div>
-                        <div style={{ height: "6px", background: "var(--canvas-soft)", borderRadius: "999px", overflow: "hidden" }}>
+                        <div style={{ height: "6px", background: "var(--canvas-soft)", borderRadius: "999px", overflow: "hidden", marginBottom: "12px" }}>
                           <div style={{
                             height: "100%",
                             width: `${progress}%`,
@@ -2161,6 +2170,36 @@ function ClassroomView({
                             transition: "width 0.4s ease"
                           }} />
                         </div>
+
+                        {/* CTA 수강신청 / 학습하기 버튼 */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // 카드 클릭 버블링 방지
+                            const isEnrolled = lmsProgress.some(p => p.email === currentUser.email && p.lectureId === course.id);
+                            if (isEnrolled) {
+                              setSelectedLecture(course);
+                            } else {
+                              if (window.confirm(`'${course.title}' 과정을 수강 신청하시겠습니까?`)) {
+                                updateProgressState(course.id, 0);
+                              }
+                            }
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "8px 12px",
+                            border: "none",
+                            borderRadius: "var(--rounded-md)",
+                            background: lmsProgress.some(p => p.email === currentUser.email && p.lectureId === course.id) ? "var(--primary)" : "var(--canvas)",
+                            border: lmsProgress.some(p => p.email === currentUser.email && p.lectureId === course.id) ? "none" : "1px solid var(--hairline-strong)",
+                            color: lmsProgress.some(p => p.email === currentUser.email && p.lectureId === course.id) ? "var(--on-primary)" : "var(--ink)",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            transition: "all 0.15s"
+                          }}
+                        >
+                          {lmsProgress.some(p => p.email === currentUser.email && p.lectureId === course.id) ? "학습하기 ➔" : "수강 신청하기"}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2371,82 +2410,130 @@ function FaqView({ faqs }) {
   );
 }
 
-// ── [MyPageView] 마이페이지 트래커 ──
-function MyPageView({ applications, courses, checkAccess, setSelectedCourse }) {
+// ── [MyPageView] 마이페이지 통합 트래커 대시보드 ──
+function MyPageView({ applications, courses, checkAccess, setSelectedCourse, lmsProgress = [] }) {
   const currentUser = JSON.parse(sessionStorage.getItem("aida:lms_login") || "null");
-  const myApps = applications.filter(a => a.email === currentUser?.email);
+  
+  // 1. 오프라인 신청 목록 (applications)
+  const myOfflineApps = applications.filter(a => a.email === currentUser?.email);
+
+  // 2. 온라인 학습 목록 (lmsProgress 중 현재 사용자의 기록)
+  const myOnlineProgress = lmsProgress.filter(p => p.email === currentUser?.email);
 
   return (
     <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
       <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
         <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px", letterSpacing: "-0.84px" }}>👤 나의 학습 마이페이지</h3>
-        <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "24px" }}>수강 신청하신 강좌들의 상태 및 진도 이력을 관리합니다.</p>
+        <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "32px" }}>수강 신청하신 강좌들의 상태 및 진도 이력을 통합하여 관리합니다.</p>
         
-        {myApps.length === 0 && (
+        {myOfflineApps.length === 0 && myOnlineProgress.length === 0 && (
           <div style={{ textAlign: "center", padding: "40px", color: "var(--body)", border: `1.5px dashed var(--hairline-strong)`, borderRadius: "var(--rounded-lg)" }}>
-            신청된 과정이 없습니다.
+            신청되거나 수강 중인 교육 과정이 없습니다.
           </div>
         )}
         
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          {myApps.map(app => {
-            const course = courses.find(c => c.id === app.courseId);
-            if (!course) return null;
-            const steps = ["pending", "approved", "studying", "completed"];
-            const currentIdx = steps.indexOf(app.status);
-            const isRejected = app.status === "rejected";
-            return (
-              <div key={app.id} style={{ border: `1px solid ${isRejected ? "var(--red)" : "var(--hairline-strong)"}`, borderRadius: "var(--rounded-lg)", padding: "20px", background: "var(--canvas-soft)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <div>
-                    <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>{course.title}</h4>
-                    <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "2px" }}>신청: {new Date(app.appliedAt).toLocaleString()}</div>
-                  </div>
-                  {app.status === "approved" && (
-                    <button onClick={() => { setSelectedCourse(course); checkAccess("classroom"); }} style={{ padding: "6px 12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", cursor: "pointer", fontWeight: 500 }}>강의실 입장 ➔</button>
-                  )}
-                </div>
-                {isRejected ? (
-                  <div style={{ background: "rgba(235, 142, 144, 0.1)", border: "1px solid var(--red)", color: "var(--red)", padding: "12px", borderRadius: "var(--rounded-md)", fontSize: "13px" }}>
-                    ❌ 반려됨 (사유: {app.rejectReason})
-                  </div>
-                ) : (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", position: "relative", marginTop: "12px" }}>
-                    {[
-                      { label: "신청 대기", code: "pending" },
-                      { label: "수강 확정", code: "approved" },
-                      { label: "학습 중", code: "studying" },
-                      { label: "수료/종료", code: "completed" }
-                    ].map((step, sIdx) => {
-                      const isActive = sIdx <= currentIdx;
-                      const isCurrent = sIdx === currentIdx;
-                      return (
-                        <div key={step.code} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", zIndex: 2 }}>
-                          <div style={{ 
-                            width: "32px", 
-                            height: "32px", 
-                            borderRadius: "50%", 
-                            background: isCurrent ? "var(--primary)" : (isActive ? "var(--surface-strong)" : "var(--canvas)"), 
-                            border: `2px solid ${isActive ? "var(--primary)" : "var(--hairline-strong)"}`, 
-                            color: isCurrent ? "#fff" : (isActive ? "var(--ink)" : "var(--body)"), 
-                            display: "flex", 
-                            alignItems: "center", 
-                            justifyContent: "center", 
-                            fontSize: "12px", 
-                            fontWeight: 700, 
-                            marginBottom: "6px" 
-                          }}>{sIdx + 1}</div>
-                          <span style={{ fontSize: "12px", color: isCurrent ? "var(--primary)" : (isActive ? "var(--ink)" : "var(--body)") }}>{step.label}</span>
+          {/* 온라인 수강 목록 출력 */}
+          {myOnlineProgress.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "8px", margin: "0 0 8px 0" }}>📺 온라인 강의 수강 현황</h4>
+              {myOnlineProgress.map(p => {
+                const c = courses.find(course => course.id === p.lectureId);
+                if (!c) return null;
+                const isComp = p.progress === 100;
+                return (
+                  <div key={p.lectureId} style={{ border: `1px solid var(--hairline-strong)`, borderRadius: "var(--rounded-lg)", padding: "20px", background: "var(--canvas-soft)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+                    <div style={{ flex: 1, minWidth: "280px" }}>
+                      <span style={{ fontSize: "11px", fontWeight: 600, padding: "3px 8px", borderRadius: "var(--rounded-pill)", background: "#eff6ff", color: "#1d4ed8", marginRight: "8px" }}>온라인</span>
+                      <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", display: "inline-block", margin: 0 }}>{c.title}</h4>
+                      <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "6px" }}>최근 학습일: {p.updatedAt ? new Date(p.updatedAt).toLocaleString() : "-"}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
+                      <div style={{ width: "160px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                          <span style={{ fontSize: "11px", color: "var(--body)" }}>진도율</span>
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: isComp ? "#10B981" : "var(--primary)" }}>{p.progress}%</span>
                         </div>
-                      );
-                    })}
-                    <div style={{ position: "absolute", top: "16px", left: "12.5%", right: "12.5%", height: "2px", background: "var(--hairline-strong)", zIndex: 1 }} />
-                    <div style={{ position: "absolute", top: "16px", left: "12.5%", width: `${currentIdx * 25}%`, height: "2px", background: "var(--primary)", zIndex: 1 }} />
+                        <div style={{ height: "6px", background: "var(--canvas)", borderRadius: "999px", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${p.progress}%`, background: isComp ? "#10B981" : "var(--primary)", borderRadius: "999px" }} />
+                        </div>
+                      </div>
+                      <button onClick={() => { setSelectedCourse(c); checkAccess("classroom"); }} style={{ padding: "8px 16px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}>강의실 입장</button>
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
+
+          {/* 오프라인 신청 목록 출력 */}
+          {myOfflineApps.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "16px" }}>
+              <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "8px", margin: "0 0 8px 0" }}>🏫 오프라인 교육 신청 현황</h4>
+              {myOfflineApps.map(app => {
+                const steps = ["pending", "approved", "studying", "completed"];
+                const currentIdx = steps.indexOf(app.status);
+                const isRejected = app.status === "rejected";
+                return (
+                  <div key={app.id} style={{ border: `1px solid ${isRejected ? "var(--red)" : "var(--hairline-strong)"}`, borderRadius: "var(--rounded-lg)", padding: "20px", background: "var(--canvas-soft)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                      <div>
+                        <span style={{ fontSize: "11px", fontWeight: 600, padding: "3px 8px", borderRadius: "var(--rounded-pill)", background: "#f0fdf4", color: "#15803d", marginRight: "8px" }}>오프라인</span>
+                        <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", display: "inline-block", margin: 0 }}>{app.courseName}</h4>
+                        <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "6px" }}>신청 일시: {new Date(app.appliedAt).toLocaleString()}</div>
+                      </div>
+                      <div>
+                        {app.status === "approved" && (
+                          <span style={{ fontSize: "12px", color: "var(--green)", fontWeight: 600 }}>수강 확정 완료</span>
+                        )}
+                        {app.status === "pending" && (
+                          <span style={{ fontSize: "12px", color: "var(--amber)", fontWeight: 600 }}>신청 승인 대기 중</span>
+                        )}
+                      </div>
+                    </div>
+                    {isRejected ? (
+                      <div style={{ background: "rgba(235, 142, 144, 0.1)", border: "1px solid var(--red)", color: "var(--red)", padding: "12px", borderRadius: "var(--rounded-md)", fontSize: "13px" }}>
+                        ❌ 반려됨 (사유: {app.rejectReason})
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", position: "relative", marginTop: "12px" }}>
+                        {[
+                          { label: "신청 대기", code: "pending" },
+                          { label: "수강 확정", code: "approved" },
+                          { label: "학습 중", code: "studying" },
+                          { label: "수료/종료", code: "completed" }
+                        ].map((step, sIdx) => {
+                          const isActive = sIdx <= currentIdx;
+                          const isCurrent = sIdx === currentIdx;
+                          return (
+                            <div key={step.code} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", zIndex: 2 }}>
+                              <div style={{ 
+                                width: "32px", 
+                                height: "32px", 
+                                borderRadius: "50%", 
+                                background: isCurrent ? "var(--primary)" : (isActive ? "var(--surface-strong)" : "var(--canvas)"), 
+                                border: `2px solid ${isActive ? "var(--primary)" : "var(--hairline-strong)"}`, 
+                                color: isCurrent ? "#fff" : (isActive ? "var(--ink)" : "var(--body)"), 
+                                display: "flex", 
+                                alignItems: "center", 
+                                justifyContent: "center", 
+                                fontSize: "12px", 
+                                fontWeight: 700, 
+                                marginBottom: "6px" 
+                              }}>{sIdx + 1}</div>
+                              <span style={{ fontSize: "12px", color: isCurrent ? "var(--primary)" : (isActive ? "var(--ink)" : "var(--body)") }}>{step.label}</span>
+                            </div>
+                          );
+                        })}
+                        <div style={{ position: "absolute", top: "16px", left: "12.5%", right: "12.5%", height: "2px", background: "var(--hairline-strong)", zIndex: 1 }} />
+                        <div style={{ position: "absolute", top: "16px", left: "12.5%", width: `${currentIdx * 25}%`, height: "2px", background: "var(--primary)", zIndex: 1 }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
