@@ -2600,9 +2600,33 @@ function BackOfficeView({
     let updated;
     if (editingEduCourseId) {
       updated = eduCourses.map(c => c.id === editingEduCourseId ? newCourse : c);
+      // 기존 스케줄도 수정
+      const updatedSchedules = schedules.map(s => {
+        if (s.courseId === editingEduCourseId) {
+          return {
+            ...s,
+            course: name.trim(),
+            date: dateStart,
+            target: target === "Customer" ? "고객" : (target === "Partner" ? "파트너" : "기타"),
+            description: overview.trim()
+          };
+        }
+        return s;
+      });
+      await saveSchedules(updatedSchedules);
       alert("교육과정이 수정되었습니다.");
     } else {
       updated = [newCourse, ...eduCourses];
+      // 새 일정 자동 추가
+      const newSchedule = {
+        id: `SCH-${Date.now()}`,
+        courseId: courseCode,
+        course: name.trim(),
+        date: dateStart,
+        target: target === "Customer" ? "고객" : (target === "Partner" ? "파트너" : "기타"),
+        description: overview.trim()
+      };
+      await saveSchedules([newSchedule, ...schedules]);
       alert("교육과정이 개설되었습니다.");
     }
 
@@ -2645,6 +2669,9 @@ function BackOfficeView({
   const handleDeleteEduCourse = async (id) => {
     if (!window.confirm("이 교육과정을 삭제하시겠습니까? 관련 수강신청 정보는 보존되지만 과정이 조회되지 않게 됩니다.")) return;
     const updated = eduCourses.filter(c => c.id !== id);
+    // 관련 스케줄도 삭제
+    const updatedSchedules = schedules.filter(s => s.courseId !== id);
+    await saveSchedules(updatedSchedules);
     await saveEduCourses(updated);
     alert("삭제되었습니다.");
   };
