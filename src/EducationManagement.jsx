@@ -149,9 +149,14 @@ export default function EducationManagement() {
   const [instructors, setInstructors] = useState(() => {
     try {
       const saved = localStorage.getItem('aida:academy_instructors');
-      return saved ? JSON.parse(saved) : ["김윤형", "최우성", "이지안"];
+      // If it exists in localStorage, filter out "이지안" to apply this change for existing clients
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.filter(name => name !== "이지안");
+      }
+      return ["김윤형", "최우성"];
     } catch {
-      return ["김윤형", "최우성", "이지안"];
+      return ["김윤형", "최우성"];
     }
   });
 
