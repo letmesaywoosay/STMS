@@ -2,28 +2,9 @@
 // ApplicantManager.jsx
 import { useState, useRef, useEffect, useMemo } from "react";
 import * as XLSX from "xlsx";
+import { fbGet, fbSet } from "./firebaseStore";
 
 // ── Firebase 설정 (직접 입력) ──────────────────────────────────
-const FB_API_KEY = "AIzaSyCarxTqSx__7AfzVNHzN-ilnk0gNN6PkTU";
-const FB_PROJECT = "solutiontestsystem";
-const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/app_data`;
-
-const fbGet = async (key) => {
-  const res = await fetch(`${FB_BASE}/${key}?key=${FB_API_KEY}`);
-  if(res.status===404) return null;
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const doc = await res.json();
-  const raw = doc?.fields?.value?.stringValue;
-  return raw ? JSON.parse(raw) : null;
-};
-const fbSet = async (key, value) => {
-  const body = { fields:{ value:{ stringValue: JSON.stringify(value) } } };
-  const res = await fetch(`${FB_BASE}/${key}?key=${FB_API_KEY}`,{
-    method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
-  });
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  return true;
-};
 const stGet = async (key) => {
   try{ return await fbGet(key); }
   catch{ try{const r=localStorage.getItem(key);return r?JSON.parse(r):null;}catch{return null;} }
@@ -7062,4 +7043,3 @@ Do NOT wrap the response in markdown blocks like \`\`\`json. Return only the raw
     </div>
   );
 }
-
