@@ -122,6 +122,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
 
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [showGuestAlert, setShowGuestAlert] = useState(false);
+  const [expandedAppIds, setExpandedAppIds] = useState([]);
 
   // 1. 초기 데이터 로드
   useEffect(() => {
@@ -453,6 +454,7 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
     setApplications(newApps);
     await fbSet("aida:lms_applications_v2", newApps);
   };
+  window.__aida_saveApplications = saveApplications;
   const saveViewLogs = async (newLogs) => {
     setViewLogs(newLogs);
     await fbSet("aida:lms_view_logs_v2", newLogs);
@@ -701,7 +703,20 @@ export default function LmsManager({ viewPath, onNavigate, adminSubTabGroup = "a
             saveLmsNotes={saveLmsNotes} 
           />
         )}
-        {activeTab === "mypage" && currentUser && <MyPageView applications={applications} courses={courses} checkAccess={checkAccess} setSelectedCourse={setSelectedCourse} lmsProgress={lmsProgress} />}
+        {activeTab === "mypage" && currentUser && (
+          <MyPageView 
+            applications={applications} 
+            courses={courses} 
+            checkAccess={checkAccess} 
+            setSelectedCourse={setSelectedCourse} 
+            lmsProgress={lmsProgress} 
+            users={users} 
+            saveUsers={saveUsers} 
+            saveApplications={saveApplications} 
+            eduRegistrations={eduRegistrations}
+            saveEduRegistrations={saveEduRegistrations}
+          />
+        )}
       </div>
 
       {/* ── Expo 스타일 미니멀 에디토리얼 푸터 ── */}
@@ -2391,13 +2406,41 @@ function FaqView({ faqs }) {
 }
 
 // ── [MyPageView] 마이페이지 통합 트래커 대시보드 ──
-function MyPageView({ applications, courses, checkAccess, setSelectedCourse, lmsProgress = [] }) {
+function MyPageView({ 
+  applications, 
+  courses, 
+  checkAccess, 
+  setSelectedCourse, 
+  lmsProgress = [], 
+  users = [], 
+  saveUsers, 
+  saveApplications,
+  eduRegistrations = [],
+  saveEduRegistrations
+}) {
   const currentUser = JSON.parse(sessionStorage.getItem("aida:lms_login") || "null");
   const [activeTab, setActiveTab] = useState("online"); // online or offline
   const [showLocationModal, setShowLocationModal] = useState(null); // Course detail for location modal
   const [toastMessage, setToastMessage] = useState("");
   const [smsNotification, setSmsNotification] = useState(true);
   const [newCourseNotification, setNewCourseNotification] = useState(true);
+
+  // 프로필 수정 모드 상태
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editName, setEditName] = useState(currentUser?.name || "");
+  const [editDivision, setEditDivision] = useState(currentUser?.division || currentUser?.team || "");
+  const [editPhone, setEditPhone] = useState(currentUser?.phone || "010-0000-0000");
+
+  // 신청내역 수정 상태
+  const [editingAppId, setEditingAppId] = useState(null);
+  const [editSchedule, setEditSchedule] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editCompany, setEditCompany] = useState("");
+  const [editPhoneNum, setEditPhoneNum] = useState("");
+  const [editAttendees, setEditAttendees] = useState(1);
+  const [editComments, setEditComments] = useState("");
 
   // 1. 오프라인 신청 목록 (applications)
   const myOfflineApps = applications.filter(a => a.email === currentUser?.email);
@@ -2415,6 +2458,89 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse, lms
 
   const handleSaveSettings = () => {
     triggerToast("설정이 저장 완료되었습니다.");
+  };
+
+  const handleSaveApp = async (appId) => {
+    if (!editSchedule.trim() || !editTime.trim()) {
+      alert("일정과 시간을 올바르게 입력해주세요.");
+      return;
+    }
+    try {
+      const updated = applications.map(a => {
+        if (a.id === appId) {
+          return {
+            ...a,
+            schedule: editSchedule.trim(),
+            time: editTime.trim(),
+            location: editLocation.trim()
+          };
+        }
+        return a;
+      });
+      await saveApplications(updated);
+
+      if (saveEduRegistrations) {
+        const updatedRegs = eduRegistrations.map(r => {
+          if (r.id === appId) {
+            return {
+              ...r,
+              fullName: editFullName.trim(),
+              company: editCompany.trim(),
+              phone: editPhoneNum.trim(),
+              attendees: Number(editAttendees),
+              comments: editComments.trim()
+            };
+          }
+          return r;
+        });
+        await saveEduRegistrations(updatedRegs);
+      }
+
+      setEditingAppId(null);
+      triggerToast("신청 정보가 수정 완료되었습니다.");
+    } catch (err) {
+      alert("신청 수정 실패: " + err.message);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) {
+      alert("이름을 입력해주세요.");
+      return;
+    }
+    try {
+      const updatedUsers = users.map(u => {
+        if (u.email.toLowerCase() === currentUser.email.toLowerCase()) {
+          return {
+            ...u,
+            name: editName.trim(),
+            division: editDivision.trim(),
+            team: editDivision.trim(), // sync division and team
+            phone: editPhone.trim()
+          };
+        }
+        return u;
+      });
+      await saveUsers(updatedUsers);
+
+      // session storage user update
+      const updatedUserObj = {
+        ...currentUser,
+        name: editName.trim(),
+        division: editDivision.trim(),
+        team: editDivision.trim(),
+        phone: editPhone.trim()
+      };
+      sessionStorage.setItem("aida:lms_login", JSON.stringify(updatedUserObj));
+      
+      setIsEditingProfile(false);
+      triggerToast("프로필 정보가 저장 완료되었습니다.");
+      
+      // refresh GNB header
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } catch (err) {
+      alert("프로필 저장 실패: " + err.message);
+    }
   };
 
   // [영역 A] 메트릭 가공
@@ -2613,29 +2739,185 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse, lms
               ) : (
                 myOfflineApps.map(app => {
                   const isRejected = app.status === "rejected";
+                  const isEditing = editingAppId === app.id;
+                  const reg = eduRegistrations.find(r => r.id === app.id);
                   return (
                     <div key={app.id} style={{ background: "var(--surface-card)", border: `1px solid ${isRejected ? "var(--red)" : "var(--hairline-strong)"}`, borderRadius: "var(--rounded-lg)", padding: "20px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-                        <div>
+                        <div style={{ flex: 1 }}>
                           <span style={{ fontSize: "10px", fontWeight: 600, padding: "2px 6px", borderRadius: "4px", background: "rgba(22, 163, 74, 0.1)", color: "var(--green)", marginRight: "8px" }}>오프라인</span>
                           <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", display: "inline-block", margin: 0 }}>{app.courseName}</h4>
-                          <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "6px" }}>📅 일정: {app.schedule} | ⏰ 시간: {app.time}</div>
-                          <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "4px" }}>
-                            📍 장소: {app.location || "여의도 파크원타워2 43층 대회의실"}{" "}
-                            <span 
-                              onClick={() => setShowLocationModal(app)} 
-                              style={{ color: "var(--text-link)", textDecoration: "underline", cursor: "pointer", marginLeft: "6px" }}
-                            >
-                              위치 보기 ↗
-                            </span>
-                          </div>
-                        </div>
-                        <div>
-                          {app.status === "approved" && (
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--green)", background: "rgba(22, 163, 74, 0.1)", padding: "4px 8px", borderRadius: "4px" }}>신청완료</span>
+                          
+                          {!isEditing ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "12px" }}>
+                              <div style={{ fontSize: "12px", color: "var(--body)" }}>📅 <strong>일정:</strong> {app.schedule} &nbsp;|&nbsp; ⏰ <strong>시간:</strong> {app.time}</div>
+                              <div style={{ fontSize: "12px", color: "var(--body)" }}>
+                                📍 <strong>장소:</strong> {app.location || "여의도 파크원타워2 43층 대회의실"}{" "}
+                                <span 
+                                  onClick={() => setShowLocationModal(app)} 
+                                  style={{ color: "var(--text-link)", textDecoration: "underline", cursor: "pointer", marginLeft: "6px" }}
+                                >
+                                  위치 보기 ↗
+                                </span>
+                              </div>
+                              <div style={{ borderTop: "1px dashed var(--hairline-strong)", marginTop: "6px", paddingTop: "8px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 12px" }}>
+                                <div style={{ fontSize: "12px", color: "var(--body)" }}>👤 <strong>신청인:</strong> {reg?.fullName || currentUser?.name || "-"}</div>
+                                <div style={{ fontSize: "12px", color: "var(--body)" }}>🏢 <strong>회사명:</strong> {reg?.company || currentUser?.company || "-"}</div>
+                                <div style={{ fontSize: "12px", color: "var(--body)" }}>📞 <strong>연락처:</strong> {reg?.phone || currentUser?.phone || "-"}</div>
+                                <div style={{ fontSize: "12px", color: "var(--body)" }}>👥 <strong>동반참석인원:</strong> {reg?.attendees || 1}명</div>
+                                <div style={{ fontSize: "12px", color: "var(--body)", gridColumn: "span 2" }}>💬 <strong>추가요청사항:</strong> {reg?.comments || "-"}</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", maxWidth: "550px" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                  <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600 }}>일정:</span>
+                                  <input 
+                                    type="text" 
+                                    value={editSchedule} 
+                                    onChange={e => setEditSchedule(e.target.value)} 
+                                    style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1 })}
+                                  />
+                                </div>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                  <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600 }}>시간:</span>
+                                  <input 
+                                    type="text" 
+                                    value={editTime} 
+                                    onChange={e => setEditTime(e.target.value)} 
+                                    style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1 })}
+                                  />
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600 }}>장소:</span>
+                                <input 
+                                  type="text" 
+                                  value={editLocation} 
+                                  onChange={e => setEditLocation(e.target.value)} 
+                                  style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1 })}
+                                />
+                              </div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", borderTop: "1px dashed var(--hairline-strong)", paddingTop: "10px" }}>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                  <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600 }}>신청인:</span>
+                                  <input 
+                                    type="text" 
+                                    value={editFullName} 
+                                    onChange={e => setEditFullName(e.target.value)} 
+                                    style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1 })}
+                                  />
+                                </div>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                  <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600 }}>회사명:</span>
+                                  <input 
+                                    type="text" 
+                                    value={editCompany} 
+                                    onChange={e => setEditCompany(e.target.value)} 
+                                    style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1 })}
+                                  />
+                                </div>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                  <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600 }}>연락처:</span>
+                                  <input 
+                                    type="text" 
+                                    value={editPhoneNum} 
+                                    onChange={e => setEditPhoneNum(e.target.value)} 
+                                    style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1 })}
+                                  />
+                                </div>
+                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                  <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600 }}>동반참석:</span>
+                                  <input 
+                                    type="number" 
+                                    value={editAttendees} 
+                                    onChange={e => setEditAttendees(Number(e.target.value))} 
+                                    style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1 })}
+                                  />
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: "8px", alignItems: "flex-start" }}>
+                                <span style={{ fontSize: "12px", width: "60px", color: "var(--body)", fontWeight: 600, marginTop: "6px" }}>추가요청:</span>
+                                <textarea 
+                                  value={editComments} 
+                                  onChange={e => setEditComments(e.target.value)} 
+                                  style={inpStyle({ padding: "6px 8px", fontSize: "12px", flex: 1, minHeight: "60px", resize: "vertical" })}
+                                />
+                              </div>
+                            </div>
                           )}
-                          {app.status === "pending" && (
-                            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--amber)", background: "rgba(171, 100, 0, 0.1)", padding: "4px 8px", borderRadius: "4px" }}>대기순번 확인</span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            {app.status === "approved" && (
+                              <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--green)", background: "rgba(22, 163, 74, 0.1)", padding: "4px 8px", borderRadius: "4px" }}>신청완료</span>
+                            )}
+                            {app.status === "pending" && (
+                              <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--amber)", background: "rgba(171, 100, 0, 0.1)", padding: "4px 8px", borderRadius: "4px" }}>대기순번 확인</span>
+                            )}
+                          </div>
+                          
+                          {/* 신청내용 수정 버튼 분기 */}
+                          {!isEditing ? (
+                            <button
+                              onClick={() => {
+                                setEditingAppId(app.id);
+                                setEditSchedule(app.schedule || "");
+                                setEditTime(app.time || "");
+                                setEditLocation(app.location || "");
+                                setEditFullName(reg ? (reg.fullName || "") : (currentUser?.name || ""));
+                                setEditCompany(reg ? (reg.company || "") : (currentUser?.company || ""));
+                                setEditPhoneNum(reg ? (reg.phone || "") : (currentUser?.phone || ""));
+                                setEditAttendees(reg ? (reg.attendees || 1) : 1);
+                                setEditComments(reg ? (reg.comments || "") : "");
+                              }}
+                              style={{
+                                padding: "4px 8px",
+                                background: "none",
+                                border: "1px solid var(--hairline-strong)",
+                                color: "var(--primary)",
+                                borderRadius: "4px",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                cursor: "pointer"
+                              }}
+                            >
+                              신청 정보 수정
+                            </button>
+                          ) : (
+                            <div style={{ display: "flex", gap: "4px" }}>
+                              <button
+                                onClick={() => handleSaveApp(app.id)}
+                                style={{
+                                  padding: "4px 8px",
+                                  background: "var(--green)",
+                                  border: "none",
+                                  color: "white",
+                                  borderRadius: "4px",
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                저장
+                              </button>
+                              <button
+                                onClick={() => setEditingAppId(null)}
+                                style={{
+                                  padding: "4px 8px",
+                                  background: "var(--canvas-soft)",
+                                  border: "1px solid var(--hairline-strong)",
+                                  color: "var(--ink)",
+                                  borderRadius: "4px",
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                취소
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -2657,21 +2939,93 @@ function MyPageView({ applications, courses, checkAccess, setSelectedCourse, lms
           
           {/* 프로필 정보 */}
           <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", boxShadow: shadow }}>
-            <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "10px", margin: "0 0 16px 0" }}>👤 나의 프로필</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
-              <div>
-                <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>이름 / 이메일</span>
-                <strong>{currentUser?.name || "사용자"} ({currentUser?.email || ""})</strong>
-              </div>
-              <div>
-                <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>소속 부서</span>
-                <strong>{currentUser?.division || currentUser?.team || "아카데미팀"}</strong>
-              </div>
-              <div>
-                <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>연락처</span>
-                <strong>{currentUser?.phone || "010-0000-0000"}</strong>
-              </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "10px", marginBottom: "16px" }}>
+              <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>👤 나의 프로필</h4>
+              {!isEditingProfile ? (
+                <button 
+                  onClick={() => {
+                    setEditName(currentUser?.name || "");
+                    setEditDivision(currentUser?.division || currentUser?.team || "");
+                    setEditPhone(currentUser?.phone || "010-0000-0000");
+                    setIsEditingProfile(true);
+                  }}
+                  style={{ background: "none", border: "none", color: "var(--text-link)", fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: "4px" }}
+                >
+                  수정
+                </button>
+              ) : (
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button 
+                    onClick={handleSaveProfile}
+                    style={{ background: "none", border: "none", color: "var(--green)", fontSize: "12px", fontWeight: 700, cursor: "pointer", padding: "4px" }}
+                  >
+                    저장
+                  </button>
+                  <button 
+                    onClick={() => setIsEditingProfile(false)}
+                    style={{ background: "none", border: "none", color: "var(--red)", fontSize: "12px", fontWeight: 600, cursor: "pointer", padding: "4px" }}
+                  >
+                    취소
+                  </button>
+                </div>
+              )}
             </div>
+
+            {!isEditingProfile ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
+                <div>
+                  <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>이름 / 이메일</span>
+                  <strong>{currentUser?.name || "사용자"} ({currentUser?.email || ""})</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>소속 부서</span>
+                  <strong>{currentUser?.division || currentUser?.team || "아카데미팀"}</strong>
+                </div>
+                <div>
+                  <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>연락처</span>
+                  <strong>{currentUser?.phone || "010-0000-0000"}</strong>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>이름</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    style={inpStyle({ padding: "6px 10px", fontSize: "13px" })}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>이메일</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={currentUser?.email || ""}
+                    style={inpStyle({ padding: "6px 10px", fontSize: "13px", background: "var(--canvas-soft)", color: "var(--muted)", cursor: "not-allowed" })}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>소속 부서</label>
+                  <input
+                    type="text"
+                    value={editDivision}
+                    onChange={e => setEditDivision(e.target.value)}
+                    style={inpStyle({ padding: "6px 10px", fontSize: "13px" })}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "11px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>연락처</label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={e => setEditPhone(e.target.value)}
+                    style={inpStyle({ padding: "6px 10px", fontSize: "13px" })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 알림 설정 */}
@@ -2791,6 +3145,7 @@ function BackOfficeView({
   const [memberFilterStatus, setMemberFilterStatus] = useState("all");
   const [showCredsModal, setShowCredsModal] = useState(false);
   const [selectedCredsUser, setSelectedCredsUser] = useState(null);
+  const [expandedAppIds, setExpandedAppIds] = useState([]); // track expanded table row IDs for detail view
 
   // adminSubTabGroup 변경 시 backTab 자동 싱크
   useEffect(() => {
@@ -3272,7 +3627,7 @@ function BackOfficeView({
   const handleApprove = async (appId) => {
     const app = applications.find(a => a.id === appId);
     if (!app) return;
-    const courseTitle = courses.find(c => c.id === app.courseId)?.title || "알 수 없는 과정";
+    const courseTitle = app.courseName || courses.find(c => c.id === app.courseId)?.title || eduCourses.find(ec => ec.id === app.courseId)?.name || "알 수 없는 과정";
     const updated = applications.map(a => a.id === appId ? { ...a, status: "approved", approvedAt: new Date().toISOString() } : a);
     await saveApplications(updated);
     
@@ -3296,7 +3651,7 @@ function BackOfficeView({
   const handleRejectSubmit = async () => {
     if (!rejectReasonText.trim()) return;
     const app = rejectModal;
-    const courseTitle = courses.find(c => c.id === app.id || c.id === app.courseId)?.title || "알 수 없는 과정";
+    const courseTitle = app.courseName || courses.find(c => c.id === app.id || c.id === app.courseId)?.title || eduCourses.find(ec => ec.id === app.courseId)?.name || "알 수 없는 과정";
     const updated = applications.map(a => a.id === app.id ? { ...a, status: "rejected", rejectReason: rejectReasonText.trim() } : a);
     await saveApplications(updated);
     
@@ -3708,58 +4063,104 @@ function BackOfficeView({
                         );
                       }
 
-                      return filteredApps.map(app => (
-                        <tr key={app.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                          <td style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 500 }}>{app.email}</td>
-                          <td style={{ padding: "10px 12px", color: "var(--body)" }}>
-                            {courses.find(c => c.id === app.courseId)?.title || "삭제된 과정"}
-                          </td>
-                          <td style={{ padding: "10px 12px" }}>
-                            {app.status === "pending" && (
-                              <span style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(245, 158, 11, 0.1)", color: "var(--accent-warning)", borderRadius: "var(--rounded-pill)" }}>
-                                대기중
-                              </span>
-                            )}
-                            {app.status === "approved" && (
-                              <span style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(22, 163, 74, 0.1)", color: "var(--semantic-success)", borderRadius: "var(--rounded-pill)" }}>
-                                승인완료
-                              </span>
-                            )}
-                            {app.status === "rejected" && (
-                              <span 
-                                title={`반려 사유: ${app.rejectReason || "없음"}`}
-                                style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(239, 68, 68, 0.1)", color: "var(--red)", borderRadius: "var(--rounded-pill)", cursor: "help" }}
+                      return filteredApps.flatMap(app => {
+                        const isExpanded = expandedAppIds.includes(app.id);
+                        const toggleExpand = () => {
+                          if (isExpanded) {
+                            setExpandedAppIds(expandedAppIds.filter(id => id !== app.id));
+                          } else {
+                            setExpandedAppIds([...expandedAppIds, app.id]);
+                          }
+                        };
+                        return [
+                          <tr key={app.id} style={{ borderBottom: isExpanded ? "none" : "1px solid var(--hairline)" }}>
+                            <td style={{ padding: "10px 12px", color: "var(--ink)", fontWeight: 500 }}>
+                              <button 
+                                onClick={toggleExpand}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "var(--primary)",
+                                  fontSize: "11px",
+                                  cursor: "pointer",
+                                  padding: "0",
+                                  marginRight: "6px",
+                                  textDecoration: "underline"
+                                }}
                               >
-                                반려됨
-                              </span>
-                            )}
-                          </td>
-                          <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                            {app.status === "pending" ? (
-                              <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
-                                <button 
-                                  onClick={() => handleApprove(app.id)} 
-                                  style={{ padding: "5px 10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "opacity 0.15s" }}
-                                  onMouseOver={e => e.currentTarget.style.opacity = 0.8}
-                                  onMouseOut={e => e.currentTarget.style.opacity = 1}
+                                {isExpanded ? "접기 ▲" : "더보기 ▼"}
+                              </button>
+                              {app.email}
+                            </td>
+                            <td style={{ padding: "10px 12px", color: "var(--body)" }}>
+                              {app.courseName || courses.find(c => c.id === app.courseId)?.title || eduCourses.find(ec => ec.id === app.courseId)?.name || "알 수 없는 과정"}
+                            </td>
+                            <td style={{ padding: "10px 12px" }}>
+                              {app.status === "pending" && (
+                                <span style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(245, 158, 11, 0.1)", color: "var(--accent-warning)", borderRadius: "var(--rounded-pill)" }}>
+                                  대기중
+                                </span>
+                              )}
+                              {app.status === "approved" && (
+                                <span style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(22, 163, 74, 0.1)", color: "var(--semantic-success)", borderRadius: "var(--rounded-pill)" }}>
+                                  승인완료
+                                </span>
+                              )}
+                              {app.status === "rejected" && (
+                                <span 
+                                  title={`반려 사유: ${app.rejectReason || "없음"}`}
+                                  style={{ display: "inline-block", padding: "4px 8px", fontSize: "11px", fontWeight: 600, background: "rgba(239, 68, 68, 0.1)", color: "var(--red)", borderRadius: "var(--rounded-pill)", cursor: "help" }}
                                 >
-                                  승인
-                                </button>
-                                <button 
-                                  onClick={() => setRejectModal(app)} 
-                                  style={{ padding: "5px 10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "background 0.15s" }}
-                                  onMouseOver={e => e.currentTarget.style.background = "var(--canvas-soft)"}
-                                  onMouseOut={e => e.currentTarget.style.background = "var(--canvas)"}
-                                >
-                                  반려
-                                </button>
-                              </div>
-                            ) : (
-                              <span style={{ color: "var(--muted)", fontSize: "12px" }}>-</span>
-                            )}
-                          </td>
-                        </tr>
-                      ));
+                                  반려됨
+                                </span>
+                              )}
+                            </td>
+                            <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                              {app.status === "pending" ? (
+                                <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                  <button 
+                                    onClick={() => handleApprove(app.id)} 
+                                    style={{ padding: "5px 10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "opacity 0.15s" }}
+                                    onMouseOver={e => e.currentTarget.style.opacity = 0.8}
+                                    onMouseOut={e => e.currentTarget.style.opacity = 1}
+                                  >
+                                    승인
+                                  </button>
+                                  <button 
+                                    onClick={() => setRejectModal(app)} 
+                                    style={{ padding: "5px 10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-md)", fontSize: "11px", fontWeight: 600, cursor: "pointer", transition: "background 0.15s" }}
+                                    onMouseOver={e => e.currentTarget.style.background = "var(--canvas-soft)"}
+                                    onMouseOut={e => e.currentTarget.style.background = "var(--canvas)"}
+                                  >
+                                    반려
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ color: "var(--muted)", fontSize: "12px" }}>-</span>
+                              )}
+                            </td>
+                          </tr>,
+                          isExpanded && (
+                            <tr key={`${app.id}-details`} style={{ borderBottom: "1px solid var(--hairline)", background: "var(--canvas-soft)" }}>
+                              <td colSpan={4} style={{ padding: "12px 16px", fontSize: "12px", color: "var(--body)", lineHeight: "1.6" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 20px" }}>
+                                  <div>📌 <strong>과정명:</strong> {app.courseName || "기록 없음"}</div>
+                                  <div>📅 <strong>일정:</strong> {app.schedule || "기록 없음"}</div>
+                                  <div>⏰ <strong>시간:</strong> {app.time || "기록 없음"}</div>
+                                  <div>📍 <strong>장소:</strong> {app.location || "기록 없음"}</div>
+                                  <div>✉️ <strong>신청자 이메일:</strong> {app.email}</div>
+                                  <div>🕒 <strong>신청 일시:</strong> {app.appliedAt ? new Date(app.appliedAt).toLocaleString() : "-"}</div>
+                                  {app.status === "rejected" && (
+                                    <div style={{ gridColumn: "span 2", color: "var(--red)", fontWeight: 500 }}>
+                                      ❌ 반려 사유: {app.rejectReason}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        ];
+                      });
                     })()}
                   </tbody>
                 </table>
@@ -5406,9 +5807,17 @@ function BackOfficeView({
                       <textarea
                         value={eduCourseForm[field.key]}
                         onChange={e => setEduCourseForm({ ...eduCourseForm, [field.key]: e.target.value })}
-                        placeholder="한 줄에 하나의 항목씩 적어주세요."
-                        style={{ ...inpStyle(), minHeight: "60px", fontSize: "13px" }}
+                        placeholder={field.key === "curriculum" 
+                          ? "예)\n국내 1위 이러닝 플랫폼\n- 1. 맑은소프트 (3분)\n- 2. 맑은소프트 소개 (2분)\n클라우드 LMS 소개\n- 1. 클라우드 개념 (5분)" 
+                          : "한 줄에 하나의 항목씩 적어주세요."
+                        }
+                        style={{ ...inpStyle(), minHeight: field.key === "curriculum" ? "120px" : "60px", fontSize: "13px" }}
                       />
+                      {field.key === "curriculum" && (
+                        <span style={{ fontSize: "11px", color: "var(--muted)", display: "block", marginTop: "4px" }}>
+                          * 챕터 제목은 일반 텍스트로 작성하시고, 하위 세부 챕터들은 앞줄에 하이픈(<code>-</code>)이나 불릿(<code>*</code>, <code>•</code>)을 붙여 작성해 주세요 (예: <code>- 1. 맑은소프트 (3분)</code>).
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -6214,6 +6623,7 @@ function CourseListPage({ eduCourses, infoBlocks, onNavigate }) {
 
 // ── [CourseDetailPage] 상세 조회 페이지 ──
 function CourseDetailPage({ eduCourses, viewPath, onNavigate }) {
+  const [expandedChapters, setExpandedChapters] = useState([0]);
   const courseId = viewPath.replace("/course/detail/", "");
   
   // 모의 데이터용 리스트 선언
@@ -6324,6 +6734,118 @@ function CourseDetailPage({ eduCourses, viewPath, onNavigate }) {
           { title: "📌 교육 유의 사항", data: course.notices }
         ].map((sec, idx) => {
           if (!sec.data || sec.data.length === 0) return null;
+
+          if (sec.title === "📋 교육 커리큘럼") {
+            const parseCurriculum = (arr) => {
+              const chapters = [];
+              let currentChapter = null;
+              arr.forEach(line => {
+                const isSub = line.trim().startsWith("-") || line.trim().startsWith("*") || line.trim().startsWith("•") || /^\d+\.\s/.test(line.trim());
+                if (isSub) {
+                  const cleanSub = line.trim().replace(/^[-*•]\s*/, "");
+                  if (currentChapter) {
+                    currentChapter.subs.push(cleanSub);
+                  } else {
+                    currentChapter = { title: "기본 챕터", subs: [cleanSub] };
+                    chapters.push(currentChapter);
+                  }
+                } else {
+                  currentChapter = { title: line.trim(), subs: [] };
+                  chapters.push(currentChapter);
+                }
+              });
+              return chapters;
+            };
+
+            const parseSubTitle = (subStr) => {
+              const match = subStr.match(/(?:\(?(\d+분)\)?|\(?(\d+\s*mins?)\)?)\s*$/i);
+              if (match) {
+                const duration = match[1] || match[2];
+                const title = subStr.substring(0, subStr.lastIndexOf(match[0])).trim();
+                return { title, duration };
+              }
+              return { title: subStr, duration: "" };
+            };
+
+            const chapters = parseCurriculum(sec.data);
+            const totalLecturesCount = chapters.reduce((sum, ch) => sum + ch.subs.length, 0);
+
+            return (
+              <div key={idx} style={{ borderBottom: "1px solid var(--hairline)", paddingBottom: "24px" }}>
+                <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span>📋</span> 강의목차 <span style={{ fontSize: "13px", color: "var(--primary)", fontWeight: "normal" }}>(총 {totalLecturesCount}강)</span>
+                </h4>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {chapters.map((ch, chIdx) => {
+                    const isExpanded = expandedChapters.includes(chIdx);
+                    const toggleExpand = () => {
+                      if (isExpanded) {
+                        setExpandedChapters(expandedChapters.filter(i => i !== chIdx));
+                      } else {
+                        setExpandedChapters([...expandedChapters, chIdx]);
+                      }
+                    };
+
+                    return (
+                      <div key={chIdx} style={{ border: "1px solid var(--hairline-strong)", borderRadius: "8px", overflow: "hidden" }}>
+                        {/* 챕터 헤더 */}
+                        <div 
+                          onClick={toggleExpand}
+                          style={{ 
+                            background: "var(--canvas-soft)", 
+                            padding: "16px 20px", 
+                            cursor: "pointer", 
+                            display: "flex", 
+                            justifyContent: "space-between", 
+                            alignItems: "center",
+                            userSelect: "none"
+                          }}
+                        >
+                          <span style={{ fontWeight: 600, fontSize: "14.5px", color: "var(--ink)" }}>{ch.title}</span>
+                          <span style={{ fontSize: "13px", color: "var(--primary)", fontWeight: 700 }}>
+                            {isExpanded ? "▲" : "▼"}
+                          </span>
+                        </div>
+
+                        {/* 하위 세부 챕터 목록 */}
+                        {isExpanded && (
+                          <div style={{ background: "var(--surface-card)", borderTop: "1px solid var(--hairline-strong)" }}>
+                            {ch.subs.length === 0 ? (
+                              <div style={{ padding: "16px 20px", color: "var(--muted)", fontSize: "13px" }}>세부 강의가 없습니다.</div>
+                            ) : (
+                              ch.subs.map((sub, sIdx) => {
+                                const parsed = parseSubTitle(sub);
+                                return (
+                                  <div 
+                                    key={sIdx} 
+                                    style={{ 
+                                      padding: "14px 20px", 
+                                      display: "flex", 
+                                      justifyContent: "space-between", 
+                                      alignItems: "center",
+                                      borderBottom: sIdx === ch.subs.length - 1 ? "none" : "1px solid var(--hairline-soft)",
+                                      fontSize: "13.5px"
+                                    }}
+                                  >
+                                    <span style={{ color: "var(--ink)" }}>{parsed.title}</span>
+                                    {parsed.duration && (
+                                      <span style={{ color: "var(--body)", fontSize: "12px", fontWeight: 500 }}>{parsed.duration}</span>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div key={idx} style={{ borderBottom: "1px solid var(--hairline)", paddingBottom: "24px" }}>
               <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", marginBottom: "12px" }}>{sec.title}</h4>
@@ -6533,7 +7055,31 @@ function CourseRegistrationPage({
       const updated = [newRegistration, ...eduRegistrations];
       await saveEduRegistrations(updated);
 
-      // 2. Append to user profile
+      // 2. Save Application to lms_applications_v2 for Admin Portal sync
+      const appFields = {
+        id: regId, // use same id for sync
+        courseId: course.id,
+        courseName: course.name,
+        email: email.trim(),
+        schedule: scheduleText,
+        time: course.time,
+        location: course.location,
+        status: "pending", // waiting for approval
+        appliedAt: new Date().toISOString()
+      };
+      
+      // Update local React state and save to firestore REST API
+      const prevApplications = await fbGet("aida:lms_applications_v2").catch(() => []);
+      const updatedApps = [appFields, ...(prevApplications || [])];
+      
+      // We need to trigger the parent state update so that it updates in memory immediately
+      if (window.__aida_saveApplications) {
+        await window.__aida_saveApplications(updatedApps);
+      } else {
+        await fbSet("aida:lms_applications_v2", updatedApps);
+      }
+
+      // 3. Append to user profile
       const matchedUser = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
       if (matchedUser) {
         const userRegistrations = matchedUser.registrations || [];
