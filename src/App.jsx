@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import MyComponent from './ApplicantManager';
 import QuestionBank from './QuestionBank';
 import LmsManager from './LmsManager';
+import EducationManagement from './EducationManagement';
+import MobileCheckin from './MobileCheckin';
 import { fbGet } from './firebaseStore';
 
 // Firestore REST API 유틸리티
@@ -62,7 +64,12 @@ function App() {
   const isQuestionView = path === '/questions';
   const isOfficerOption = path === '/officer';
   const isAdminView = path === '/admin';
-  const isLmsView = !isQuestionView && !isOfficerOption && !isAdminView;
+  const isAttendanceCheckin = path === '/attendance/checkin';
+  const isLmsView = !isQuestionView && !isOfficerOption && !isAdminView && !isAttendanceCheckin;
+
+  if (isAttendanceCheckin) {
+    return <MobileCheckin onBack={() => navigate('/')} />;
+  }
 
   // ── [어드민 전용 뷰 렌더링 분기 - Expo 테마 적용] ──
   if (isAdminView) {
@@ -186,6 +193,22 @@ function App() {
               >
                 솔루션 테스트 관리
               </button>
+              <button
+                onClick={() => setAdminSubTab("lms-education")}
+                style={{
+                  padding: '16px 20px',
+                  border: 'none',
+                  background: 'none',
+                  borderBottom: adminSubTab === 'lms-education' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: adminSubTab === 'lms-education' ? 'var(--ink)' : 'var(--body)',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                교육관리
+              </button>
             </div>
           </div>
 
@@ -199,6 +222,9 @@ function App() {
             )}
             {adminSubTab === 'lms-approval' && (
               <LmsManager viewPath="/admin" onNavigate={navigate} adminSubTabGroup="approval" />
+            )}
+            {adminSubTab === 'lms-education' && (
+              <EducationManagement />
             )}
           </div>
         </div>
