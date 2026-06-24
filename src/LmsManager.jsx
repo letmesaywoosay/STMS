@@ -3301,10 +3301,9 @@ function BackOfficeView({
           <button onClick={() => setBackTab("apply")} style={{ padding: "8px 16px", border: "none", background: backTab === "apply" ? "var(--primary)" : "none", color: backTab === "apply" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>수강 신청 승인</button>
           <button onClick={() => setBackTab("register")} style={{ padding: "8px 16px", border: "none", background: backTab === "register" ? "var(--primary)" : "none", color: backTab === "register" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입 승인</button>
           <button onClick={() => setBackTab("member")} style={{ padding: "8px 16px", border: "none", background: backTab === "member" ? "var(--primary)" : "none", color: backTab === "member" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>가입자 관리</button>
-          <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 관리</button>
+          <button onClick={() => setBackTab("schedule")} style={{ padding: "8px 16px", border: "none", background: backTab === "schedule" ? "var(--primary)" : "none", color: backTab === "schedule" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>일정 및 과정 관리</button>
           <button onClick={() => setBackTab("notice")} style={{ padding: "8px 16px", border: "none", background: backTab === "notice" ? "var(--primary)" : "none", color: backTab === "notice" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>공지사항 관리</button>
           <button onClick={() => setBackTab("faq")} style={{ padding: "8px 16px", border: "none", background: backTab === "faq" ? "var(--primary)" : "none", color: backTab === "faq" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>FAQ 관리</button>
-          <button onClick={() => setBackTab("educourse")} style={{ padding: "8px 16px", border: "none", background: backTab === "educourse" ? "var(--primary)" : "none", color: backTab === "educourse" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>신청 과정 관리</button>
           <button onClick={() => setBackTab("decorator")} style={{ padding: "8px 16px", border: "none", background: backTab === "decorator" ? "var(--primary)" : "none", color: backTab === "decorator" ? "var(--on-primary)" : "var(--body)", fontWeight: 600, borderRadius: "var(--rounded-md)", cursor: "pointer" }}>페이지 꾸미기</button>
         </div>
       )}
@@ -4586,411 +4585,10 @@ function BackOfficeView({
               </div>
             </div>
           )}
-        </div>
-      )}
 
-      {/* 공지사항 관리 탭 UI [NEW] */}
-      {backTab === "notice" && (
-        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-          {/* 등록/수정 폼 */}
-          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📢 {editingNoticeId ? "공지사항 수정" : "공지사항 등록"}</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>제목 *</label>
-                <input type="text" value={noticeForm.title} onChange={e => setNoticeForm({ ...noticeForm, title: e.target.value })} placeholder="공지사항 제목" style={inpStyle({ padding: "8px 12px" })} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>내용 *</label>
-                <HtmlEditor 
-                  value={noticeForm.content} 
-                  onChange={html => setNoticeForm({ ...noticeForm, content: html })} 
-                  placeholder="공지사항 상세 내용을 작성하세요." 
-                  minHeight="220px" 
-                />
-              </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={handleSaveNotice} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-                  {editingNoticeId ? "수정 완료" : "등록 완료"}
-                </button>
-                {editingNoticeId && (
-                  <button onClick={() => { setEditingNoticeId(null); setNoticeForm({ title: "", content: "" }); }} style={{ padding: "10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "13px", cursor: "pointer" }}>
-                    취소
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 목록 조회 */}
-          <div style={{ flex: 1.5, minWidth: "400px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📋 등록된 공지사항 목록</h4>
-            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead>
-                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
-                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>제목</th>
-                    <th style={{ padding: "10px", width: "90px", color: "var(--ink)", fontWeight: 600 }}>작성일</th>
-                    <th style={{ padding: "10px", width: "70px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>조회수</th>
-                    <th style={{ padding: "10px", width: "110px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {notices.map(n => (
-                    <tr key={n.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{n.title}</td>
-                      <td style={{ padding: "10px", color: "var(--body)" }}>{n.date}</td>
-                      <td style={{ padding: "10px", textAlign: "center", color: "var(--body)" }}>{n.hits || 0}</td>
-                      <td style={{ padding: "10px", textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                          <button onClick={() => handleEditNotice(n)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
-                          <button onClick={() => handleDeleteNotice(n.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {notices.length === 0 && (
-                    <tr>
-                      <td colSpan="4" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 공지사항이 없습니다.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* FAQ 관리 탭 UI [NEW] */}
-      {backTab === "faq" && (
-        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-          {/* 등록/수정 폼 */}
-          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>❓ {editingFaqId ? "FAQ 수정" : "FAQ 등록"}</h4>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>카테고리 분류 *</label>
-                <select value={faqForm.category} onChange={e => setFaqForm({ ...faqForm, category: e.target.value })} style={inpStyle({ padding: "8px 12px" })}>
-                  <option value="학습/수강">학습/수강</option>
-                  <option value="수료 기준">수료 기준</option>
-                  <option value="기타">기타</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>질문 (Question) *</label>
-                <input type="text" value={faqForm.question} onChange={e => setFaqForm({ ...faqForm, question: e.target.value })} placeholder="자주 묻는 질문 입력" style={inpStyle({ padding: "8px 12px" })} />
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>답변 (Answer) *</label>
-                <HtmlEditor 
-                  value={faqForm.answer} 
-                  onChange={html => setFaqForm({ ...faqForm, answer: html })} 
-                  placeholder="FAQ 상세 답변을 작성하세요." 
-                  minHeight="180px" 
-                />
-              </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={handleSaveFaq} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
-                  {editingFaqId ? "수정 완료" : "등록 완료"}
-                </button>
-                {editingFaqId && (
-                  <button onClick={() => { setEditingFaqId(null); setFaqForm({ category: "학습/수강", question: "", answer: "" }); }} style={{ padding: "10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "13px", cursor: "pointer" }}>
-                    취소
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 목록 조회 */}
-          <div style={{ flex: 1.5, minWidth: "400px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📋 등록된 FAQ 목록</h4>
-            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                <thead>
-                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
-                    <th style={{ padding: "10px", width: "90px", color: "var(--ink)", fontWeight: 600 }}>분류</th>
-                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>질문</th>
-                    <th style={{ padding: "10px", width: "110px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {faqs.map(f => (
-                    <tr key={f.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                      <td style={{ padding: "10px" }}>
-                        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-link)", background: "rgba(13, 116, 206, 0.08)", padding: "2px 6px", borderRadius: "4px" }}>
-                          {f.category}
-                        </span>
-                      </td>
-                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{f.question}</td>
-                      <td style={{ padding: "10px", textAlign: "center" }}>
-                        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
-                          <button onClick={() => handleEditFaq(f)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
-                          <button onClick={() => handleDeleteFaq(f.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {faqs.length === 0 && (
-                    <tr>
-                      <td colSpan="3" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 FAQ가 없습니다.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 페이지 꾸미기 탭 UI [NEW] */}
-      {backTab === "decorator" && (
-        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
-          {/* 입력 폼 */}
-          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>🎨 상단 배너 캐러셀 및 레이어 설정</h4>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {/* 1. 캐러셀 슬라이드 동작 설정 */}
-              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "16px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>⚙️ 캐러셀 슬라이드 설정</h5>
-                <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "var(--ink)", cursor: "pointer", fontWeight: 600 }}>
-                    <input 
-                      type="radio" 
-                      name="autoSlide" 
-                      checked={bannersAutoSlide} 
-                      onChange={() => setBannersAutoSlide(true)} 
-                    />
-                    자동 슬라이드 재생 (Auto Slide)
-                  </label>
-                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "var(--ink)", cursor: "pointer", fontWeight: 600 }}>
-                    <input 
-                      type="radio" 
-                      name="autoSlide" 
-                      checked={!bannersAutoSlide} 
-                      onChange={() => setBannersAutoSlide(false)} 
-                    />
-                    수동 슬라이드 재생 전용 (Manual)
-                  </label>
-                </div>
-                
-                {bannersAutoSlide && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", borderTop: "1px solid var(--hairline)", paddingTop: "12px" }}>
-                    <span style={{ fontSize: "13px", color: "var(--ink)", fontWeight: 600 }}>슬라이드 전환 간격:</span>
-                    <select 
-                      value={bannersSlideInterval} 
-                      onChange={e => setBannersSlideInterval(Number(e.target.value))}
-                      style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
-                    >
-                      <option value={3000}>3초 (3000ms)</option>
-                      <option value={5000}>5초 (5000ms)</option>
-                      <option value={7000}>7초 (7000ms)</option>
-                      <option value={10000}>10초 (10000ms)</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. 통합 배너 배경 이미지 설정 */}
-              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "16px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>🏞️ 통합 배너 배경 이미지 설정</h5>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "2px" }}>
-                  배너 공통 배경 이미지 등록 (배경 레이어)
-                </label>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleUnifiedBgUpload} 
-                  style={{ fontSize: "12px", color: "var(--body)" }} 
-                />
-                {bannersBgImage && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
-                    <div style={{ width: "120px", height: "45px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
-                      <img src={bannersBgImage} alt="BG Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    </div>
-                    <button 
-                      type="button"
-                      onClick={() => setBannersBgImage("")}
-                      style={{ padding: "4px 8px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
-                    >
-                      배경 제거
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 3. 배너 목록 및 편집 */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>📋 배너 목록 ({bannersList.length}/5)</h5>
-                  {bannersList.length < 5 && (
-                    <button 
-                      type="button"
-                      onClick={handleAddBanner}
-                      style={{ padding: "6px 12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
-                    >
-                      ➕ 새 배너 추가
-                    </button>
-                  )}
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {bannersList.map((banner, index) => (
-                    <div 
-                      key={banner.id} 
-                      style={{ 
-                        background: "var(--surface-card)", 
-                        border: "1px solid var(--hairline-strong)", 
-                        borderRadius: "var(--rounded-lg)", 
-                        padding: "16px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "16px",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline)", paddingBottom: "10px" }}>
-                        <span style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--ink)" }}>✨ 배너 #{index + 1}</span>
-                        {bannersList.length > 1 && (
-                          <button 
-                            type="button" 
-                            onClick={() => handleDeleteBanner(banner.id)}
-                            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
-                          >
-                            제거
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 1. 상단 레이어 (전경 PNG) */}
-                      <div>
-                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>🖼️ 상단 배너 이미지 등록 (PNG - 전경 레이어)</label>
-                        <input 
-                          type="file" 
-                          accept="image/png" 
-                          onChange={(e) => handleBannerImageUpload(banner.id, e)} 
-                          style={{ fontSize: "12px", color: "var(--body)" }} 
-                        />
-                        {banner.fgImage && (
-                          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
-                            <div style={{ width: "80px", height: "30px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
-                              <img src={banner.fgImage} alt="FG Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                            </div>
-                            <button 
-                              type="button"
-                              onClick={() => handleUpdateBannerField(banner.id, "fgImage", "")}
-                              style={{ padding: "3px 6px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", cursor: "pointer" }}
-                            >
-                              전경 제거
-                            </button>
-                            
-                            <span style={{ fontSize: "12px", color: "var(--ink)", marginLeft: "auto" }}>맞춤:</span>
-                            <select 
-                              value={banner.fit || "contain"} 
-                              onChange={e => handleUpdateBannerField(banner.id, "fit", e.target.value)}
-                              style={{ padding: "2px 6px", fontSize: "11px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
-                            >
-                              <option value="contain">Contain</option>
-                              <option value="cover">Cover</option>
-                              <option value="100% 100%">Fill</option>
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button onClick={handleSavePageConfig} style={{ padding: "12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "14px", fontWeight: 600, cursor: "pointer", marginTop: "8px" }}>설정 저장하기</button>
-            </div>
-          </div>
-
-          {/* 페이지 라이브 프리뷰 */}
-          <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "12px" }}>
-            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>👀 실시간 화면 미리보기</h4>
-            
-            <div style={{ 
-              border: "1px solid var(--hairline-strong)", 
-              borderRadius: "var(--rounded-lg)", 
-              overflow: "hidden", 
-              boxShadow: shadow,
-              background: "#000",
-              position: "relative"
-            }}>
-              {/* Preview Hero Band */}
-              <div style={{ 
-                backgroundImage: bannersBgImage 
-                  ? `url(${bannersBgImage})` 
-                  : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
-                backgroundRepeat: "no-repeat",
-                backgroundPosition: "center",
-                backgroundSize: "cover",
-                padding: "0", 
-                height: "180px",
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative",
-                overflow: "hidden"
-              }}>
-                {bannersList[previewSlide]?.fgImage && (
-                  <img 
-                    src={bannersList[previewSlide].fgImage} 
-                    alt="Preview Top Layer" 
-                    style={{ 
-                      width: "100%", 
-                      height: "100%", 
-                      objectFit: bannersList[previewSlide].fit || "contain", 
-                      pointerEvents: "none" 
-                    }} 
-                  />
-                )}
-              </div>
-
-              {/* Preview Controls (Indicators) */}
-              {bannersList.length > 1 && (
-                <div style={{
-                  position: "absolute",
-                  bottom: "10px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  zIndex: 10,
-                  display: "flex",
-                  gap: "4px"
-                }}>
-                  {bannersList.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setPreviewSlide(idx)}
-                      style={{
-                        width: idx === previewSlide ? "12px" : "6px",
-                        height: "6px",
-                        borderRadius: "3px",
-                        border: "none",
-                        background: idx === previewSlide ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
-                        cursor: "pointer",
-                        transition: "all 0.3s ease",
-                        padding: 0
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-            {bannersList.length > 1 && (
-              <span style={{ fontSize: "11px", color: "var(--body)", textAlign: "center" }}>
-                현재 미리보기: 슬라이드 {previewSlide + 1} / {bannersList.length}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {backTab === "educourse" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
+          {/* 신청 과정 관리 내용 통합 배치 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "32px", borderTop: "2px solid var(--hairline-strong)", paddingTop: "32px", marginTop: "20px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
           {/* 상단 액션 바 */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📋 수강신청 교육과정 목록</h3>
@@ -5091,14 +4689,7 @@ function BackOfficeView({
                 />
               </div>
 
-              <div>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>쿠폰 정책 안내</label>
-                <textarea
-                  value={adminInfoBlocks.coupon}
-                  onChange={e => setAdminInfoBlocks({ ...adminInfoBlocks, coupon: e.target.value })}
-                  style={{ ...inpStyle(), minHeight: "100px", fontSize: "13px" }}
-                />
-              </div>
+
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--body)", marginBottom: "4px" }}>취소 및 중도포기 규정 안내</label>
@@ -5523,6 +5114,408 @@ function BackOfficeView({
             </div>
           )}
         </div>
+          </div>
+        </div>
+      )}
+
+      {/* 공지사항 관리 탭 UI [NEW] */}
+      {backTab === "notice" && (
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* 등록/수정 폼 */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📢 {editingNoticeId ? "공지사항 수정" : "공지사항 등록"}</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>제목 *</label>
+                <input type="text" value={noticeForm.title} onChange={e => setNoticeForm({ ...noticeForm, title: e.target.value })} placeholder="공지사항 제목" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>내용 *</label>
+                <HtmlEditor 
+                  value={noticeForm.content} 
+                  onChange={html => setNoticeForm({ ...noticeForm, content: html })} 
+                  placeholder="공지사항 상세 내용을 작성하세요." 
+                  minHeight="220px" 
+                />
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={handleSaveNotice} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                  {editingNoticeId ? "수정 완료" : "등록 완료"}
+                </button>
+                {editingNoticeId && (
+                  <button onClick={() => { setEditingNoticeId(null); setNoticeForm({ title: "", content: "" }); }} style={{ padding: "10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "13px", cursor: "pointer" }}>
+                    취소
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 목록 조회 */}
+          <div style={{ flex: 1.5, minWidth: "400px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📋 등록된 공지사항 목록</h4>
+            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
+                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>제목</th>
+                    <th style={{ padding: "10px", width: "90px", color: "var(--ink)", fontWeight: 600 }}>작성일</th>
+                    <th style={{ padding: "10px", width: "70px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>조회수</th>
+                    <th style={{ padding: "10px", width: "110px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {notices.map(n => (
+                    <tr key={n.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{n.title}</td>
+                      <td style={{ padding: "10px", color: "var(--body)" }}>{n.date}</td>
+                      <td style={{ padding: "10px", textAlign: "center", color: "var(--body)" }}>{n.hits || 0}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                          <button onClick={() => handleEditNotice(n)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
+                          <button onClick={() => handleDeleteNotice(n.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {notices.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 공지사항이 없습니다.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FAQ 관리 탭 UI [NEW] */}
+      {backTab === "faq" && (
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* 등록/수정 폼 */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "20px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>❓ {editingFaqId ? "FAQ 수정" : "FAQ 등록"}</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: "var(--canvas-soft)", border: "1px solid var(--hairline)", padding: "20px", borderRadius: "var(--rounded-lg)" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>카테고리 분류 *</label>
+                <select value={faqForm.category} onChange={e => setFaqForm({ ...faqForm, category: e.target.value })} style={inpStyle({ padding: "8px 12px" })}>
+                  <option value="학습/수강">학습/수강</option>
+                  <option value="수료 기준">수료 기준</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>질문 (Question) *</label>
+                <input type="text" value={faqForm.question} onChange={e => setFaqForm({ ...faqForm, question: e.target.value })} placeholder="자주 묻는 질문 입력" style={inpStyle({ padding: "8px 12px" })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "var(--ink)", marginBottom: "4px" }}>답변 (Answer) *</label>
+                <HtmlEditor 
+                  value={faqForm.answer} 
+                  onChange={html => setFaqForm({ ...faqForm, answer: html })} 
+                  placeholder="FAQ 상세 답변을 작성하세요." 
+                  minHeight="180px" 
+                />
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={handleSaveFaq} style={{ flex: 1, padding: "10px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}>
+                  {editingFaqId ? "수정 완료" : "등록 완료"}
+                </button>
+                {editingFaqId && (
+                  <button onClick={() => { setEditingFaqId(null); setFaqForm({ category: "학습/수강", question: "", answer: "" }); }} style={{ padding: "10px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-md)", fontSize: "13px", cursor: "pointer" }}>
+                    취소
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 목록 조회 */}
+          <div style={{ flex: 1.5, minWidth: "400px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>📋 등록된 FAQ 목록</h4>
+            <div style={{ border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: "var(--canvas-soft)", borderBottom: "1px solid var(--hairline-strong)", textAlign: "left" }}>
+                    <th style={{ padding: "10px", width: "90px", color: "var(--ink)", fontWeight: 600 }}>분류</th>
+                    <th style={{ padding: "10px", color: "var(--ink)", fontWeight: 600 }}>질문</th>
+                    <th style={{ padding: "10px", width: "110px", textAlign: "center", color: "var(--ink)", fontWeight: 600 }}>액션</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {faqs.map(f => (
+                    <tr key={f.id} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                      <td style={{ padding: "10px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-link)", background: "rgba(13, 116, 206, 0.08)", padding: "2px 6px", borderRadius: "4px" }}>
+                          {f.category}
+                        </span>
+                      </td>
+                      <td style={{ padding: "10px", fontWeight: 600, color: "var(--ink)" }}>{f.question}</td>
+                      <td style={{ padding: "10px", textAlign: "center" }}>
+                        <div style={{ display: "flex", gap: "4px", justifyContent: "center" }}>
+                          <button onClick={() => handleEditFaq(f)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--ink)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>수정</button>
+                          <button onClick={() => handleDeleteFaq(f.id)} style={{ padding: "4px 8px", background: "var(--canvas)", border: "1px solid var(--hairline-strong)", color: "var(--red)", borderRadius: "var(--rounded-sm)", cursor: "pointer", fontSize: "11px", fontWeight: 600 }}>삭제</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {faqs.length === 0 && (
+                    <tr>
+                      <td colSpan="3" style={{ padding: "20px", textAlign: "center", color: "var(--muted)" }}>등록된 FAQ가 없습니다.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 페이지 꾸미기 탭 UI [NEW] */}
+      {backTab === "decorator" && (
+        <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+          {/* 입력 폼 */}
+          <div style={{ flex: 1, minWidth: "360px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>🎨 상단 배너 캐러셀 및 레이어 설정</h4>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* 1. 캐러셀 슬라이드 동작 설정 */}
+              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "16px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>⚙️ 캐러셀 슬라이드 설정</h5>
+                <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "var(--ink)", cursor: "pointer", fontWeight: 600 }}>
+                    <input 
+                      type="radio" 
+                      name="autoSlide" 
+                      checked={bannersAutoSlide} 
+                      onChange={() => setBannersAutoSlide(true)} 
+                    />
+                    자동 슬라이드 재생 (Auto Slide)
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "var(--ink)", cursor: "pointer", fontWeight: 600 }}>
+                    <input 
+                      type="radio" 
+                      name="autoSlide" 
+                      checked={!bannersAutoSlide} 
+                      onChange={() => setBannersAutoSlide(false)} 
+                    />
+                    수동 슬라이드 재생 전용 (Manual)
+                  </label>
+                </div>
+                
+                {bannersAutoSlide && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", borderTop: "1px solid var(--hairline)", paddingTop: "12px" }}>
+                    <span style={{ fontSize: "13px", color: "var(--ink)", fontWeight: 600 }}>슬라이드 전환 간격:</span>
+                    <select 
+                      value={bannersSlideInterval} 
+                      onChange={e => setBannersSlideInterval(Number(e.target.value))}
+                      style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
+                    >
+                      <option value={3000}>3초 (3000ms)</option>
+                      <option value={5000}>5초 (5000ms)</option>
+                      <option value={7000}>7초 (7000ms)</option>
+                      <option value={10000}>10초 (10000ms)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. 통합 배너 배경 이미지 설정 */}
+              <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline-strong)", padding: "16px", borderRadius: "var(--rounded-lg)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>🏞️ 통합 배너 배경 이미지 설정</h5>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "2px" }}>
+                  배너 공통 배경 이미지 등록 (배경 레이어)
+                </label>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleUnifiedBgUpload} 
+                  style={{ fontSize: "12px", color: "var(--body)" }} 
+                />
+                {bannersBgImage && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+                    <div style={{ width: "120px", height: "45px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
+                      <img src={bannersBgImage} alt="BG Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setBannersBgImage("")}
+                      style={{ padding: "4px 8px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                    >
+                      배경 제거
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. 배너 목록 및 편집 */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h5 style={{ fontSize: "13px", fontWeight: 700, color: "var(--ink)", margin: 0 }}>📋 배너 목록 ({bannersList.length}/5)</h5>
+                  {bannersList.length < 5 && (
+                    <button 
+                      type="button"
+                      onClick={handleAddBanner}
+                      style={{ padding: "6px 12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+                    >
+                      ➕ 새 배너 추가
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {bannersList.map((banner, index) => (
+                    <div 
+                      key={banner.id} 
+                      style={{ 
+                        background: "var(--surface-card)", 
+                        border: "1px solid var(--hairline-strong)", 
+                        borderRadius: "var(--rounded-lg)", 
+                        padding: "16px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "16px",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hairline)", paddingBottom: "10px" }}>
+                        <span style={{ fontSize: "13.5px", fontWeight: 700, color: "var(--ink)" }}>✨ 배너 #{index + 1}</span>
+                        {bannersList.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleDeleteBanner(banner.id)}
+                            style={{ padding: "4px 8px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+                          >
+                            제거
+                          </button>
+                        )}
+                      </div>
+
+                      {/* 1. 상단 레이어 (전경 PNG) */}
+                      <div>
+                        <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--ink)", marginBottom: "6px" }}>🖼️ 상단 배너 이미지 등록 (PNG - 전경 레이어)</label>
+                        <input 
+                          type="file" 
+                          accept="image/png" 
+                          onChange={(e) => handleBannerImageUpload(banner.id, e)} 
+                          style={{ fontSize: "12px", color: "var(--body)" }} 
+                        />
+                        {banner.fgImage && (
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "8px" }}>
+                            <div style={{ width: "80px", height: "30px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", overflow: "hidden", background: "var(--canvas-soft)" }}>
+                              <img src={banner.fgImage} alt="FG Preview" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                            </div>
+                            <button 
+                              type="button"
+                              onClick={() => handleUpdateBannerField(banner.id, "fgImage", "")}
+                              style={{ padding: "3px 6px", background: "none", border: "1px solid var(--red)", color: "var(--red)", borderRadius: "var(--rounded-sm)", fontSize: "11px", cursor: "pointer" }}
+                            >
+                              전경 제거
+                            </button>
+                            
+                            <span style={{ fontSize: "12px", color: "var(--ink)", marginLeft: "auto" }}>맞춤:</span>
+                            <select 
+                              value={banner.fit || "contain"} 
+                              onChange={e => handleUpdateBannerField(banner.id, "fit", e.target.value)}
+                              style={{ padding: "2px 6px", fontSize: "11px", borderRadius: "var(--rounded-xs)", border: "1px solid var(--hairline-strong)", background: "var(--canvas)" }}
+                            >
+                              <option value="contain">Contain</option>
+                              <option value="cover">Cover</option>
+                              <option value="100% 100%">Fill</option>
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button onClick={handleSavePageConfig} style={{ padding: "12px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "14px", fontWeight: 600, cursor: "pointer", marginTop: "8px" }}>설정 저장하기</button>
+            </div>
+          </div>
+
+          {/* 페이지 라이브 프리뷰 */}
+          <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", margin: 0 }}>👀 실시간 화면 미리보기</h4>
+            
+            <div style={{ 
+              border: "1px solid var(--hairline-strong)", 
+              borderRadius: "var(--rounded-lg)", 
+              overflow: "hidden", 
+              boxShadow: shadow,
+              background: "#000",
+              position: "relative"
+            }}>
+              {/* Preview Hero Band */}
+              <div style={{ 
+                backgroundImage: bannersBgImage 
+                  ? `url(${bannersBgImage})` 
+                  : "linear-gradient(135deg, #cfe7ff, #a8c8e8)",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "center",
+                backgroundSize: "cover",
+                padding: "0", 
+                height: "180px",
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+                overflow: "hidden"
+              }}>
+                {bannersList[previewSlide]?.fgImage && (
+                  <img 
+                    src={bannersList[previewSlide].fgImage} 
+                    alt="Preview Top Layer" 
+                    style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      objectFit: bannersList[previewSlide].fit || "contain", 
+                      pointerEvents: "none" 
+                    }} 
+                  />
+                )}
+              </div>
+
+              {/* Preview Controls (Indicators) */}
+              {bannersList.length > 1 && (
+                <div style={{
+                  position: "absolute",
+                  bottom: "10px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 10,
+                  display: "flex",
+                  gap: "4px"
+                }}>
+                  {bannersList.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPreviewSlide(idx)}
+                      style={{
+                        width: idx === previewSlide ? "12px" : "6px",
+                        height: "6px",
+                        borderRadius: "3px",
+                        border: "none",
+                        background: idx === previewSlide ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                        padding: 0
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            {bannersList.length > 1 && (
+              <span style={{ fontSize: "11px", color: "var(--body)", textAlign: "center" }}>
+                현재 미리보기: 슬라이드 {previewSlide + 1} / {bannersList.length}
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       {rejectModal && (
@@ -5871,15 +5864,7 @@ function CourseListPage({ eduCourses, infoBlocks, onNavigate }) {
           </div>
         </div>
 
-        {/* 쿠폰 정책 */}
-        <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline)", borderRadius: "var(--rounded-lg)", padding: "24px" }}>
-          <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span>🎟️</span> 쿠폰 정책
-          </h4>
-          <div style={{ fontSize: "13px", color: "var(--body)", lineHeight: "1.7", whiteSpace: "pre-line" }}>
-            {infoBlocks?.coupon}
-          </div>
-        </div>
+
 
         {/* 취소 규정 */}
         <div style={{ background: "var(--canvas-soft)", border: "1px solid var(--hairline)", borderRadius: "var(--rounded-lg)", padding: "24px" }}>
