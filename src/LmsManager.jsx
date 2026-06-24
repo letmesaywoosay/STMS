@@ -3,29 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 import RegisterModal from "./RegisterModal";
-
-const FB_API_KEY = "AIzaSyCarxTqSx__7AfzVNHzN-ilnk0gNN6PkTU";
-const FB_PROJECT = "solutiontestsystem";
-const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/app_data`;
+import { fbGet, fbSet } from "./firebaseStore";
 
 // Firestore REST API 유틸리티
-const fbGet = async (key) => {
-  const res = await fetch(`${FB_BASE}/${key}?key=${FB_API_KEY}`);
-  if(res.status===404) return null;
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const doc = await res.json();
-  const raw = doc?.fields?.value?.stringValue;
-  return raw ? JSON.parse(raw) : null;
-};
-
-const fbSet = async (key, value) => {
-  const body = { fields:{ value:{ stringValue: JSON.stringify(value) } } };
-  const res = await fetch(`${FB_BASE}/${key}?key=${FB_API_KEY}`,{
-    method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)
-  });
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  return true;
-};
 
 // ── Expo-inspired 디자인 토큰 ──
 const C = {
@@ -2413,129 +2393,367 @@ function FaqView({ faqs }) {
 // ── [MyPageView] 마이페이지 통합 트래커 대시보드 ──
 function MyPageView({ applications, courses, checkAccess, setSelectedCourse, lmsProgress = [] }) {
   const currentUser = JSON.parse(sessionStorage.getItem("aida:lms_login") || "null");
-  
+  const [activeTab, setActiveTab] = useState("online"); // online or offline
+  const [showLocationModal, setShowLocationModal] = useState(null); // Course detail for location modal
+  const [toastMessage, setToastMessage] = useState("");
+  const [smsNotification, setSmsNotification] = useState(true);
+  const [newCourseNotification, setNewCourseNotification] = useState(true);
+
   // 1. 오프라인 신청 목록 (applications)
   const myOfflineApps = applications.filter(a => a.email === currentUser?.email);
 
   // 2. 온라인 학습 목록 (lmsProgress 중 현재 사용자의 기록)
   const myOnlineProgress = lmsProgress.filter(p => p.email === currentUser?.email);
 
-  return (
-    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box" }}>
-      <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "32px", boxShadow: shadow }}>
-        <h3 style={{ fontSize: "28px", fontWeight: 600, color: "var(--ink)", marginBottom: "8px", letterSpacing: "-0.84px" }}>👤 나의 학습 마이페이지</h3>
-        <p style={{ fontSize: "14px", color: "var(--body)", marginBottom: "32px" }}>수강 신청하신 강좌들의 상태 및 진도 이력을 통합하여 관리합니다.</p>
-        
-        {myOfflineApps.length === 0 && myOnlineProgress.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px", color: "var(--body)", border: `1.5px dashed var(--hairline-strong)`, borderRadius: "var(--rounded-lg)" }}>
-            신청되거나 수강 중인 교육 과정이 없습니다.
-          </div>
-        )}
-        
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          {/* 온라인 수강 목록 출력 */}
-          {myOnlineProgress.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "8px", margin: "0 0 8px 0" }}>📺 온라인 강의 수강 현황</h4>
-              {myOnlineProgress.map(p => {
-                const c = courses.find(course => course.id === p.lectureId);
-                if (!c) return null;
-                const isComp = p.progress === 100;
-                return (
-                  <div key={p.lectureId} style={{ border: `1px solid var(--hairline-strong)`, borderRadius: "var(--rounded-lg)", padding: "20px", background: "var(--canvas-soft)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-                    <div style={{ flex: 1, minWidth: "280px" }}>
-                      <span style={{ fontSize: "11px", fontWeight: 600, padding: "3px 8px", borderRadius: "var(--rounded-pill)", background: "#eff6ff", color: "#1d4ed8", marginRight: "8px" }}>온라인</span>
-                      <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", display: "inline-block", margin: 0 }}>{c.title}</h4>
-                      <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "6px" }}>최근 학습일: {p.updatedAt ? new Date(p.updatedAt).toLocaleString() : "-"}</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "24px", flexWrap: "wrap" }}>
-                      <div style={{ width: "160px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "11px", color: "var(--body)" }}>진도율</span>
-                          <span style={{ fontSize: "11px", fontWeight: 700, color: isComp ? "#10B981" : "var(--primary)" }}>{p.progress}%</span>
-                        </div>
-                        <div style={{ height: "6px", background: "var(--canvas)", borderRadius: "999px", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${p.progress}%`, background: isComp ? "#10B981" : "var(--primary)", borderRadius: "999px" }} />
-                        </div>
-                      </div>
-                      <button onClick={() => { setSelectedCourse(c); checkAccess("classroom"); }} style={{ padding: "8px 16px", background: "var(--primary)", color: "var(--on-primary)", border: "none", borderRadius: "var(--rounded-md)", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}>강의실 입장</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+  // 토스트 트리거 헬퍼
+  const triggerToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage("");
+    }, 3000);
+  };
 
-          {/* 오프라인 신청 목록 출력 */}
-          {myOfflineApps.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "16px" }}>
-              <h4 style={{ fontSize: "18px", fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "8px", margin: "0 0 8px 0" }}>🏫 오프라인 교육 신청 현황</h4>
-              {myOfflineApps.map(app => {
-                const steps = ["pending", "approved", "studying", "completed"];
-                const currentIdx = steps.indexOf(app.status);
-                const isRejected = app.status === "rejected";
-                return (
-                  <div key={app.id} style={{ border: `1px solid ${isRejected ? "var(--red)" : "var(--hairline-strong)"}`, borderRadius: "var(--rounded-lg)", padding: "20px", background: "var(--canvas-soft)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+  const handleSaveSettings = () => {
+    triggerToast("설정이 저장 완료되었습니다.");
+  };
+
+  // [영역 A] 메트릭 가공
+  const totalOnlineCount = myOnlineProgress.length;
+  const avgOnlineProgress = totalOnlineCount > 0 
+    ? Math.round(myOnlineProgress.reduce((sum, curr) => sum + (curr.progress || 0), 0) / totalOnlineCount)
+    : 0;
+
+  // 가장 빠른 오프라인 일정 찾기
+  const upcomingOffline = myOfflineApps
+    .filter(app => app.status === "approved" || app.status === "pending")
+    .map(app => ({
+      ...app,
+      dateStart: app.appliedAt // 실제 일정 날짜 대입 폴백
+    }))
+    .sort((a, b) => new Date(a.dateStart) - new Date(b.dateStart))[0];
+
+  const completedOnlineCount = myOnlineProgress.filter(p => p.progress === 100).length;
+
+  return (
+    <div style={{ padding: "40px 24px", maxWidth: "1200px", margin: "0 auto", boxSizing: "border-box", fontFamily: "var(--sans)" }}>
+      
+      {/* 토스트 알림 */}
+      {toastMessage && (
+        <div style={{
+          position: "fixed",
+          top: "24px",
+          right: "24px",
+          background: "#0F172A",
+          color: "#fff",
+          padding: "12px 24px",
+          borderRadius: "8px",
+          boxShadow: "0 10px 15px -3px rgba(0,0,0,0.3)",
+          fontSize: "14px",
+          fontWeight: 600,
+          zIndex: 99999,
+          animation: "fadeInOut 3s ease-in-out"
+        }}>
+          ✨ {toastMessage}
+        </div>
+      )}
+
+      {/* [영역 A] 학습 현황 요약 (Summary Dashboard) */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px", marginBottom: "32px" }}>
+        
+        {/* 요약 1: 온라인 강의 진도 */}
+        <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", boxShadow: shadow }}>
+          <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--body)", textTransform: "uppercase", marginBottom: "8px" }}>수강 중인 온라인 강의</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
+            <span style={{ fontSize: "28px", fontWeight: 700, color: "var(--ink)" }}>{totalOnlineCount}</span>
+            <span style={{ fontSize: "14px", color: "var(--body)" }}>개 과정</span>
+          </div>
+          <div style={{ marginTop: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "12px" }}>
+              <span style={{ color: "var(--body)" }}>평균 진도율</span>
+              <span style={{ fontWeight: 700, color: "var(--primary)" }}>{avgOnlineProgress}%</span>
+            </div>
+            <div style={{ height: "6px", background: "var(--canvas-soft)", borderRadius: "999px", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${avgOnlineProgress}%`, background: "var(--primary)" }} />
+            </div>
+          </div>
+        </div>
+
+        {/* 요약 2: 오프라인 가장 빠른 일정 */}
+        <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", boxShadow: shadow }}>
+          <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--body)", textTransform: "uppercase", marginBottom: "8px" }}>오프라인 교육 일정</div>
+          {upcomingOffline ? (
+            <div>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--ink)", marginBottom: "4px" }}>
+                {upcomingOffline.courseName}
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--body)" }}>
+                📍 장소: {upcomingOffline.location || "여의도 파크원타워2 43층"}
+              </div>
+              <span style={{ display: "inline-block", marginTop: "12px", fontSize: "11px", fontWeight: 600, padding: "2px 8px", borderRadius: "4px", background: "var(--accent-warning)", color: "var(--ink)" }}>
+                D-Day 대기 중
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontSize: "13px", color: "var(--body)", marginTop: "12px" }}>예정된 오프라인 일정이 없습니다.</div>
+          )}
+        </div>
+
+        {/* 요약 3: 역량 성과 요약 */}
+        <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", boxShadow: shadow }}>
+          <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--body)", textTransform: "uppercase", marginBottom: "8px" }}>내 역량 성과</div>
+          <div style={{ display: "flex", gap: "24px", marginTop: "12px" }}>
+            <div>
+              <div style={{ fontSize: "11px", color: "var(--body)" }}>이수 과정</div>
+              <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--ink)" }}>{completedOnlineCount} <span style={{ fontSize: "12px", fontWeight: "normal" }}>건</span></div>
+            </div>
+            <div style={{ borderLeft: "1px solid var(--hairline-strong)", paddingLeft: "24px" }}>
+              <div style={{ fontSize: "11px", color: "var(--body)" }}>획득 수료증</div>
+              <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--green)" }}>{completedOnlineCount} <span style={{ fontSize: "12px", fontWeight: "normal" }}>장</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 메인 2단 구성: [영역 B] 대시보드 리스트 & [영역 C] 설정 카드 */}
+      <div style={{ display: "flex", gap: "32px", flexWrap: "wrap" }}>
+        
+        {/* [영역 B] 수강 목록 (좌측/메인) */}
+        <div style={{ flex: 1, minWidth: "320px" }}>
+          
+          {/* 탭 헤더 */}
+          <div style={{ display: "flex", borderBottom: "2px solid var(--hairline-strong)", marginBottom: "20px" }}>
+            <button
+              onClick={() => setActiveTab("online")}
+              style={{
+                padding: "12px 24px",
+                background: "none",
+                border: "none",
+                fontSize: "15px",
+                fontWeight: 600,
+                color: activeTab === "online" ? "var(--primary)" : "var(--body)",
+                borderBottom: activeTab === "online" ? "3px solid var(--primary)" : "3px solid transparent",
+                cursor: "pointer"
+              }}
+            >
+              💻 온라인 교육 ({totalOnlineCount})
+            </button>
+            <button
+              onClick={() => setActiveTab("offline")}
+              style={{
+                padding: "12px 24px",
+                background: "none",
+                border: "none",
+                fontSize: "15px",
+                fontWeight: 600,
+                color: activeTab === "offline" ? "var(--primary)" : "var(--body)",
+                borderBottom: activeTab === "offline" ? "3px solid var(--primary)" : "3px solid transparent",
+                cursor: "pointer"
+              }}
+            >
+              🏛️ 오프라인 교육 ({myOfflineApps.length})
+            </button>
+          </div>
+
+          {/* 탭 내용 분기 */}
+          {activeTab === "online" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {myOnlineProgress.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--body)", border: "1px dashed var(--hairline-strong)", borderRadius: "var(--rounded-lg)" }}>
+                  현재 학습 중인 온라인 과정이 없습니다.
+                </div>
+              ) : (
+                myOnlineProgress.map(p => {
+                  const c = courses.find(course => course.id === p.lectureId);
+                  if (!c) return null;
+                  const isComp = p.progress === 100;
+                  return (
+                    <div key={p.lectureId} style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
                       <div>
-                        <span style={{ fontSize: "11px", fontWeight: 600, padding: "3px 8px", borderRadius: "var(--rounded-pill)", background: "#f0fdf4", color: "#15803d", marginRight: "8px" }}>오프라인</span>
-                        <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", display: "inline-block", margin: 0 }}>{app.courseName}</h4>
-                        <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "6px" }}>신청 일시: {new Date(app.appliedAt).toLocaleString()}</div>
+                        <span style={{ fontSize: "10px", fontWeight: 600, padding: "2px 6px", borderRadius: "4px", background: "var(--blue-light)", color: "var(--primary)", marginRight: "8px" }}>온라인</span>
+                        <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", display: "inline-block", margin: 0 }}>{c.title}</h4>
+                        <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "4px" }}>최근 수강일: {p.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : "-"}</div>
                       </div>
-                      <div>
-                        {app.status === "approved" && (
-                          <span style={{ fontSize: "12px", color: "var(--green)", fontWeight: 600 }}>수강 확정 완료</span>
-                        )}
-                        {app.status === "pending" && (
-                          <span style={{ fontSize: "12px", color: "var(--amber)", fontWeight: 600 }}>신청 승인 대기 중</span>
-                        )}
+                      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                        <div style={{ width: "120px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "11px" }}>
+                            <span style={{ color: "var(--body)" }}>진도</span>
+                            <span style={{ fontWeight: 700, color: isComp ? "var(--green)" : "var(--primary)" }}>{p.progress}%</span>
+                          </div>
+                          <div style={{ height: "4px", background: "var(--canvas-soft)", borderRadius: "999px", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${p.progress}%`, background: isComp ? "var(--green)" : "var(--primary)" }} />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { setSelectedCourse(c); checkAccess("classroom"); }}
+                          style={{
+                            padding: "8px 16px",
+                            background: isComp ? "var(--canvas)" : "var(--primary)",
+                            border: isComp ? "1px solid var(--hairline-strong)" : "none",
+                            color: isComp ? "var(--ink)" : "var(--on-primary)",
+                            borderRadius: "var(--rounded-md)",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer"
+                          }}
+                        >
+                          {isComp ? "다시 보기" : "이어서 학습"}
+                        </button>
                       </div>
                     </div>
-                    {isRejected ? (
-                      <div style={{ background: "rgba(235, 142, 144, 0.1)", border: "1px solid var(--red)", color: "var(--red)", padding: "12px", borderRadius: "var(--rounded-md)", fontSize: "13px" }}>
-                        ❌ 반려됨 (사유: {app.rejectReason})
+                  );
+                })
+              )}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {myOfflineApps.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px", color: "var(--body)", border: "1px dashed var(--hairline-strong)", borderRadius: "var(--rounded-lg)" }}>
+                  신청하신 오프라인 교육이 존재하지 않습니다.
+                </div>
+              ) : (
+                myOfflineApps.map(app => {
+                  const isRejected = app.status === "rejected";
+                  return (
+                    <div key={app.id} style={{ background: "var(--surface-card)", border: `1px solid ${isRejected ? "var(--red)" : "var(--hairline-strong)"}`, borderRadius: "var(--rounded-lg)", padding: "20px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+                        <div>
+                          <span style={{ fontSize: "10px", fontWeight: 600, padding: "2px 6px", borderRadius: "4px", background: "rgba(22, 163, 74, 0.1)", color: "var(--green)", marginRight: "8px" }}>오프라인</span>
+                          <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", display: "inline-block", margin: 0 }}>{app.courseName}</h4>
+                          <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "6px" }}>📅 일정: {app.schedule} | ⏰ 시간: {app.time}</div>
+                          <div style={{ fontSize: "12px", color: "var(--body)", marginTop: "4px" }}>
+                            📍 장소: {app.location || "여의도 파크원타워2 43층 대회의실"}{" "}
+                            <span 
+                              onClick={() => setShowLocationModal(app)} 
+                              style={{ color: "var(--text-link)", textDecoration: "underline", cursor: "pointer", marginLeft: "6px" }}
+                            >
+                              위치 보기 ↗
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          {app.status === "approved" && (
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--green)", background: "rgba(22, 163, 74, 0.1)", padding: "4px 8px", borderRadius: "4px" }}>신청완료</span>
+                          )}
+                          {app.status === "pending" && (
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--amber)", background: "rgba(171, 100, 0, 0.1)", padding: "4px 8px", borderRadius: "4px" }}>대기순번 확인</span>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", position: "relative", marginTop: "12px" }}>
-                        {[
-                          { label: "신청 대기", code: "pending" },
-                          { label: "수강 확정", code: "approved" },
-                          { label: "학습 중", code: "studying" },
-                          { label: "수료/종료", code: "completed" }
-                        ].map((step, sIdx) => {
-                          const isActive = sIdx <= currentIdx;
-                          const isCurrent = sIdx === currentIdx;
-                          return (
-                            <div key={step.code} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", zIndex: 2 }}>
-                              <div style={{ 
-                                width: "32px", 
-                                height: "32px", 
-                                borderRadius: "50%", 
-                                background: isCurrent ? "var(--primary)" : (isActive ? "var(--surface-strong)" : "var(--canvas)"), 
-                                border: `2px solid ${isActive ? "var(--primary)" : "var(--hairline-strong)"}`, 
-                                color: isCurrent ? "#fff" : (isActive ? "var(--ink)" : "var(--body)"), 
-                                display: "flex", 
-                                alignItems: "center", 
-                                justifyContent: "center", 
-                                fontSize: "12px", 
-                                fontWeight: 700, 
-                                marginBottom: "6px" 
-                              }}>{sIdx + 1}</div>
-                              <span style={{ fontSize: "12px", color: isCurrent ? "var(--primary)" : (isActive ? "var(--ink)" : "var(--body)") }}>{step.label}</span>
-                            </div>
-                          );
-                        })}
-                        <div style={{ position: "absolute", top: "16px", left: "12.5%", right: "12.5%", height: "2px", background: "var(--hairline-strong)", zIndex: 1 }} />
-                        <div style={{ position: "absolute", top: "16px", left: "12.5%", width: `${currentIdx * 25}%`, height: "2px", background: "var(--primary)", zIndex: 1 }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      {isRejected && (
+                        <div style={{ marginTop: "12px", background: "rgba(235, 142, 144, 0.1)", border: "1px solid var(--red)", color: "var(--red)", padding: "12px", borderRadius: "var(--rounded-md)", fontSize: "12px" }}>
+                          반려 사유: {app.rejectReason}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
         </div>
+
+        {/* [영역 C] 개인 프로필 및 알림 설정 (우측/사이드바) */}
+        <div style={{ width: "340px", display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          {/* 프로필 정보 */}
+          <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", boxShadow: shadow }}>
+            <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "10px", margin: "0 0 16px 0" }}>👤 나의 프로필</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
+              <div>
+                <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>이름 / 이메일</span>
+                <strong>{currentUser?.name || "사용자"} ({currentUser?.email || ""})</strong>
+              </div>
+              <div>
+                <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>소속 부서</span>
+                <strong>{currentUser?.division || currentUser?.team || "아카데미팀"}</strong>
+              </div>
+              <div>
+                <span style={{ color: "var(--body)", display: "block", marginBottom: "2px" }}>연락처</span>
+                <strong>{currentUser?.phone || "010-0000-0000"}</strong>
+              </div>
+            </div>
+          </div>
+
+          {/* 알림 설정 */}
+          <div style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", boxShadow: shadow }}>
+            <h4 style={{ fontSize: "15px", fontWeight: 600, color: "var(--ink)", borderBottom: "1px solid var(--hairline-strong)", paddingBottom: "10px", margin: "0 0 16px 0" }}>⚙️ 알림 수신 설정</h4>
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", color: "var(--ink)", lineHeight: "1.4" }}>
+                  오프라인 강의 시작 1시간 전 SMS 알림
+                </span>
+                <input
+                  type="checkbox"
+                  checked={smsNotification}
+                  onChange={e => setSmsNotification(e.target.checked)}
+                  style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "13px", color: "var(--ink)", lineHeight: "1.4" }}>
+                  신규 온라인 과정 개설 알림 메일
+                </span>
+                <input
+                  type="checkbox"
+                  checked={newCourseNotification}
+                  onChange={e => setNewCourseNotification(e.target.checked)}
+                  style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                />
+              </div>
+
+              <button
+                onClick={handleSaveSettings}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  background: "var(--primary)",
+                  color: "var(--on-primary)",
+                  border: "none",
+                  borderRadius: "var(--rounded-md)",
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  marginTop: "8px"
+                }}
+              >
+                설정 저장
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* 장소 위치 모달 팝업 */}
+      {showLocationModal && (
+        <div onClick={() => setShowLocationModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 99999, display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center" }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "var(--surface-card)", border: "1px solid var(--hairline-strong)", borderRadius: "var(--rounded-lg)", padding: "24px", width: "90%", maxWidth: "440px", boxShadow: shadowLg }}>
+            <h4 style={{ fontSize: "16px", fontWeight: 600, color: "var(--ink)", marginBottom: "12px" }}>📍 교육 장소 위치 안내</h4>
+            <div style={{ background: "var(--canvas-soft)", height: "180px", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--body)", marginBottom: "16px", border: "1px solid var(--hairline)" }}>
+              🗺️ [지도 플레이스홀더] 여의도 파크원타워2
+            </div>
+            <div style={{ fontSize: "13px", color: "var(--ink)", lineHeight: "1.5", marginBottom: "20px" }}>
+              <strong>주소:</strong> 서울특별시 영등포구 여의대로 108 (파크원타워2, 43층 대회의실)
+            </div>
+            <button
+              onClick={() => setShowLocationModal(null)}
+              style={{
+                width: "100%",
+                padding: "10px",
+                background: "var(--primary)",
+                color: "var(--on-primary)",
+                border: "none",
+                borderRadius: "var(--rounded-md)",
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -6752,11 +6970,72 @@ function HtmlEditor({ value, onChange, placeholder, minHeight = "180px" }) {
   );
 }
 
+function sanitizeHtml(html) {
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") {
+    return "";
+  }
+
+  const allowedTags = new Set([
+    "A",
+    "B",
+    "BLOCKQUOTE",
+    "BR",
+    "DIV",
+    "EM",
+    "H2",
+    "H3",
+    "I",
+    "IMG",
+    "LI",
+    "OL",
+    "P",
+    "SPAN",
+    "STRONG",
+    "S",
+    "U",
+    "UL",
+  ]);
+  const allowedAttrs = new Set(["href", "src", "alt", "title", "style", "target", "rel"]);
+  const urlAttrs = new Set(["href", "src"]);
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const nodes = Array.from(doc.body.querySelectorAll("*"));
+
+  nodes.forEach((node) => {
+    if (!allowedTags.has(node.tagName)) {
+      node.replaceWith(...Array.from(node.childNodes));
+      return;
+    }
+
+    Array.from(node.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim();
+      const isAllowedUrl =
+        !urlAttrs.has(name) || /^(https?:|mailto:|tel:|\/|#)/i.test(value);
+
+      if (
+        name.startsWith("on") ||
+        !allowedAttrs.has(name) ||
+        !isAllowedUrl ||
+        /expression\s*\(|javascript:/i.test(value)
+      ) {
+        node.removeAttribute(attr.name);
+      }
+    });
+
+    if (node.tagName === "A") {
+      node.setAttribute("rel", "noopener noreferrer");
+    }
+  });
+
+  return doc.body.innerHTML;
+}
+
 function renderHtmlOrText(text) {
   if (!text) return "";
   const hasHtml = /<[a-z][\s\S]*>/i.test(text);
   if (hasHtml) {
-    return <span dangerouslySetInnerHTML={{ __html: text }} />;
+    return <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }} />;
   }
   return <span style={{ whiteSpace: "pre-line" }}>{text}</span>;
 }
