@@ -4,20 +4,9 @@ import React, { useState, useEffect } from 'react';
 import MyComponent from './ApplicantManager';
 import QuestionBank from './QuestionBank';
 import LmsManager from './LmsManager';
+import { fbGet } from './firebaseStore';
 
 // Firestore REST API 유틸리티
-const FB_API_KEY = "AIzaSyCarxTqSx__7AfzVNHzN-ilnk0gNN6PkTU";
-const FB_PROJECT = "solutiontestsystem";
-const FB_BASE    = `https://firestore.googleapis.com/v1/projects/${FB_PROJECT}/databases/(default)/documents/app_data`;
-
-const fbGet = async (key) => {
-  const res = await fetch(`${FB_BASE}/${key}?key=${FB_API_KEY}`);
-  if(res.status===404) return null;
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const doc = await res.json();
-  const raw = doc?.fields?.value?.stringValue;
-  return raw ? JSON.parse(raw) : null;
-};
 
 function App() {
   const [path, setPath] = useState(window.location.pathname);
