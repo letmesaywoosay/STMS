@@ -146,6 +146,37 @@ export default function EducationManagement() {
     }
   });
 
+  const [instructors, setInstructors] = useState(() => {
+    try {
+      const saved = localStorage.getItem('aida:academy_instructors');
+      return saved ? JSON.parse(saved) : ["김윤형", "최우성", "이지안"];
+    } catch {
+      return ["김윤형", "최우성", "이지안"];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('aida:academy_instructors', JSON.stringify(instructors));
+    } catch (e) {
+      console.error("Failed to save instructors", e);
+    }
+  }, [instructors]);
+
+  const handleAddInstructor = () => {
+    const name = prompt("새로운 담당강사 이름을 입력해 주세요:");
+    if (name && name.trim()) {
+      const trimmed = name.trim();
+      if (instructors.includes(trimmed)) {
+        alert("이미 존재하는 강사 이름입니다.");
+        return;
+      }
+      setInstructors(prev => [...prev, trimmed]);
+      setSelectedEdu(prev => ({ ...prev, instructor: trimmed }));
+      alert(`"${trimmed}" 강사가 추가되었습니다.`);
+    }
+  };
+
   // Main UI states
   const [filter, setFilter] = useState('ALL'); // ALL, BEFORE, PROGRESS, FINISHED
   const [selectedEdu, setSelectedEdu] = useState(null);
@@ -892,14 +923,36 @@ export default function EducationManagement() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
                     <div>
                       <label style={labelStyle}>담당강사 *</label>
-                      <input 
-                        type="text" 
-                        name="instructor" 
-                        value={selectedEdu.instructor} 
-                        onChange={handleInputChange} 
-                        style={inpStyle()} 
-                        required 
-                      />
+                      <div style={{ display: "flex", gap: "6px" }}>
+                        <select 
+                          name="instructor" 
+                          value={selectedEdu.instructor} 
+                          onChange={handleInputChange} 
+                          style={inpStyle({ background: "var(--canvas)", cursor: "pointer", flex: 1 })}
+                          required 
+                        >
+                          <option value="" disabled>-- 강사 선택 --</option>
+                          {instructors.map(inst => (
+                            <option key={inst} value={inst}>{inst}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleAddInstructor}
+                          style={{
+                            padding: "0 12px",
+                            background: "var(--canvas)",
+                            border: "1px solid var(--hairline-strong)",
+                            borderRadius: "var(--rounded-md)",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          추가하기
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label style={labelStyle}>교육 대상 *</label>
