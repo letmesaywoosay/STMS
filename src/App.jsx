@@ -460,6 +460,25 @@ function App() {
                 )}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '16px' }}>
+                  <span
+                    onClick={() => navigate('/mypage')}
+                    style={{
+                      fontSize: '13px',
+                      color: path === '/mypage' ? '#38BDF8' : '#94A3B8',
+                      cursor: 'pointer',
+                      marginRight: '12px',
+                      fontWeight: path === '/mypage' ? '600' : '500',
+                      transition: 'color 0.15s'
+                    }}
+                    onMouseOver={e => {
+                      if (path !== '/mypage') e.currentTarget.style.color = '#F8FAFC';
+                    }}
+                    onMouseOut={e => {
+                      if (path !== '/mypage') e.currentTarget.style.color = '#94A3B8';
+                    }}
+                  >
+                    마이페이지
+                  </span>
                   <span style={{ fontSize: '13px', color: '#E2E8F0' }}>👤 {lmsUser.name}님</span>
                   <button
                     onClick={handleAdminLogout}
