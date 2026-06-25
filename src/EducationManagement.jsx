@@ -202,7 +202,7 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
   const [otpToken, setOtpToken] = useState("AIDA-OTP-7A9F2E");
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
 
-  // Local storage synchronization
+  // Local storage & Firestore synchronization
   useEffect(() => {
     try {
       localStorage.setItem('aida:academy_educations', JSON.stringify(educations));
@@ -214,10 +214,26 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
   useEffect(() => {
     try {
       localStorage.setItem('aida:academy_students', JSON.stringify(students));
+      fbSet("aida:academy_students_v1", students).catch(err => console.error("Firestore save students error", err));
     } catch (e) {
       console.error("Failed to save students", e);
     }
   }, [students]);
+
+  // Fetch initial students roster from Firestore on mount
+  useEffect(() => {
+    const syncStudentsOnMount = async () => {
+      try {
+        const remoteStudents = await fbGet("aida:academy_students_v1").catch(() => null);
+        if (remoteStudents && remoteStudents.length > 0) {
+          setStudents(remoteStudents);
+        }
+      } catch (err) {
+        console.error("Failed to sync remote students on mount", err);
+      }
+    };
+    syncStudentsOnMount();
+  }, []);
 
   // Real-time synchronization effect
   useEffect(() => {
