@@ -60,10 +60,10 @@ export default function MobileCheckin({ onBack }) {
         roster = savedStudents ? JSON.parse(savedStudents) : [];
       }
 
-      const targetCourseId = Number(selectedCourseId);
+      const targetCourseId = selectedCourseId;
       
       // Look up student by name in the roster for this course
-      const existingIdx = roster.findIndex(s => s.courseId === targetCourseId && s.name.trim() === studentName.trim());
+      const existingIdx = roster.findIndex(s => String(s.courseId) === String(targetCourseId) && s.name.trim() === studentName.trim());
       
       const nowStr = new Date().toISOString().replace('T', ' ').slice(0, 19);
       let updatedStudent;
@@ -106,8 +106,8 @@ export default function MobileCheckin({ onBack }) {
 
       if (eduList.length > 0) {
         const updatedEduList = eduList.map(edu => {
-          if (edu.id === targetCourseId) {
-            const count = roster.filter(s => s.courseId === targetCourseId && (s.status === 'ATTENDED' || s.status === 'LATE')).length;
+          if (String(edu.id) === String(targetCourseId)) {
+            const count = roster.filter(s => String(s.courseId) === String(targetCourseId) && (s.status === 'ATTENDED' || s.status === 'LATE')).length;
             return { ...edu, attendee_count: count };
           }
           return edu;
