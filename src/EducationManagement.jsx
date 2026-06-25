@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { fbGet, fbSet } from './firebaseStore';
 
 // Preset default options
 const defaultCourseNames = [
@@ -127,7 +128,9 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
     setCurrentMenu(defaultMenu);
   }, [defaultMenu]);
   
-  // States loaded from localStorage
+  const [lmsCourses, setLmsCourses] = useState([]);
+
+  // States loaded from localStorage / initial seeds
   const [educations, setEducations] = useState(() => {
     try {
       const saved = localStorage.getItem('aida:academy_educations');
@@ -153,7 +156,6 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
   const [instructors, setInstructors] = useState(() => {
     try {
       const saved = localStorage.getItem('aida:academy_instructors');
-      // If it exists in localStorage, filter out "이지안" to apply this change for existing clients
       if (saved) {
         const parsed = JSON.parse(saved);
         return parsed.filter(name => name !== "이지안");
@@ -215,6 +217,85 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
     } catch (e) {
       console.error("Failed to save students", e);
     }
+  }, [students]);
+
+  // Real-time synchronization effect
+  useEffect(() => {
+    const syncData = async () => {
+      try {
+        const remoteLms = await fbGet("aida:edu_courses_v1").catch(() => []);
+        if (remoteLms && remoteLms.length > 0) {
+          setLmsCourses(remoteLms);
+        }
+
+        const remoteAcademyEdus = await fbGet("aida:academy_educations_v1").catch(() => []);
+        const savedLocalStr = localStorage.getItem('aida:academy_educations');
+        const localEdus = savedLocalStr ? JSON.parse(savedLocalStr) : initialEducations;
+        
+        const sourceCourses = (remoteLms && remoteLms.length > 0) ? remoteLms : localEdus.map(e => ({
+          id: e.id,
+          name: e.course_name,
+          target: e.target_aud === "고객사" ? "Customer" : (e.target_aud === "파트너사" ? "Partner" : "Other"),
+          dateStart: e.start_date,
+          dateEnd: e.end_date,
+          time: e.time_range,
+          location: e.location,
+          curriculum: e.content
+        }));
+
+        const backofficeDetails = (remoteAcademyEdus && remoteAcademyEdus.length > 0) ? remoteAcademyEdus : localEdus;
+
+        const reconciled = sourceCourses.map(course => {
+          const detail = backofficeDetails.find(d => d.id === course.id || d.course_name === course.name);
+          const targetAudMap = {
+            Customer: "고객사",
+            Partner: "파트너사",
+            Other: "임직원"
+          };
+
+          return {
+            id: course.id,
+            course_name: course.name,
+            status: calculateStatus(course.dateStart, course.dateEnd || course.dateStart),
+            instructor: detail ? detail.instructor : "김윤형",
+            target_aud: targetAudMap[course.target] || "고객사",
+            onsite_customer: detail ? detail.onsite_customer : "",
+            start_date: course.dateStart,
+            end_date: course.dateEnd || course.dateStart,
+            time_range: course.time || "13:00~18:00",
+            total_hours: detail ? detail.total_hours : 8,
+            job_type: detail ? detail.job_type : "IT 직무",
+            location: course.location || "아카데미 교육장",
+            topic: course.name,
+            method: course.teachingMethod || "이론+실습",
+            product_version: course.name.split(" ")[0] || "CONTRABASS",
+            content: course.curriculum || "",
+            attendee_count: detail ? detail.attendee_count : 0,
+            prep_hours: detail ? detail.prep_hours : 0,
+            run_hours: detail ? detail.run_hours : 0,
+            sat_instructor: detail ? detail.sat_instructor : 0.0,
+            sat_course: detail ? detail.sat_course : 0.0,
+            sat_overall: detail ? detail.sat_overall : 0.0,
+            log_url: detail ? detail.log_url : ""
+          };
+        });
+
+        setEducations(reconciled);
+        localStorage.setItem('aida:academy_educations', JSON.stringify(reconciled));
+
+        // Auto-focus progress (today's) course for attendance tab
+        const activeToday = reconciled.find(e => e.status === 'PROGRESS');
+        if (activeToday) {
+          setSelectedCourseId(activeToday.id);
+        } else if (reconciled.length > 0 && !reconciled.some(e => e.id === selectedCourseId)) {
+          setSelectedCourseId(reconciled[0].id);
+        }
+      } catch (e) {
+        console.error("Reconciliation error", e);
+      }
+    };
+
+    syncData();
   }, [students]);
 
   // Sync attendee_count dynamically on mount or on student changes
@@ -333,7 +414,7 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
     });
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (!selectedEdu.course_name.trim()) {
       alert("교육 과정명을 입력해 주세요.");
@@ -344,8 +425,10 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
       return;
     }
 
+    let updatedEdus = [];
     if (isNew) {
-      setEducations(prev => [selectedEdu, ...prev]);
+      updatedEdus = [selectedEdu, ...educations];
+      setEducations(updatedEdus);
       
       // Auto-populate 3 mock students for new course
       const newCourseId = selectedEdu.id;
@@ -356,16 +439,75 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
       ];
       setStudents(prev => [...prev, ...newMockStudents]);
     } else {
-      setEducations(prev => prev.map(item => item.id === selectedEdu.id ? selectedEdu : item));
+      updatedEdus = educations.map(item => item.id === selectedEdu.id ? selectedEdu : item);
+      setEducations(updatedEdus);
     }
+
+    // Save to Firestore databases
+    try {
+      await fbSet("aida:academy_educations_v1", updatedEdus);
+
+      const lmsTargetMap = {
+        "고객사": "Customer",
+        "파트너사": "Partner",
+        "임직원": "Other"
+      };
+
+      const newLmsCourses = updatedEdus.map(edu => ({
+        id: edu.id,
+        name: edu.course_name,
+        target: lmsTargetMap[edu.target_aud] || "Customer",
+        dateStart: edu.start_date,
+        dateEnd: edu.end_date,
+        time: edu.time_range,
+        location: edu.location,
+        status: "Available",
+        curriculum: edu.content,
+        teachingMethod: edu.method || "이론+실습"
+      }));
+
+      await fbSet("aida:edu_courses_v1", newLmsCourses);
+    } catch (err) {
+      console.error("Firestore save error", err);
+    }
+
     setIsModalOpen(false);
     alert(isNew ? "새 교육 과정이 등록되었습니다." : "변경사항이 성공적으로 반영되었습니다.");
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("이 교육 과정 데이터를 삭제하시겠습니까? (연동된 출석 명단도 삭제됩니다.)")) {
-      setEducations(prev => prev.filter(item => item.id !== id));
+      const updatedEdus = educations.filter(item => item.id !== id);
+      setEducations(updatedEdus);
       setStudents(prev => prev.filter(item => item.courseId !== id));
+
+      try {
+        await fbSet("aida:academy_educations_v1", updatedEdus);
+
+        const lmsTargetMap = {
+          "고객사": "Customer",
+          "파트너사": "Partner",
+          "임직원": "Other"
+        };
+
+        const newLmsCourses = updatedEdus.map(edu => ({
+          id: edu.id,
+          name: edu.course_name,
+          target: lmsTargetMap[edu.target_aud] || "Customer",
+          dateStart: edu.start_date,
+          dateEnd: edu.end_date,
+          time: edu.time_range,
+          location: edu.location,
+          status: "Available",
+          curriculum: edu.content,
+          teachingMethod: edu.method || "이론+실습"
+        }));
+
+        await fbSet("aida:edu_courses_v1", newLmsCourses);
+      } catch (err) {
+        console.error("Firestore delete error", err);
+      }
+
       if (selectedEdu && selectedEdu.id === id) {
         setIsModalOpen(false);
       }
@@ -892,7 +1034,24 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
                           const val = e.target.value;
                           setCourseSelectVal(val);
                           if (val !== "custom") {
-                            setSelectedEdu(prev => ({ ...prev, course_name: val }));
+                            const matched = lmsCourses.find(c => c.name === val);
+                            setSelectedEdu(prev => {
+                              const targetAudMap = {
+                                Customer: "고객사",
+                                Partner: "파트너사",
+                                Other: "임직원"
+                              };
+                              return {
+                                ...prev,
+                                course_name: val,
+                                target_aud: matched ? (targetAudMap[matched.target] || "고객사") : prev.target_aud,
+                                start_date: matched ? matched.dateStart : prev.start_date,
+                                end_date: matched ? (matched.dateEnd || matched.dateStart) : prev.end_date,
+                                time_range: matched ? (matched.time || "13:00~18:00") : prev.time_range,
+                                location: matched ? (matched.location || "아카데미 교육장") : prev.location,
+                                content: matched ? (matched.curriculum || "") : prev.content
+                              };
+                            });
                           } else {
                             setSelectedEdu(prev => ({ ...prev, course_name: "" }));
                           }
@@ -900,8 +1059,8 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
                         style={inpStyle({ background: "var(--canvas)", cursor: "pointer", marginBottom: courseSelectVal === "custom" ? "8px" : "0" })}
                       >
                         <option value="" disabled>-- 교육 과정명 선택 --</option>
-                        {defaultCourseNames.map(name => (
-                          <option key={name} value={name}>{name}</option>
+                        {lmsCourses.map(c => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
                         ))}
                         <option value="custom">직접 입력...</option>
                       </select>
