@@ -55,6 +55,8 @@ function AppContent() {
       <Route path="/" element={<UserLayout lmsUser={lmsUser} onLogout={handleAdminLogout} />}>
         <Route index element={<LmsManager viewPath="/" onNavigate={navigate} />} />
         <Route path="courses" element={<LmsManager viewPath="/course" onNavigate={navigate} />} />
+        <Route path="course/detail/:id" element={<LmsManager viewPath={location.pathname} onNavigate={navigate} />} />
+        <Route path="course/register/:id" element={<LmsManager viewPath={location.pathname} onNavigate={navigate} />} />
         <Route path="schedule" element={<LmsManager viewPath="/schedule" onNavigate={navigate} />} />
         <Route path="classroom" element={
           lmsUser ? <LmsManager viewPath="/classroom" onNavigate={navigate} /> : <Navigate to="/" replace />
