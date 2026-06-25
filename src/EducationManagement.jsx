@@ -120,8 +120,12 @@ const calculateStatus = (startDate, endDate) => {
   }
 };
 
-export default function EducationManagement() {
-  const [currentMenu, setCurrentMenu] = useState('EDU'); // 'EDU' (교육과정) 또는 'ATT' (출석정보)
+export default function EducationManagement({ defaultMenu = 'EDU' }) {
+  const [currentMenu, setCurrentMenu] = useState(defaultMenu); // 'EDU' (교육과정) 또는 'ATT' (출석정보)
+
+  useEffect(() => {
+    setCurrentMenu(defaultMenu);
+  }, [defaultMenu]);
   
   // States loaded from localStorage
   const [educations, setEducations] = useState(() => {
