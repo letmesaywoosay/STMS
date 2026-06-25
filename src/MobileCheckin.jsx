@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { fbGet, fbSet } from './firebaseStore';
 
 // Preset default options for educations & students
 const defaultCourseNames = [
@@ -15,25 +16,32 @@ export default function MobileCheckin({ onBack }) {
   const [checkinSuccess, setCheckinSuccess] = useState(false);
   const [checkedStudent, setCheckedStudent] = useState(null);
 
-  // Load educations and students from localStorage on mount
+  // Load educations from Firestore on mount
   useEffect(() => {
-    try {
-      const savedEdu = localStorage.getItem('aida:academy_educations');
-      if (savedEdu) {
-        const parsed = JSON.parse(savedEdu);
-        setEducations(parsed);
-        // Default select the first active/progress course
-        const activeCourse = parsed.find(c => c.status === 'PROGRESS') || parsed[0];
-        if (activeCourse) {
-          setSelectedCourseId(activeCourse.id);
+    const loadEducations = async () => {
+      try {
+        let eduList = await fbGet("aida:academy_educations_v1").catch(() => null);
+        if (!eduList || eduList.length === 0) {
+          const savedEdu = localStorage.getItem('aida:academy_educations');
+          eduList = savedEdu ? JSON.parse(savedEdu) : [];
         }
+        
+        if (eduList.length > 0) {
+          setEducations(eduList);
+          // Default select the first active/progress course
+          const activeCourse = eduList.find(c => c.status === 'PROGRESS') || eduList[0];
+          if (activeCourse) {
+            setSelectedCourseId(activeCourse.id);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load educations", e);
       }
-    } catch (e) {
-      console.error("Failed to load educations", e);
-    }
+    };
+    loadEducations();
   }, []);
 
-  const handleCheckin = (e) => {
+  const handleCheckin = async (e) => {
     e.preventDefault();
     if (!selectedCourseId) {
       alert("출석할 교육 과정을 선택해 주세요.");
@@ -45,11 +53,14 @@ export default function MobileCheckin({ onBack }) {
     }
 
     try {
-      const savedStudents = localStorage.getItem('aida:academy_students');
-      let roster = savedStudents ? JSON.parse(savedStudents) : [];
+      // Fetch latest students list from Firestore
+      let roster = await fbGet("aida:academy_students_v1").catch(() => null);
+      if (!roster || roster.length === 0) {
+        const savedStudents = localStorage.getItem('aida:academy_students');
+        roster = savedStudents ? JSON.parse(savedStudents) : [];
+      }
 
       const targetCourseId = Number(selectedCourseId);
-      const selectedCourseObj = educations.find(c => c.id === targetCourseId);
       
       // Look up student by name in the roster for this course
       const existingIdx = roster.findIndex(s => s.courseId === targetCourseId && s.name.trim() === studentName.trim());
@@ -82,13 +93,18 @@ export default function MobileCheckin({ onBack }) {
         roster.push(updatedStudent);
       }
 
-      // Save to localStorage
+      // Save to localStorage & Firestore
       localStorage.setItem('aida:academy_students', JSON.stringify(roster));
+      await fbSet("aida:academy_students_v1", roster);
       
       // Trigger attendee count recalculation inside parent education list
-      const savedEdu = localStorage.getItem('aida:academy_educations');
-      if (savedEdu) {
-        const eduList = JSON.parse(savedEdu);
+      let eduList = await fbGet("aida:academy_educations_v1").catch(() => null);
+      if (!eduList || eduList.length === 0) {
+        const savedEdu = localStorage.getItem('aida:academy_educations');
+        eduList = savedEdu ? JSON.parse(savedEdu) : [];
+      }
+
+      if (eduList.length > 0) {
         const updatedEduList = eduList.map(edu => {
           if (edu.id === targetCourseId) {
             const count = roster.filter(s => s.courseId === targetCourseId && (s.status === 'ATTENDED' || s.status === 'LATE')).length;
@@ -97,6 +113,7 @@ export default function MobileCheckin({ onBack }) {
           return edu;
         });
         localStorage.setItem('aida:academy_educations', JSON.stringify(updatedEduList));
+        await fbSet("aida:academy_educations_v1", updatedEduList);
       }
 
       setCheckedStudent(updatedStudent);
