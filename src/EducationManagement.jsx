@@ -318,7 +318,7 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
   useEffect(() => {
     setEducations(prevEdu => 
       prevEdu.map(edu => {
-        const attendedCount = students.filter(s => s.courseId === edu.id && (s.status === 'ATTENDED' || s.status === 'LATE')).length;
+        const attendedCount = students.filter(s => String(s.courseId) === String(edu.id) && (s.status === 'ATTENDED' || s.status === 'LATE')).length;
         if (edu.attendee_count !== attendedCount) {
           return { ...edu, attendee_count: attendedCount };
         }
@@ -326,6 +326,26 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
       })
     );
   }, [students]);
+
+  // Real-time polling for student list changes (runs every 3 seconds for immediate update)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const remoteStudents = await fbGet("aida:academy_students_v1").catch(() => null);
+        if (remoteStudents && remoteStudents.length > 0) {
+          setStudents(prev => {
+            if (JSON.stringify(prev) !== JSON.stringify(remoteStudents)) {
+              return remoteStudents;
+            }
+            return prev;
+          });
+        }
+      } catch (err) {
+        console.error("Failed to poll remote students", err);
+      }
+    }, 3000);
+    return () => clearInterval(pollInterval);
+  }, []);
 
   // Timer for security QR code (OTP)
   useEffect(() => {
@@ -356,7 +376,7 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
 
   // Attendance statistics for dashboard
   const attendanceStats = (() => {
-    const courseStudents = students.filter(s => s.courseId === Number(selectedCourseId));
+    const courseStudents = students.filter(s => String(s.courseId) === String(selectedCourseId));
     const attended = courseStudents.filter(s => s.status === 'ATTENDED').length;
     const late = courseStudents.filter(s => s.status === 'LATE').length;
     const absent = courseStudents.filter(s => s.status === 'ABSENT').length;
@@ -865,12 +885,12 @@ export default function EducationManagement({ defaultMenu = 'EDU' }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {students.filter(s => s.courseId === Number(selectedCourseId)).length === 0 ? (
+                    {students.filter(s => String(s.courseId) === String(selectedCourseId)).length === 0 ? (
                       <tr>
                         <td colSpan="6" style={{ padding: "30px", textAlign: "center", color: "var(--muted)" }}>등록된 수강생이 없습니다.</td>
                       </tr>
                     ) : (
-                      students.filter(s => s.courseId === Number(selectedCourseId)).map(s => {
+                      students.filter(s => String(s.courseId) === String(selectedCourseId)).map(s => {
                         const statusColors = {
                           ATTENDED: { label: "출석", bg: "rgba(16, 185, 129, 0.1)", text: "#10B981" },
                           LATE: { label: "지각", bg: "rgba(59, 130, 246, 0.1)", text: "#3B82F6" },
